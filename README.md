@@ -76,10 +76,10 @@ bench/
   scope_check.py                  Stage 1 guard: an originator may change only its role's paths
   eval/oms/                       benchmark results on the real OMS (docs drift, secrets)
   README.md
-plumbline/
+loops/
   spec/*.md                       canonical agent specs (single source of truth)
   shared/*.md                     write policy, three-stage protocol, isolated-critic (judge) protocol
-  agents/plumbline-critic.md           read-only critic subagent (Claude Code + Copilot .agent.md; /plumbline-critic prompt fallback)
+  agents/plumbline-critic.md      read-only critic subagent (Claude Code + Copilot .agent.md; /plumbline-critic prompt fallback)
                                   originator subagents are generated from the specs' @originator sections
   build.py                        spec → dist/ (python3 loops/build.py; --check in CI)
   tools/merge_to_spec.py          one-off migration from the drifted Claude/Copilot sets

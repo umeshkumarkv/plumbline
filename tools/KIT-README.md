@@ -19,7 +19,7 @@ fails CI unless a human adds the `plumbline-policy-change` label). Add them to C
 ## What is inside
 | Folder | What | Generic? |
 |---|---|---|
-| `plumbline/` | loop specs, shared rules, critic agent, `build.py` (generates `dist/`) | method generic; specs assume the stack below |
+| `loops/` | loop specs, shared rules, critic agent, `build.py` (generates `dist/`) | method generic; specs assume the stack below |
 | `dist/` | generated Claude Code commands/agents and Copilot prompts/agents | generated |
 | `bench/` | Stage 2 benchmark (`run.py`) + Stage 1 scope check (`scope_check.py`) | engine generic; role checks assume the stack |
 | `gates/` | Semgrep + structure/domain checks, protected paths, CI templates, baseline | `checks/protected_paths.py` generic; rules and baseline are this repo's |
