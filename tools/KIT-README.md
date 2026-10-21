@@ -11,6 +11,7 @@ cp -R <source>/.plumbline ./.plumbline    # or unpack the release tarball here
 python3 .plumbline/init.py                    # detect, project.yaml, install, baseline, prerequisites, doctor
 git add .plumbline .claude .github && git commit -m "Add Plumbline $(cat .plumbline/VERSION)"
 ```
+Step-by-step trial: see Quickstart in https://github.com/umeshkumarkv/plumbline#readme
 `init.py --doctor` reports what the framework sees; `--check` fails CI on drift; `--upgrade <tarball>` updates the
 framework and keeps `project.yaml` and the baseline. `--domain broker-dealer` selects the broker-dealer domain pack.
 Protect it: `.plumbline/`, `.claude/` and `.github/` are protected paths (agents may not change them; a PR that does
