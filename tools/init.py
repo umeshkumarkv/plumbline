@@ -19,6 +19,7 @@ import filecmp
 import json
 import re
 import shutil
+import os
 import subprocess
 import sys
 import tarfile
@@ -51,11 +52,14 @@ DOMAINS = {   # domain pack + gate selection
 }
 
 
-def sh(*cmd, cwd=REPO):
+def sh(*cmd, cwd=REPO, timeout=600):
+    env = dict(os.environ, SEMGREP_ENABLE_VERSION_CHECK="0", SEMGREP_SEND_METRICS="off")
     try:
-        r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+        r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env)
     except FileNotFoundError:
         return 127, f"{cmd[0]}: not found"
+    except subprocess.TimeoutExpired:
+        return 124, f"{cmd[0]}: timed out after {timeout}s"
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
@@ -212,7 +216,7 @@ def prerequisites(units):
         say("MISS", "PyYAML — pip install -r .plumbline/requirements.txt")
         probs.append("PyYAML")
     want = re.search(r"semgrep==([\d.]+)", (G / "requirements.txt").read_text())
-    rc, out = sh("semgrep", "--version")
+    rc, out = sh("semgrep", "--version", timeout=60)
     if rc != 0:
         say("MISS", "Semgrep — gates cannot run (pip install -r .plumbline/requirements.txt)")
         probs.append("semgrep")
@@ -221,7 +225,7 @@ def prerequisites(units):
             + ("" if not want or want.group(1) in out else f" (pinned {want.group(1)})"))
     javas = sorted({u.get("java") for u in units if u.get("java")})
     if javas:
-        rc, out = sh("java", "-version")
+        rc, out = sh("java", "-version", timeout=60)
         m = re.search(r'version "(?:1\.)?(\d+)', out)
         have = int(m.group(1)) if m else None
         for v in javas:
@@ -239,7 +243,7 @@ def prerequisites(units):
                 elif not (f.stat().st_mode & 0o111):
                     say("warn", f"{w} is not executable: chmod +x {w}")
     if any(u["kind"] == "frontend" for u in units):
-        rc, out = sh("node", "--version")
+        rc, out = sh("node", "--version", timeout=60)
         say("ok" if rc == 0 else "warn", f"node {out if rc == 0 else 'missing (frontend tests and coverage need it)'}")
     rc, _ = sh("git", "rev-parse", "--git-dir")
     if rc != 0:
@@ -262,7 +266,7 @@ def baseline(force=False):
     if BASELINE.is_file() and not (force or foreign):
         say("keep", f"{BASELINE.relative_to(REPO)} exists — not changed (--rebaseline to rebuild)")
         return
-    if sh("semgrep", "--version")[0] != 0:
+    if sh("semgrep", "--version", timeout=60)[0] != 0:
         say("skip", "baseline not written: Semgrep is missing")
         return
     rc, out = sh(sys.executable, str(G / "gates" / "run_gates.py"), ".", "--write-baseline", str(BASELINE))
@@ -396,7 +400,7 @@ def upgrade(tarball):
     shutil.rmtree(retired, ignore_errors=True)
     kept = [k for k in KEEP_ON_UPGRADE if (G / k).is_file()]
     say("write", f"framework {old_v} → {(G / 'VERSION').read_text().strip()} (kept: {', '.join(kept) or 'nothing'})")
-    return subprocess.run([sys.executable, str(G / "init.py"), "--no-baseline"]).returncode
+    return subprocess.run([sys.executable, str(G / "init.py")]).returncode   # keeps this repo's baseline; replaces only the shipped broker-dealer one
 
 
 def uninstall(yes):

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.10.1 — 2026-10-21
+
+- **Install from the repository:** `git clone https://github.com/umeshkumarkv/plumbline ~/plumbline`, then
+  `~/plumbline/install.sh` inside any project. Fresh install or upgrade (including from `.agentic-sdlc/`) is detected;
+  init.py flags pass through. No tarball needed.
+- **Fix: `init.py` could hang** on `semgrep --version` (Semgrep's online update check). Tool probes now time out (60 s),
+  the update check and metrics are off, and every subprocess has a timeout.
+- **Fix: upgrade kept the shipped broker-dealer baseline** in a non-broker-dealer repository (e.g. migrating from
+  `.agentic-sdlc/` 1.8), so `--check` failed. Upgrade now rebuilds only that shipped baseline; a repository's own
+  baseline is kept.
+- README: Quickstart is three commands.
+
 ## 1.10.0 — 2026-10-21
 
 ### One folder in the project: `.plumbline/`

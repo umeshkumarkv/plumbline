@@ -7,11 +7,10 @@ folder's `.gitignore`). Outside it, `init.py` writes only the entry files Claude
 
 ## Use in a repository
 ```bash
-cp -R <source>/.plumbline ./.plumbline    # or unpack the release tarball here
-python3 .plumbline/init.py                    # detect, project.yaml, install, baseline, prerequisites, doctor
+~/plumbline/install.sh                        # from a clone of https://github.com/umeshkumarkv/plumbline
+# (or copy this folder in and run: python3 .plumbline/init.py)
 git add .plumbline .claude .github && git commit -m "Add Plumbline $(cat .plumbline/VERSION)"
 ```
-Step-by-step trial: see Quickstart in https://github.com/umeshkumarkv/plumbline#readme
 `init.py --doctor` reports what the framework sees; `--check` fails CI on drift; `--upgrade <tarball>` updates the
 framework and keeps `project.yaml` and the baseline. `--domain broker-dealer` selects the broker-dealer domain pack.
 Protect it: `.plumbline/`, `.claude/` and `.github/` are protected paths (agents may not change them; a PR that does
@@ -39,5 +38,5 @@ repository root** (`./src`, the root `CLAUDE.md` is its CLAUDE.md), and frontend
 `package.json`, e.g. `ui/`). Anything else: copy `project.yaml.example` to `project.yaml` here and list the units.
 
 ## Update
-`python3 .plumbline/init.py --upgrade plumbline-<version>.tar.gz` replaces the framework and keeps `project.yaml`,
+`git -C ~/plumbline pull && ~/plumbline/install.sh` (or `init.py --upgrade <tarball>`) replaces the framework and keeps `project.yaml`,
 the baseline and `run/`. See `CHANGELOG.md`.

@@ -4,74 +4,35 @@
 whole delivery cycle — onboarding, PRD, story, design, code, review, QA, docs, CI fixes — and checks every step against
 true vertical: a deterministic benchmark first, then an isolated judge, with a human approving every external write.
 
-## Quickstart — try it on an existing repository
+## Quickstart
 
-Takes about 10 minutes plus one onboarding run. Uses a separate worktree on a new branch, so your main checkout is
-untouched and the branch is something you can share as a PR.
-
-### 1. Prerequisites (once per machine)
 ```bash
-python3 -m pip install --user pyyaml     # Python 3.10+
-brew install semgrep                     # or: pipx install semgrep — without it only the Semgrep-based checks are skipped
+git clone https://github.com/umeshkumarkv/plumbline ~/plumbline      # once per machine
+cd <your-project>                                                    # any git repository
+~/plumbline/install.sh                                               # install (or upgrade) Plumbline here
 ```
-Plus the project's own toolchain (JDK for Maven/Gradle projects, node for frontends) and Claude Code or VS Code with
-GitHub Copilot (Agent mode).
-
-### 2. Trial branch
-```bash
-cd <your-repo>
-git worktree add ../<your-repo>-plumbline-trial -b plumbline-trial
-cd ../<your-repo>-plumbline-trial
+Then open the project in **Claude Code** or **VS Code Copilot (Agent mode)** and run:
 ```
-
-### 3. Install
-```bash
-TAR=/path/to/plumbline-<version>.tar.gz
-tar -xzf "$TAR" .plumbline/init.py
-if [ -d .agentic-sdlc ] || [ -d .plumbline/loops ]; then
-  python3 .plumbline/init.py --upgrade "$TAR"     # existing install (also migrates the pre-1.10 .agentic-sdlc folder)
-else
-  tar -xzf "$TAR" && python3 .plumbline/init.py --domain none
-fi
+/plumbline-onboard service:all
 ```
-`--domain none` = generic rules only. Use `--domain broker-dealer` for the shipped OMS pack. Add `--ci` to also install
-the GitHub workflows (`.github/workflows/plumbline-*.yml`).
+That's it. Everything lands in `.plumbline/` plus `plumbline-*` entry files in `.claude/` and `.github/`; commit them
+and open a PR to share with your team.
 
-### 4. Verify
-```bash
-python3 .plumbline/init.py --doctor      # units, endpoints, frontend calls, JDK, warnings
-python3 .plumbline/init.py --check       # must pass
-for t in .plumbline/selftest/*_selftest.py; do python3 "$t"; done
-git status --short                       # new files only under .plumbline/, .claude/, .github/
-```
-Installed Semgrep after step 3? Run `python3 .plumbline/init.py --rebaseline` once.
+- **Needs:** Python 3.10+ with PyYAML (`python3 -m pip install --user pyyaml`); Semgrep recommended
+  (`brew install semgrep` — without it only the Semgrep checks are skipped); your project's own JDK / node.
+- **Options** (passed through to `init.py`): `--domain broker-dealer` (OMS rule pack; default `none` = generic),
+  `--ci` (also install GitHub workflows).
+- **Update:** `git -C ~/plumbline pull && ~/plumbline/install.sh` — keeps your `project.yaml` and gate baseline.
+- **Check:** `python3 .plumbline/init.py --doctor` (what it sees) · `--check` (CI: fails on drift).
+- **Remove:** `python3 .plumbline/init.py --uninstall --yes` (your CLAUDE.md files stay).
+- **Trying it without touching your branch:** `git worktree add ../trial -b plumbline-trial && cd ../trial` first.
 
-### 5. Onboard
-- **Claude Code:** `claude` in the trial folder → `/plumbline-onboard service:all`
-- **Copilot:** open the trial folder, Chat in **Agent** mode → `/plumbline-onboard service:all`
+**Other roles:** `/plumbline-pm`, `-ba`, `-arch`, `-dev`, `-code-review`, `-qa`, `-doc`, `-devops`, `-sm` — the same
+loop (originator → deterministic benchmark → isolated judge, up to 3 attempts, then a human), each confined to its own
+paths. Every external write (JIRA, PR, push) waits for your approval. CLAUDE.md files are merged between
+`plumbline:begin/end` markers, never overwritten: one master at the root, one per unit.
 
-Expect originator → benchmark → judge per unit, up to 3 attempts before it hands over to you. CLAUDE.md files are
-merged between `plumbline:begin/end` markers, never overwritten: one master at the root, one per unit (`src/CLAUDE.md`
-for an app at the repository root).
-
-### 6. Share
-```bash
-git add .plumbline .claude .github $(git ls-files -mo --exclude-standard -- '*CLAUDE.md')
-git commit -m "Trial: Plumbline $(cat .plumbline/VERSION) onboarding"
-git push -u origin plumbline-trial        # then open a PR: it shows exactly what Plumbline adds
-```
-
-### Clean up
-```bash
-cd <your-repo> && git worktree remove ../<your-repo>-plumbline-trial
-# or keep the branch and remove Plumbline from it: python3 .plumbline/init.py --uninstall --yes
-```
-
-### Next roles
-`/plumbline-pm`, `-ba`, `-arch`, `-dev`, `-code-review`, `-qa`, `-doc`, `-devops`, `-sm` — same three-stage loop,
-each scoped to its own paths. Every external write (JIRA, PR, push) waits for human approval.
-
-**What `init.py` does:** detects the units (`services/<name>/`, top-level modules, an app at the root, frontends such as `ui/`), the Java version, the frontend framework and the base branch; writes `.plumbline/project.yaml`; installs the generated Claude Code commands/agents and Copilot prompts/agents (and the CI workflows with `--ci`); writes the gate baseline; checks prerequisites; prints a **doctor** report. `--doctor` reports only, `--check` (CI) fails on drift, `--upgrade <tarball>` replaces the framework and keeps `project.yaml` and the baseline.
+**What `init.py` does:** detects the units (`services/<name>/`, top-level modules, an app at the root, frontends such as `ui/`), the Java version, the frontend framework and the base branch; writes `.plumbline/project.yaml`; installs the generated Claude Code commands/agents and Copilot prompts/agents (and the CI workflows with `--ci`); writes the gate baseline; checks prerequisites; prints a **doctor** report. `--doctor` reports only, `--check` (CI) fails on drift, `--upgrade <tarball>` (used by `install.sh`) replaces the framework and keeps `project.yaml` and the baseline.
 
 ## What is inside
 
