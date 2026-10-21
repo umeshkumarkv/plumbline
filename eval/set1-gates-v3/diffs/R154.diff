@@ -1,0 +1,22 @@
+--- a/services/notification-service/src/main/resources/application.yml
++++ b/services/notification-service/src/main/resources/application.yml
+@@ -24,18 +24,18 @@
+   endpoints:
+     web:
+       exposure:
+         include: health,info,metrics
+   endpoint:
+     health:
+       probes:
+         enabled: true
+       show-details: always
+ 
+ app:
+   jwt:
+-    secret: ${JWT_SECRET}
++    secret: 7c1e4a9f2b6d8e3a5c0f9b2d4e6a8c1f3b5d7e9a2c4f6b8d0e2a4c6f8b1d3e5a
+ 
+ logging:
+   level:
+     com.brokerdealer: INFO
+     org.springframework.kafka: WARN

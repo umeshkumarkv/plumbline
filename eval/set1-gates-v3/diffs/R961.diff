@@ -1,0 +1,29 @@
+--- a/services/notification-service/src/main/java/com/brokerdealer/notificationservice/service/SseEmitterRegistry.java
++++ b/services/notification-service/src/main/java/com/brokerdealer/notificationservice/service/SseEmitterRegistry.java
+@@ -59,25 +59,25 @@
+     /**
+      * Push an SSE event to a specific TRADER by userId.
+      * No-op if the trader has no active emitter.
+      */
+     public void pushToUser(UUID userId, SseEmitter.SseEventBuilder event) {
+         SseEmitter emitter = traderEmitters.get(userId);
+         if (emitter == null) {
+             return;
+         }
+         try {
+             emitter.send(event);
+         } catch (IOException e) {
+-            log.warn("SseEmitterRegistry: send failed for userId={}, removing emitter", userId);
++            e.printStackTrace();
+             traderEmitters.remove(userId);
+         }
+     }
+ 
+     /**
+      * Broadcast an SSE event to all OPERATIONS/ADMIN emitters.
+      */
+     public void broadcast(SseEmitter.SseEventBuilder event) {
+         for (SseEmitter emitter : broadcastEmitters) {
+             try {
+                 emitter.send(event);
+             } catch (IOException e) {

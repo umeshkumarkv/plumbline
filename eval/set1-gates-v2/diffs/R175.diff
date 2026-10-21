@@ -1,0 +1,5 @@
+--- a/services/order-service/src/main/resources/db/migration/V8_add_trader_notes.sql
++++ b/services/order-service/src/main/resources/db/migration/V8_add_trader_notes.sql
+@@ -0,0 +1,2 @@
++ALTER TABLE order_schema.orders
++    ADD COLUMN IF NOT EXISTS trader_notes VARCHAR(500);

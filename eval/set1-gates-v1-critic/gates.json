@@ -1,0 +1,407 @@
+{
+ "D01": {
+  "caught": true,
+  "rules": [
+   "C1-money-floating-point"
+  ],
+  "files": [
+   "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java"
+  ]
+ },
+ "D02": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D03": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D04": {
+  "caught": true,
+  "rules": [
+   "C1-primary-key-not-uuid"
+  ],
+  "files": [
+   "services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskWarning.java"
+  ]
+ },
+ "D05": {
+  "caught": true,
+  "rules": [
+   "C1-legacy-date-time"
+  ],
+  "files": [
+   "services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskRuleConfig.java"
+  ]
+ },
+ "D06": {
+  "caught": true,
+  "rules": [
+   "C1-enum-ordinal"
+  ],
+  "files": [
+   "services/execution-service/src/main/java/com/brokerdealer/executionservice/domain/Execution.java"
+  ]
+ },
+ "D07": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D08": {
+  "caught": true,
+  "rules": [
+   "C4-field-injection"
+  ],
+  "files": [
+   "services/notification-service/src/main/java/com/brokerdealer/notificationservice/service/NotificationService.java"
+  ]
+ },
+ "D09": {
+  "caught": true,
+  "rules": [
+   "C5-reactive-types"
+  ],
+  "files": [
+   "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java"
+  ]
+ },
+ "D10": {
+  "caught": true,
+  "rules": [
+   "C5-application-event"
+  ],
+  "files": [
+   "services/client-service/src/main/java/com/brokerdealer/clientservice/kafka/consumer/OrderEventConsumer.java"
+  ]
+ },
+ "D11": {
+  "caught": true,
+  "rules": [
+   "C9-generic-runtime-exception"
+  ],
+  "files": [
+   "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java"
+  ]
+ },
+ "D12": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D13": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D14": {
+  "caught": true,
+  "rules": [
+   "C11-yaml-literal-secret"
+  ],
+  "files": [
+   "services/notification-service/src/main/resources/application.yml"
+  ]
+ },
+ "D15": {
+  "caught": true,
+  "rules": [
+   "C8-log-secret"
+  ],
+  "files": [
+   "services/auth-service/src/main/java/com/brokerdealer/authservice/service/AuthService.java"
+  ]
+ },
+ "D16": {
+  "caught": true,
+  "rules": [
+   "C8-log-secret"
+  ],
+  "files": [
+   "services/auth-service/src/main/java/com/brokerdealer/authservice/service/UserService.java"
+  ]
+ },
+ "D17": {
+  "caught": true,
+  "rules": [
+   "C8-log-money-info"
+  ],
+  "files": [
+   "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java"
+  ]
+ },
+ "D18": {
+  "caught": true,
+  "rules": [
+   "C9-stacktrace-exposed"
+  ],
+  "files": [
+   "services/notification-service/src/main/java/com/brokerdealer/notificationservice/service/SseEmitterRegistry.java"
+  ]
+ },
+ "D19": {
+  "caught": true,
+  "rules": [
+   "C7-money-column-precision"
+  ],
+  "files": [
+   "services/execution-service/src/main/java/com/brokerdealer/executionservice/domain/Execution.java"
+  ]
+ },
+ "D20": {
+  "caught": true,
+  "rules": [
+   "C12-flyway-filename"
+  ],
+  "files": [
+   "services/order-service/src/main/resources/db/migration/V8_add_trader_notes.sql"
+  ]
+ },
+ "D21": {
+  "caught": true,
+  "rules": [
+   "C12-flyway-destructive"
+  ],
+  "files": [
+   "services/execution-service/src/main/resources/db/migration/V5__rebuild_pending_order_executions.sql"
+  ]
+ },
+ "D22": {
+  "caught": true,
+  "rules": [
+   "C12-flyway-foreign-schema"
+  ],
+  "files": [
+   "services/risk-service/src/main/resources/db/migration/V15__add_risk_flag_to_orders.sql"
+  ]
+ },
+ "D23": {
+  "caught": true,
+  "rules": [
+   "C2-kafka-group-name"
+  ],
+  "files": [
+   "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java"
+  ]
+ },
+ "D24": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D25": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D26": {
+  "caught": true,
+  "rules": [
+   "C5-controller-uses-repository"
+  ],
+  "files": [
+   "services/execution-service/src/main/java/com/brokerdealer/executionservice/controller/ExecutionController.java"
+  ]
+ },
+ "D27": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D28": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D29": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D30": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D31": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D32": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D33": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D34": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D35": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D36": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D37": {
+  "caught": true,
+  "rules": [
+   "C9-stacktrace-exposed"
+  ],
+  "files": [
+   "services/order-service/src/main/java/com/brokerdealer/orderservice/exception/GlobalExceptionHandler.java"
+  ]
+ },
+ "D38": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D39": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D40": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D41": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D42": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D43": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D44": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D45": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D46": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D47": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D48": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D49": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "D50": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K01": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K02": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K03": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K04": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K05": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K06": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K07": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K08": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K09": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K10": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K11": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K12": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K13": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K14": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ },
+ "K15": {
+  "caught": false,
+  "rules": [],
+  "files": []
+ }
+}

@@ -1,0 +1,183 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/exception/IllegalStateTransitionException.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/exception/IllegalStateTransitionException.java
+@@ -0,0 +1,18 @@
++package com.brokerdealer.orderservice.exception;
++
++import com.brokerdealer.orderservice.domain.OrderStatus;
++
++import java.util.UUID;
++
++public class IllegalStateTransitionException extends RuntimeException {
++
++    private final String errorCode = "ILLEGAL_STATE_TRANSITION";
++
++    public IllegalStateTransitionException(UUID orderId, OrderStatus from, OrderStatus to) {
++        super("Illegal order state transition: orderId=" + orderId + " " + from + " -> " + to);
++    }
++
++    public String getErrorCode() {
++        return errorCode;
++    }
++}
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -1,18 +1,19 @@
+ package com.brokerdealer.orderservice.service;
+ 
+ import com.brokerdealer.orderservice.domain.Order;
+ import com.brokerdealer.orderservice.domain.OrderStatus;
+ import com.brokerdealer.orderservice.dto.kafka.OrderExecutionRequestedEvent;
+ import com.brokerdealer.orderservice.dto.kafka.OrderStateChangedEvent;
++import com.brokerdealer.orderservice.exception.IllegalStateTransitionException;
+ import com.brokerdealer.orderservice.exception.OrderNotFoundException;
+ import com.brokerdealer.orderservice.kafka.producer.OrderEventProducer;
+ import com.brokerdealer.orderservice.repository.OrderRepository;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.data.redis.core.RedisTemplate;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+ 
+ import java.time.Instant;
+ import java.util.Collections;
+ import java.util.Map;
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -7,24 +7,26 @@
+ import com.brokerdealer.orderservice.exception.IllegalStateTransitionException;
+ import com.brokerdealer.orderservice.exception.OrderNotFoundException;
+ import com.brokerdealer.orderservice.kafka.producer.OrderEventProducer;
+ import com.brokerdealer.orderservice.repository.OrderRepository;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.data.redis.core.RedisTemplate;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+ 
+ import java.time.Instant;
+ import java.util.Collections;
++import java.util.EnumMap;
++import java.util.EnumSet;
+ import java.util.Map;
+ import java.util.Set;
+ import java.util.UUID;
+ 
+ @Service
+ @RequiredArgsConstructor
+ @Slf4j
+ public class OrderStateMachineService {
+ 
+     /**
+      * States that are terminal or already past the risk evaluation phase.
+      * Used ONLY as an idempotency guard in risk.evaluation.result consumers.
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -29,24 +29,46 @@
+ 
+     /**
+      * States that are terminal or already past the risk evaluation phase.
+      * Used ONLY as an idempotency guard in risk.evaluation.result consumers.
+      * SENT_TO_EXECUTION is NOT a true terminal state per the order lifecycle —
+      * do NOT reuse this set in consumeExecutionCompleted (SCRUM-48).
+      */
+     private static final Set<OrderStatus> IDEMPOTENT_SKIP_STATES_FOR_RISK_RESULT = Set.of(
+             OrderStatus.FILLED, OrderStatus.CANCELLED, OrderStatus.REJECTED,
+             OrderStatus.EXPIRED, OrderStatus.RISK_REJECTED, OrderStatus.SENT_TO_EXECUTION
+     );
+ 
++    /**
++     * Allowed forward transitions per CLAUDE.md §5. Any transition not listed here is
++     * rejected before anything is persisted or published.
++     */
++    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = new EnumMap<>(OrderStatus.class);
++
++    static {
++        ALLOWED_TRANSITIONS.put(OrderStatus.NEW,
++                EnumSet.of(OrderStatus.VALIDATED, OrderStatus.REJECTED));
++        ALLOWED_TRANSITIONS.put(OrderStatus.VALIDATED,
++                EnumSet.of(OrderStatus.RISK_CHECK_PASSED, OrderStatus.RISK_REJECTED));
++        ALLOWED_TRANSITIONS.put(OrderStatus.RISK_CHECK_PASSED,
++                EnumSet.of(OrderStatus.ACCEPTED));
++        ALLOWED_TRANSITIONS.put(OrderStatus.ACCEPTED,
++                EnumSet.of(OrderStatus.SENT_TO_EXECUTION));
++        ALLOWED_TRANSITIONS.put(OrderStatus.SENT_TO_EXECUTION,
++                EnumSet.of(OrderStatus.PARTIALLY_FILLED, OrderStatus.FILLED,
++                        OrderStatus.REJECTED, OrderStatus.EXPIRED));
++        ALLOWED_TRANSITIONS.put(OrderStatus.PARTIALLY_FILLED,
++                EnumSet.of(OrderStatus.FILLED, OrderStatus.EXPIRED, OrderStatus.SENT_TO_EXECUTION));
++    }
++
+     private static final String TRIGGERED_BY_RISK_ENGINE = "SYSTEM:RISK_ENGINE";
+     private static final String TRIGGERED_BY_OMS = "SYSTEM:OMS";
+ 
+     private final OrderRepository orderRepository;
+     private final OrderEventProducer orderEventProducer;
+     private final RedisTemplate<String, Object> redisTemplate;
+ 
+     @Transactional
+     public void transitionOnRiskPassed(UUID orderId) {
+         Order order = orderRepository.findById(orderId)
+                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+ 
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -181,25 +181,33 @@
+     public void transitionOnExecutionRejected(UUID orderId) {
+         Order order = orderRepository.findById(orderId)
+                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+         if (EXECUTION_TERMINAL_STATES.contains(order.getStatus())) {
+             log.warn("Idempotency: order already terminal: orderId={} status={}", orderId, order.getStatus());
+             return;
+         }
+         transitionState(order, order.getStatus(), OrderStatus.REJECTED, TRIGGERED_BY_EXECUTION);
+         evictRedisOrderState(orderId);
+         log.info("Order REJECTED by execution: orderId={}", orderId);
+     }
+ 
++    static boolean isAllowedTransition(OrderStatus from, OrderStatus to) {
++        return ALLOWED_TRANSITIONS.getOrDefault(from, Collections.emptySet()).contains(to);
++    }
++
+     private void transitionState(Order order, OrderStatus from, OrderStatus to, String triggeredBy) {
++        if (!isAllowedTransition(from, to)) {
++            log.warn("Rejected state transition: orderId={} {} -> {}", order.getId(), from, to);
++            throw new IllegalStateTransitionException(order.getId(), from, to);
++        }
+         order.setStatus(to);
+         orderRepository.save(order);
+ 
+         orderEventProducer.publishOrderStateChanged(OrderStateChangedEvent.builder()
+                 .orderId(order.getId())
+                 .clientId(order.getClientId())
+                 .userId(order.getCreatedBy())
+                 .fromState(from.name())
+                 .toState(to.name())
+                 .triggeredBy(triggeredBy)
+                 .timestamp(Instant.now().toString())
+                 .metadata(Collections.emptyMap())
+--- a/services/order-service/src/test/java/com/brokerdealer/orderservice/service/OrderStateTransitionTableTest.java
++++ b/services/order-service/src/test/java/com/brokerdealer/orderservice/service/OrderStateTransitionTableTest.java
+@@ -0,0 +1,23 @@
++package com.brokerdealer.orderservice.service;
++
++import com.brokerdealer.orderservice.domain.OrderStatus;
++import org.junit.jupiter.api.Test;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++class OrderStateTransitionTableTest {
++
++    @Test
++    void shouldAllowHappyPath() {
++        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.NEW, OrderStatus.VALIDATED)).isTrue();
++        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION)).isTrue();
++        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.SENT_TO_EXECUTION, OrderStatus.FILLED)).isTrue();
++    }
++
++    @Test
++    void shouldRejectTransitionsOutOfTerminalStates() {
++        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.FILLED, OrderStatus.NEW)).isFalse();
++        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.EXPIRED, OrderStatus.FILLED)).isFalse();
++        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.RISK_REJECTED, OrderStatus.VALIDATED)).isFalse();
++    }
++}

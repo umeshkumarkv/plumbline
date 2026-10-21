@@ -1,0 +1,217 @@
+{
+  "F01": {
+    "affected": [
+      "audit-service",
+      "client-service",
+      "notification-service"
+    ],
+    "evidence": {
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:112 \u2014 (String) event.get(\"executedPrice\") on execution.completed; a JSON number now raises ClassCastException",
+      "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java:213 \u2014 new BigDecimal((String) payload.get(\"executedPrice\")) in processExecutionFill; ClassCastException",
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/ExecutionConsumer.java:40,44 \u2014 reads event.getExecutedPrice() (String field; Jackson coerces number, still a reader)"
+    },
+    "breaking": true
+  },
+  "F02": {
+    "affected": [
+      "notification-service"
+    ],
+    "evidence": {
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/ExecutionConsumer.java:45 \u2014 reads event.getRemainingQuantity(); key renamed so value becomes null ('null remaining')"
+    },
+    "breaking": true
+  },
+  "F03": {
+    "affected": [
+      "audit-service"
+    ],
+    "evidence": {
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:47-50 \u2014 reads timestamp and Instant.parse()s it; epoch string fails silently to Instant.now(), breaking event time and duplicate check"
+    },
+    "breaking": true
+  },
+  "F04": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "F05": {
+    "affected": [
+      "audit-service"
+    ],
+    "evidence": {
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:63-69 \u2014 for RISK_REJECTED reads metadata.rejectionReason / metadata.violatedRuleCode; now empty"
+    },
+    "breaking": true
+  },
+  "F06": {
+    "affected": [
+      "notification-service",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/kafka/consumer/RiskResultConsumer.java:26,34 \u2014 converts to RiskEvaluationResultEvent and reads getViolatedRuleCode(); now null",
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/RiskResultConsumer.java:38,46 \u2014 reads event.getRuleCode(), which is now populated (behaviour change)"
+    },
+    "breaking": true
+  },
+  "F07": {
+    "affected": [
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/client/ClientServiceClient.java:31 + dto/client/ClientResponse.java:20 \u2014 GET /clients/{id}/portfolio deserialises kycExpiryDate as LocalDate (ISO); dd-MM-yyyy fails, read at service/OrderService.java:130"
+    },
+    "breaking": true
+  },
+  "F08": {
+    "affected": [
+      "frontend",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/client/ExecutionServiceClient.java:32 + service/OrderService.java:542 \u2014 ExecutionItem.executedAt passed through into order detail fills",
+      "frontend": "frontend/src/pages/OrderBlotterPage.tsx:697 \u2014 fmtDateTime(f.executedAt) on getExecutions() result (frontend/src/api/orderApi.ts:31)"
+    },
+    "breaking": true
+  },
+  "F09": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/pages/DashboardPage.tsx:143-146 \u2014 getOrders() without pageSize relies on server default; gtdPage.orders list now truncated to 20 (OrderBlotterPage passes pageSize=500)"
+    },
+    "breaking": false
+  },
+  "F10": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "F11": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/pages/AdminPanelPage.tsx:312,327 via frontend/src/api/riskApi.ts:9 \u2014 PATCH /risk/rules/{ruleCode} sends only enabled/thresholdValue/changeReason; now 400"
+    },
+    "breaking": true
+  },
+  "F12": {
+    "affected": [
+      "frontend",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/client/MarketDataServiceClient.java:69 + service/OrderService.java:389-390 \u2014 holidays.contains(expiryDate.toString()) compares ISO dates",
+      "frontend": "frontend/src/components/NavBar.tsx:74 and frontend/src/pages/OrderEntryPage.tsx:275,414 \u2014 holidayDate assumed YYYY-MM-DD (new Date(h.holidayDate + 'T12:00:00'))"
+    },
+    "breaking": true
+  },
+  "F13": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/pages/OrderBlotterPage.tsx:726-731 \u2014 reads rec.previousState / rec.actorId from audit records (optional in types, tolerant)"
+    },
+    "breaking": false
+  },
+  "F14": {
+    "affected": [
+      "auth-service",
+      "marketdata-service",
+      "order-service",
+      "risk-service"
+    ],
+    "evidence": {
+      "auth-service": "services/auth-service/src/main/java/com/brokerdealer/authservice/controller/UserController.java:79 \u2014 httpRequest.getHeader(\"X-User-Id\") for caller admin id",
+      "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java:32,40,49 \u2014 @RequestHeader X-User-Id for watchlist owner",
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java:33,67 \u2014 @RequestHeader X-User-Id (createdBy / ownership check)",
+      "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java:39,67,76 \u2014 @RequestHeader X-User-Id (maker/checker, defaults to SYSTEM)"
+    },
+    "breaking": true
+  },
+  "F15": {
+    "affected": [
+      "api-gateway"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java:89 \u2014 claims.get(\"username\") populates X-Username; now null"
+    },
+    "breaking": true
+  },
+  "F16": {
+    "affected": [
+      "api-gateway",
+      "order-service"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/resources/application.yml:48 \u2014 route uri http://audit-service:8087",
+      "order-service": "services/order-service/src/main/resources/application.yml:73 \u2014 health aggregator audit-service URL :8087"
+    },
+    "breaking": true
+  },
+  "F17": {
+    "affected": [
+      "api-gateway"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java:38,82 \u2014 checks Redis key auth:blacklist:{token}; revoked tokens would be accepted"
+    },
+    "breaking": true
+  },
+  "F18": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/nginx.conf:16 (proxy_pass api-gateway:9090) and frontend/vite.config.ts:11 ('/api' -> localhost:9090)"
+    },
+    "breaking": true
+  },
+  "F19": {
+    "affected": [
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/request/SubmitOrderRequest.java:35 \u2014 @JsonProperty(\"tif\") @NotBlank timeInForce; body key timeInForce ignored -> 400"
+    },
+    "breaking": true
+  },
+  "F20": {
+    "affected": [
+      "marketdata-service"
+    ],
+    "evidence": {
+      "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java:38 \u2014 only @PostMapping(\"/{symbol}\") exists; POST /watchlists with body unmapped"
+    },
+    "breaking": true
+  },
+  "F21": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "F22": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "F23": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "F24": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "F25": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "S01": {
+    "affected": [
+      "audit-service",
+      "client-service"
+    ],
+    "evidence": {
+      "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java:214 \u2014 processExecutionFill does new BigDecimal((String) payload.get(\"fillValue\")) on execution.completed Map payload; NPE once key renamed",
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:113 \u2014 event.get(\"fillValue\") from execution.completed Map; stored metadata silently becomes \"0\""
+    },
+    "breaking": true
+  },
+  "S02": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "S03": {
+    "affected": [
+      "audit-service",
+      "client-service",
+      "notification-service"
+    ],
+    "evidence": {
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/dto/event/ExecutionCompletedEvent.java:20 \u2014 typed DTO declares Integer executedQty, used in ExecutionConsumer.java:39,43 (Jackson coerces numeric string, but contract type changed)",
+      "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java:212 \u2014 ((Number) payload.get(\"executedQty\")).intValue() -> ClassCastException on String",
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:111 \u2014 event.get(\"executedQty\") copied into audit metadata (type in stored JSON changes)"
+    },
+    "breaking": true
+  },
+  "S04": {
+    "affected": [
+      "audit-service",
+      "client-service",
+      "notification-service",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/kafka/consumer/RiskResultConsumer.java:40-58 \u2014 @KafkaListener execution.completed drives FILLED/PARTIALLY_FILLED/REJECTED transitions",
+      "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/kafka/consumer/OrderEventConsumer.java:25 \u2014 @KafkaListener execution.completed updates cash/holdings",
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:92 \u2014 @KafkaListener execution.completed writes EXECUTION audit rows",
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/ExecutionConsumer.java:21-26 \u2014 @KafkaListener execution.completed pushes fill notifications"
+    },
+    "breaking": true
+  },
+  "S05": {
+    "affected": [
+      "audit-service",
+      "client-service",
+      "notification-service"
+    ],
+    "evidence": {
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/OrderStateConsumer.java:23 \u2014 listens on literal topic \"order.state.changed\"",
+      "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/kafka/consumer/OrderEventConsumer.java:18 \u2014 listens on \"order.state.changed\"",
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:27 \u2014 listens on \"order.state.changed\""
+    },
+    "breaking": true
+  },
+  "S06": {
+    "affected": [
+      "risk-service"
+    ],
+    "evidence": {
+      "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/RiskEvaluationRequest.java:23 \u2014 expects buyingPower; read in rule/SufficientCashRule.java:31-34 (null -> rule silently PASSES)"
+    },
+    "breaking": true
+  },
+  "S07": {
+    "affected": [
+      "notification-service",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/kafka/RiskEvaluationResultEvent.java:16 + kafka/consumer/RiskResultConsumer.java:34 \u2014 convertValue maps violatedRuleCode; rule code lost on RISK_REJECTED",
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/dto/event/RiskEvaluationResultEvent.java:15 + kafka/consumer/RiskResultConsumer.java:38,46 \u2014 reads ruleCode from risk.evaluation.result (change alters what it receives)"
+    },
+    "breaking": true
+  },
+  "S08": {
+    "affected": [
+      "audit-service"
+    ],
+    "evidence": {
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:65-69 \u2014 reads nested metadata.getOrDefault(\"violatedRuleCode\") for RISK_REJECTED events"
+    },
+    "breaking": true
+  },
+  "S09": {
+    "affected": [
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/kafka/OrderStateChangedEvent.java:22 \u2014 producer of order.state.changed publishes triggeredBy (no initiatedBy); set in OrderStateMachineService.java:110,178, OrderService.java:281, MarketCloseScheduler.java:109"
+    },
+    "breaking": true
+  },
+  "S10": {
+    "affected": [
+      "frontend",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/client/ClientResponse.java:22 + service/OrderService.java:210-211 \u2014 reads data.cashBalance from GET /clients/{id}/portfolio for buying-power check",
+      "frontend": "frontend/src/pages/PortfolioPage.tsx:163, frontend/src/pages/OrderEntryPage.tsx:387 \u2014 portfolio.cashBalance (types/client.types.ts Portfolio)"
+    },
+    "breaking": true
+  },
+  "S11": {
+    "affected": [
+      "frontend",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/client/ClientResponse.java:30 (nested HoldingData.quantity) + service/OrderService.java:215 \u2014 sums holding quantity for holdingsForSymbol",
+      "frontend": "frontend/src/pages/PortfolioPage.tsx:168,242, frontend/src/pages/OrderEntryPage.tsx:391 \u2014 holding.quantity"
+    },
+    "breaking": true
+  },
+  "S12": {
+    "affected": [
+      "client-service",
+      "frontend",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/client/MarketDataServiceClient.java:31 \u2014 marketDataServiceUrl + \"/api/v1/market/instrument/\" + symbol",
+      "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/client/MarketDataClient.java:25 \u2014 marketDataBaseUrl + \"/api/v1/market/instrument/\" + symbol",
+      "frontend": "frontend/src/api/marketApi.ts:15 \u2014 http.get(`/market/instrument/${symbol}`) used by OrderEntryPage.tsx:313, MarketDataPage.tsx:996"
+    },
+    "breaking": true
+  },
+  "S13": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/pages/OrderEntryPage.tsx:373,708 \u2014 r.companyName from searchInstrumentsV2 (/market/instruments/search); types/market.types.ts InstrumentSearchResult.companyName"
+    },
+    "breaking": true
+  },
+  "S14": {
+    "affected": [
+      "frontend",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/execution/ExecutionItem.java:12 + service/OrderService.java:527-540 \u2014 getExecutedPrice() for avgFillPrice and fills from GET /executions/{orderId}",
+      "frontend": "frontend/src/pages/OrderBlotterPage.tsx:684 \u2014 f.executedPrice (types/order.types.ts Execution)"
+    },
+    "breaking": true
+  },
+  "S15": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/api/orderApi.ts:43 \u2014 POST /orders body sends tif: order.tif; would fail @NotBlank timeInForce"
+    },
+    "breaking": true
+  },
+  "S16": {
+    "affected": [
+      "client-service"
+    ],
+    "evidence": {
+      "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java:43-47 \u2014 GET /clients/{id} returns ClientProfileResponse (no holdings/cashBalance/marginCallActive) instead of PortfolioResponse; provider contract now relied on differently"
+    },
+    "breaking": true
+  },
+  "S17": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "S18": {
+    "affected": [
+      "api-gateway",
+      "order-service"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/resources/application.yml:48 \u2014 route uri http://audit-service:8087",
+      "order-service": "services/order-service/src/main/resources/application.yml:73 \u2014 health aggregator audit-service URL :8087"
+    },
+    "breaking": true
+  },
+  "S19": {
+    "affected": [
+      "api-gateway",
+      "client-service",
+      "execution-service",
+      "frontend",
+      "order-service"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/resources/application.yml:32,36 \u2014 routes to http://marketdata-service:8084",
+      "order-service": "services/order-service/src/main/resources/application.yml:61,70 \u2014 marketdata-service url / health url :8084",
+      "client-service": "services/client-service/src/main/resources/application.yml:58 \u2014 services.marketdata.url default :8084",
+      "execution-service": "services/execution-service/src/main/resources/application.yml:72 + service/MarketDataClient.java:20 \u2014 marketdata base-url :8084",
+      "frontend": "frontend/nginx.conf:27 (/ws/ -> marketdata-service:8084), frontend/vite.config.ts:12 (ws proxy localhost:8084) \u2014 WebSocket bypasses gateway"
+    },
+    "breaking": true
+  },
+  "S20": {
+    "affected": [
+      "frontend",
+      "marketdata-service"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/api/marketApi.ts:5-50 \u2014 all market calls go to /api/v1/market/* via gateway; no longer routed",
+      "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/MarketDataController.java:27 \u2014 serves /api/v1/market; gateway forwards path unchanged (no rewrite) so /api/v1/marketdata/** would 404"
+    },
+    "breaking": true
+  },
+  "S21": {
+    "affected": [
+      "auth-service",
+      "marketdata-service",
+      "order-service",
+      "risk-service"
+    ],
+    "evidence": {
+      "auth-service": "services/auth-service/src/main/java/com/brokerdealer/authservice/controller/UserController.java:79 \u2014 httpRequest.getHeader(\"X-User-Id\")",
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java:33,67 \u2014 @RequestHeader(\"X-User-Id\")",
+      "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java:32,40,49 \u2014 @RequestHeader(\"X-User-Id\") for per-user watchlists",
+      "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java:39,67,76 \u2014 @RequestHeader(\"X-User-Id\") maker/checker identity"
+    },
+    "breaking": true
+  },
+  "S22": {
+    "affected": [
+      "execution-service"
+    ],
+    "evidence": {
+      "execution-service": "services/execution-service/src/main/java/com/brokerdealer/executionservice/controller/ExecutionController.java:20 \u2014 only GET /api/v1/executions/{orderId} exists (UUID path var); /order/{id} unmapped"
+    },
+    "breaking": true
+  },
+  "S23": {
+    "affected": [
+      "audit-service"
+    ],
+    "evidence": {
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:116-124 \u2014 EXECUTION audit metadata JSON written with key executedQty (no filledQty), served via GET /audit/trail"
+    },
+    "breaking": true
+  },
+  "S24": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "S25": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "S26": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "S27": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "S28": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "S29": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "S30": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  }
+}

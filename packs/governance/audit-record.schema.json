@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/umeshkumarkv/plumbline/packs/governance/audit-record.schema.json",
+  "title": "Plumbline agent change audit record",
+  "description": "One record per agent-produced change that reaches a PR. Append-only; hash-chained via prev_hash. Lets internal audit trace a merged commit to the agent run, the reviews and the humans who approved it.",
+  "type": "object",
+  "required": ["record_id", "ticket", "agent", "runtime", "model", "artifact", "gates", "critic", "approvals", "created_at", "prev_hash"],
+  "properties": {
+    "record_id": {"type": "string", "format": "uuid"},
+    "ticket": {"type": "string", "pattern": "^[A-Z]+-[0-9]+$"},
+    "pr": {"type": ["integer", "null"]},
+    "merge_sha": {"type": ["string", "null"]},
+    "agent": {"type": "string", "description": "e.g. dev-eval-loop"},
+    "spec_version": {"type": "string", "description": "git sha of plumbline/loops/spec used"},
+    "runtime": {"enum": ["claude-code", "copilot", "ci"]},
+    "model": {"type": "string", "description": "model identifier as reported by the runtime"},
+    "attempts": {"type": "integer", "minimum": 1},
+    "artifact": {
+      "type": "object", "required": ["type", "sha256"],
+      "properties": {"type": {"enum": ["diff", "design", "story", "prd", "claude-md", "doc"]}, "sha256": {"type": "string"}, "path": {"type": "string"}}
+    },
+    "gates": {
+      "type": "object", "required": ["ruleset_sha", "new_findings", "baseline_debt"],
+      "properties": {
+        "ruleset_sha": {"type": "string"},
+        "new_findings": {"type": "integer", "minimum": 0},
+        "baseline_debt": {"type": "integer", "minimum": 0},
+        "rules_fired": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "critic": {
+      "type": "object", "required": ["isolation", "rubric", "verdict"],
+      "properties": {
+        "isolation": {"enum": ["subagent", "ci-headless", "separate-session", "self-attested"],
+                      "description": "self-attested reviews cannot satisfy a gate"},
+        "model": {"type": "string"},
+        "rubric": {"type": "string"},
+        "verdict": {"enum": ["PASS", "FAIL"]},
+        "findings": {"type": "integer", "minimum": 0},
+        "discarded_for_evidence_mismatch": {"type": "integer", "minimum": 0},
+        "output_sha256": {"type": "string"}
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["action", "approver", "at"],
+        "properties": {
+          "action": {"type": "string", "description": "row of approval-matrix.md, e.g. git-push, merge, add-label"},
+          "approver": {"type": "string", "description": "SSO identity or policy id if automated"},
+          "automated": {"type": "boolean", "default": false},
+          "at": {"type": "string", "format": "date-time"}
+        }
+      }
+    },
+    "bypasses": {"type": "array", "items": {"type": "string"}, "description": "any gate bypass, with reason and approver"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "prev_hash": {"type": "string", "description": "sha256 of the previous record (hash chain)"}
+  },
+  "additionalProperties": false
+}

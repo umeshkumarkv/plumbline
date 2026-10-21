@@ -1,0 +1,34 @@
+{
+  "R793": {"violation": false, "findings": []},
+  "R822": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §13e Dependency Injection", "evidence": "@Autowired\n    private MarketDataClient marketDataClient;", "reason": "Field injection via @Autowired is explicitly forbidden; MarketDataClient must be a final field injected through @RequiredArgsConstructor."},
+    {"severity": "minor", "rule": "CLAUDE.md §10 / §15 Testing Requirements", "evidence": "public PortfolioSummaryResponse getSummary(UUID clientId) {", "reason": "New cost-basis/market-value business logic in PortfolioSummaryService ships with no unit tests."}
+  ]},
+  "R828": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §4 (.dto — Never expose entities) / §13g", "evidence": "public List<MarketHoliday> getUpcomingHolidays(int limit) {\n...\nList<MarketHoliday> data = marketDataService.getUpcomingHolidays(limit);", "reason": "Service returns and controller serializes the JPA entity MarketHoliday instead of mapping to MarketHolidayResponse via the existing mapper."}
+  ]},
+  "R836": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §10 Market hours / Timezone (America/New_York — never UTC for market hours)", "evidence": "ZonedDateTime now = instant.atZone(ZoneOffset.UTC);", "reason": "Session window 09:30–16:00 is evaluated in UTC (05:30–12:00 ET / 04:30–11:00 EST), so LIMIT orders fill pre-market and are frozen for most of the real session."}
+  ]},
+  "R838": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §7 Kafka Rules (retry 3x 1s/2s/4s, then {topic}.DLT; at-least-once)", "evidence": "} catch (Exception e) {\n            meterRegistry.counter(METRIC_FAILED, \"orderType\", event.getOrderType().name()).increment();\n            log.error(\"Failed to process execution request: orderId={}, error={}\",", "reason": "Swallowing all exceptions in the listener bypasses the DefaultErrorHandler, so failed executions are never retried or sent to order.execution.requested.DLT and the offset is committed — the order is silently lost in SENT_TO_EXECUTION."}
+  ]},
+  "R844": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §13a BigDecimal arithmetic (setScale(2, RoundingMode.HALF_UP))", "evidence": "BigDecimal netProceeds = fillValue.subtract(commission).setScale(2, BigDecimal.ROUND_DOWN);", "reason": "SELL proceeds are truncated with the deprecated ROUND_DOWN int constant instead of HALF_UP, inconsistent with the BUY path and the mandated money rounding."},
+    {"severity": "major", "rule": "client-service CLAUDE.md §10 (Never allow negative cash balance after reservation) / §11 buyingPower", "evidence": "BigDecimal totalDebit = fillValue.add(commission).setScale(2, RoundingMode.HALF_UP);\n                client.setCashBalance(client.getCashBalance().subtract(totalDebit)", "reason": "Commission is debited on BUY fills but never included in the reserved-cash / buying-power check, so a client trading up to full buying power is driven below zero cash."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 Testing Requirements", "evidence": "void shouldDebitFillValuePlusCommissionOnBuy() {", "reason": "Only the BUY path is tested; the new SELL commission/net-proceeds logic has no unit test."}
+  ]},
+  "R845": {"violation": false, "findings": []},
+  "R943": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §6 Level 2 check #12 (Self trade check — no open opposite order at crossing price)", "evidence": "return side == OrderSide.BUY\n                ? restingLimit.compareTo(newLimit) >= 0\n                : restingLimit.compareTo(newLimit) <= 0;", "reason": "Crossing comparison is inverted versus the original logic (BUY crosses when resting sell limit <= buy limit), so genuine self-crosses pass validation and non-crossing orders are wrongly rejected."},
+    {"severity": "minor", "rule": "CLAUDE.md §10 / §15 Testing Requirements", "evidence": "public class SelfTradeDetector {", "reason": "New extracted Level 2 business logic (including SHORT_SELL side expansion) has no unit tests, which would have caught the inverted comparison."}
+  ]},
+  "R947": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §12 REST API Standards / correctness (bounded list endpoints, MAX_PAGE_SIZE)", "evidence": "List<Order> orders = orderRepository.findAll(spec,\n                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, \"createdAt\"));", "reason": "Unpaged query bypasses the MAX_PAGE_SIZE cap and, with createdAfter optional, returns every order ever stored rather than a full-day view — unbounded memory/response size."},
+    {"severity": "major", "rule": "Correctness — order/fill data", "evidence": ".map(o -> toOrderResponse(o, Collections.emptyList()))", "reason": "FILLED/PARTIALLY_FILLED orders are reported with filledQuantity 0 and null avgFillPrice, giving the desk an incorrect blotter."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 Testing Requirements", "evidence": "public OrderListResponse getBlotter(String status, String side, String createdAfter) {", "reason": "New service method and REST endpoint added without unit or MockMvc tests."}
+  ]},
+  "R961": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §10 / §13h Logging (NEVER log passwords, tokens, secrets)", "evidence": "log.info(\"Admin password reset: targetId={} callerAdminId={} request={}\", targetId, callerAdminId, request);", "reason": "ResetPasswordRequest is Lombok @Data, so its toString() writes the plaintext newPassword to the INFO log."}
+  ]}
+}

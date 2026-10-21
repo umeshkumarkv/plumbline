@@ -1,0 +1,30 @@
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java
+@@ -174,25 +174,26 @@
+                 request.getOrderId(), qty);
+     }
+ 
+     public boolean checkLimitCondition(OrderSide side, BigDecimal marketPrice, BigDecimal limitPrice) {
+         if (side == OrderSide.BUY) {
+             return marketPrice.compareTo(limitPrice) <= 0;
+         } else {
+             return marketPrice.compareTo(limitPrice) >= 0;
+         }
+     }
+ 
+     private BigDecimal computeFillValue(int qty, BigDecimal price) {
+-        return BigDecimal.valueOf(qty).multiply(price).setScale(2, RoundingMode.HALF_UP);
++        double value = qty * price.doubleValue();
++        return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
+     }
+ 
+     private Execution buildExecution(OrderExecutionRequest request, int qty, BigDecimal executedPrice,
+                                      FillType fillType, BigDecimal fillValue,
+                                      int remainingQty, BigDecimal marketPrice) {
+         return Execution.builder()
+                 .orderId(request.getOrderId())
+                 .clientId(request.getClientId())
+                 .symbol(request.getSymbol())
+                 .side(request.getSide())
+                 .executedQty(qty)
+                 .executedPrice(executedPrice)

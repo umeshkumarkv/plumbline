@@ -1,0 +1,209 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/OpenExposureResponse.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/OpenExposureResponse.java
+@@ -0,0 +1,24 @@
++package com.brokerdealer.orderservice.dto.response;
++
++import lombok.Builder;
++import lombok.Value;
++
++import java.util.UUID;
++
++@Value
++@Builder
++public class OpenExposureResponse {
++    OpenExposureData data;
++    ResponseMeta meta;
++
++    @Value
++    @Builder
++    public static class OpenExposureData {
++        UUID clientId;
++        Integer openBuyCount;
++        Integer openSellCount;
++        String openBuyNotional;
++        String openSellNotional;
++        String netNotional;
++    }
++}
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OpenExposureService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OpenExposureService.java
+@@ -0,0 +1,75 @@
++package com.brokerdealer.orderservice.service;
++
++import com.brokerdealer.orderservice.domain.Order;
++import com.brokerdealer.orderservice.domain.OrderSide;
++import com.brokerdealer.orderservice.domain.OrderStatus;
++import com.brokerdealer.orderservice.dto.response.OpenExposureResponse;
++import com.brokerdealer.orderservice.dto.response.ResponseMeta;
++import com.brokerdealer.orderservice.repository.OrderRepository;
++import lombok.RequiredArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
++import org.springframework.stereotype.Service;
++
++import java.math.BigDecimal;
++import java.math.RoundingMode;
++import java.time.Instant;
++import java.util.List;
++import java.util.UUID;
++
++@Service
++@RequiredArgsConstructor
++@Slf4j
++public class OpenExposureService {
++
++    private static final List<OrderStatus> OPEN_STATUSES = List.of(
++            OrderStatus.NEW, OrderStatus.VALIDATED, OrderStatus.RISK_CHECK_PASSED,
++            OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION, OrderStatus.PARTIALLY_FILLED);
++
++    private final OrderRepository orderRepository;
++
++    public OpenExposureResponse getOpenExposure(UUID clientId) {
++        log.debug("Computing open exposure: clientId={}", clientId);
++        List<Order> openOrders = orderRepository.findAll((root, query, cb) -> cb.and(
++                cb.equal(root.get("clientId"), clientId),
++                root.get("status").in(OPEN_STATUSES)));
++
++        long buyCents = 0L;
++        long sellCents = 0L;
++        int buyCount = 0;
++        int sellCount = 0;
++        for (Order order : openOrders) {
++            if (order.getOrderValue() == null) {
++                continue;
++            }
++            long cents = order.getOrderValue().movePointRight(2)
++                    .setScale(0, RoundingMode.HALF_UP)
++                    .longValueExact();
++            if (order.getSide() == OrderSide.BUY) {
++                buyCents += cents;
++                buyCount++;
++            } else {
++                sellCents += cents;
++                sellCount++;
++            }
++        }
++
++        BigDecimal buyNotional = BigDecimal.valueOf(buyCents / 100.0).setScale(2, RoundingMode.HALF_UP);
++        BigDecimal sellNotional = BigDecimal.valueOf(sellCents / 100.0).setScale(2, RoundingMode.HALF_UP);
++        BigDecimal netNotional = buyNotional.subtract(sellNotional);
++
++        return OpenExposureResponse.builder()
++                .data(OpenExposureResponse.OpenExposureData.builder()
++                        .clientId(clientId)
++                        .openBuyCount(buyCount)
++                        .openSellCount(sellCount)
++                        .openBuyNotional(buyNotional.toPlainString())
++                        .openSellNotional(sellNotional.toPlainString())
++                        .netNotional(netNotional.toPlainString())
++                        .build())
++                .meta(ResponseMeta.builder()
++                        .timestamp(Instant.now().toString())
++                        .requestId(UUID.randomUUID().toString())
++                        .build())
++                .build();
++    }
++}
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
+@@ -1,16 +1,17 @@
+ package com.brokerdealer.orderservice.controller;
+ 
+ import com.brokerdealer.orderservice.dto.request.SubmitOrderRequest;
+ import com.brokerdealer.orderservice.dto.response.OrderDetailResponse;
++import com.brokerdealer.orderservice.dto.response.OpenExposureResponse;
+ import com.brokerdealer.orderservice.dto.response.OrderListResponse;
+ import com.brokerdealer.orderservice.dto.response.StatusCountsResponse;
+ import com.brokerdealer.orderservice.dto.response.SubmitOrderResponse;
+ import com.brokerdealer.orderservice.service.OrderService;
+ import jakarta.validation.Valid;
+ import lombok.RequiredArgsConstructor;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.GetMapping;
+ import org.springframework.web.bind.annotation.PathVariable;
+ import org.springframework.web.bind.annotation.PostMapping;
+ import org.springframework.web.bind.annotation.RequestBody;
+ import org.springframework.web.bind.annotation.RequestHeader;
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
+@@ -1,20 +1,21 @@
+ package com.brokerdealer.orderservice.controller;
+ 
+ import com.brokerdealer.orderservice.dto.request.SubmitOrderRequest;
+ import com.brokerdealer.orderservice.dto.response.OrderDetailResponse;
+ import com.brokerdealer.orderservice.dto.response.OpenExposureResponse;
+ import com.brokerdealer.orderservice.dto.response.OrderListResponse;
+ import com.brokerdealer.orderservice.dto.response.StatusCountsResponse;
+ import com.brokerdealer.orderservice.dto.response.SubmitOrderResponse;
++import com.brokerdealer.orderservice.service.OpenExposureService;
+ import com.brokerdealer.orderservice.service.OrderService;
+ import jakarta.validation.Valid;
+ import lombok.RequiredArgsConstructor;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.GetMapping;
+ import org.springframework.web.bind.annotation.PathVariable;
+ import org.springframework.web.bind.annotation.PostMapping;
+ import org.springframework.web.bind.annotation.RequestBody;
+ import org.springframework.web.bind.annotation.RequestHeader;
+ import org.springframework.web.bind.annotation.RequestMapping;
+ import org.springframework.web.bind.annotation.RequestParam;
+ import org.springframework.web.bind.annotation.RestController;
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
+@@ -19,24 +19,25 @@
+ import org.springframework.web.bind.annotation.RequestMapping;
+ import org.springframework.web.bind.annotation.RequestParam;
+ import org.springframework.web.bind.annotation.RestController;
+ 
+ import java.util.UUID;
+ 
+ @RestController
+ @RequestMapping("/api/v1/orders")
+ @RequiredArgsConstructor
+ public class OrderController {
+ 
+     private final OrderService orderService;
++    private final OpenExposureService openExposureService;
+ 
+     @PostMapping
+     public ResponseEntity<SubmitOrderResponse> submitOrder(
+             @Valid @RequestBody SubmitOrderRequest request,
+             @RequestHeader(value = "X-User-Id", required = false) String userId) {
+         UUID userUuid = null;
+         if (userId != null && !userId.isBlank()) {
+             try {
+                 userUuid = UUID.fromString(userId);
+             } catch (IllegalArgumentException ignored) {
+                 // gateway may not send this header in all cases
+             }
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
+@@ -50,24 +50,29 @@
+     public ResponseEntity<OrderListResponse> getOrders(
+             @RequestParam(required = false) String status,
+             @RequestParam(required = false) UUID clientId,
+             @RequestParam(required = false) String side,
+             @RequestParam(required = false) String timeInForce,
+             @RequestParam(required = false) String createdAfter,
+             @RequestParam(defaultValue = "0") int page,
+             @RequestParam(defaultValue = "50") int pageSize) {
+         OrderListResponse response = orderService.getOrders(status, clientId, side, timeInForce, createdAfter, page, pageSize);
+         return ResponseEntity.ok(response);
+     }
+ 
++    @GetMapping("/open-exposure")
++    public ResponseEntity<OpenExposureResponse> getOpenExposure(@RequestParam UUID clientId) {
++        return ResponseEntity.ok(openExposureService.getOpenExposure(clientId));
++    }
++
+     @GetMapping("/status-counts")
+     public ResponseEntity<StatusCountsResponse> getStatusCounts() {
+         return ResponseEntity.ok(orderService.getStatusCountsForToday());
+     }
+ 
+     @GetMapping("/{id}")
+     public ResponseEntity<OrderDetailResponse> getOrderById(
+             @PathVariable UUID id,
+             @RequestHeader(value = "X-User-Id", required = false) String userId,
+             @RequestHeader(value = "X-User-Role", required = false) String role) {
+         UUID callerUserId = null;
+         if (userId != null && !userId.isBlank()) {

@@ -1,0 +1,134 @@
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java
+@@ -229,24 +229,64 @@
+             }
+         } else if ("SELL".equals(side) && !"REJECTED".equals(fillType)) {
+             client.setCashBalance(client.getCashBalance().add(fillValue).setScale(2, RoundingMode.HALF_UP));
+             client.setTurnoverToday(client.getTurnoverToday().add(fillValue).setScale(2, RoundingMode.HALF_UP));
+             reduceHolding(clientId, symbol, executedQty);
+             log.info("SELL fill applied: clientId={} symbol={} qty={}", clientId, symbol, executedQty);
+         }
+ 
+         clientRepository.save(client);
+         evictPortfolioCache(clientId);
+     }
+ 
++    /**
++     * Moves shares of one symbol from a source account to a target account at the
++     * source's average cost (operations journal). Cash balances are not affected.
++     */
++    public Map<String, Object> journalPosition(UUID sourceClientId, UUID targetClientId,
++                                               String symbol, Integer quantity) {
++        if (symbol == null || !symbol.matches("[A-Z]{1,6}")) {
++            throw new ValidationException("VALIDATION_ERROR", "symbol must be 1-6 uppercase letters");
++        }
++        if (quantity == null || quantity <= 0) {
++            throw new ValidationException("VALIDATION_ERROR", "quantity must be greater than 0");
++        }
++        if (sourceClientId.equals(targetClientId)) {
++            throw new ValidationException("INVALID_JOURNAL", "source and target client must differ");
++        }
++        if (!clientRepository.existsById(sourceClientId) || !clientRepository.existsById(targetClientId)) {
++            throw new ClientNotFoundException("CLIENT_NOT_FOUND", "Source or target client not found");
++        }
++
++        Holding source = holdingRepository.findByClientIdAndSymbol(sourceClientId, symbol)
++                .orElseThrow(() -> new ValidationException("INSUFFICIENT_HOLDINGS",
++                        "No position in " + symbol + " to journal"));
++        if (source.getQuantity() < quantity) {
++            throw new ValidationException("INSUFFICIENT_HOLDINGS",
++                    "Journal quantity exceeds position in " + symbol);
++        }
++
++        source.setQuantity(source.getQuantity() - quantity);
++        holdingRepository.save(source);
++        upsertHolding(targetClientId, symbol, quantity, source.getAvgPrice());
++
++        evictPortfolioCache(sourceClientId);
++        evictPortfolioCache(targetClientId);
++        log.info("Position journal applied: sourceClientId={} targetClientId={} symbol={} qty={}",
++                sourceClientId, targetClientId, symbol, quantity);
++
++        return Map.of("sourceClientId", sourceClientId, "targetClientId", targetClientId,
++                "symbol", symbol, "quantity", quantity);
++    }
++
+     private void upsertHolding(UUID clientId, String symbol, int executedQty, BigDecimal executedPrice) {
+         Optional<Holding> existing = holdingRepository.findByClientIdAndSymbol(clientId, symbol);
+         if (existing.isPresent()) {
+             Holding h = existing.get();
+             int newQty = h.getQuantity() + executedQty;
+             BigDecimal newAvg = h.getAvgPrice().multiply(BigDecimal.valueOf(h.getQuantity()))
+                     .add(executedPrice.multiply(BigDecimal.valueOf(executedQty)))
+                     .divide(BigDecimal.valueOf(newQty), 4, RoundingMode.HALF_UP);
+             h.setQuantity(newQty);
+             h.setAvgPrice(newAvg);
+             holdingRepository.save(h);
+         } else {
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
+@@ -54,22 +54,33 @@
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
+     @PatchMapping("/{id}/default-route")
+     public ResponseEntity<Map<String, Object>> updateDefaultRoute(
+             @PathVariable UUID id,
+             @Valid @RequestBody UpdateDefaultRouteRequest request) {
+         log.debug("PATCH /api/v1/clients/{}/default-route", id);
+         UpdateDefaultRouteResponse data = clientService.updateDefaultRoute(id, request);
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
++    @PostMapping("/{id}/position-journal")
++    public ResponseEntity<Map<String, Object>> journalPosition(
++            @PathVariable UUID id,
++            @RequestParam UUID targetClientId,
++            @RequestParam String symbol,
++            @RequestParam Integer quantity) {
++        log.debug("POST /api/v1/clients/{}/position-journal targetClientId={} symbol={}", id, targetClientId, symbol);
++        return ResponseEntity.ok(buildSuccessResponse(
++                clientService.journalPosition(id, targetClientId, symbol, quantity)));
++    }
++
+     private Map<String, Object> buildSuccessResponse(Object data) {
+         return Map.of(
+                 "data", data,
+                 "meta", Map.of(
+                         "timestamp", Instant.now().toString(),
+                         "requestId", UUID.randomUUID().toString()
+                 )
+         );
+     }
+ }
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/filter/RoleAuthorizationFilter.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/filter/RoleAuthorizationFilter.java
+@@ -83,24 +83,28 @@
+         // /active endpoint — TRADER, OPERATIONS and ADMIN
+         if ("GET".equalsIgnoreCase(method) && path.equals("/api/v1/clients/active")) {
+             return "TRADER".equals(role) || "OPERATIONS".equals(role) || "ADMIN".equals(role);
+         }
+         if ("GET".equalsIgnoreCase(method) && path.startsWith("/api/v1/clients")) {
+             // ADMIN cannot access portfolio data per BRD Section 12.2
+             // SYSTEM (order-service service-to-service) requires portfolio for L2 validation — allowed
+             if (path.contains("/portfolio") && "ADMIN".equals(role)) {
+                 return false;
+             }
+             return true;
+         }
++        // POST /position-journal — OPERATIONS only
++        if ("POST".equalsIgnoreCase(method) && path.endsWith("/position-journal")) {
++            return "OPERATIONS".equals(role);
++        }
+         // PATCH /default-route — ADMIN only
+         if ("PATCH".equalsIgnoreCase(method) && path.contains("/default-route")) {
+             return "ADMIN".equals(role);
+         }
+         return false;
+     }
+ 
+     private void writeError(HttpServletResponse response, HttpStatus status,
+                             String code, String message) throws IOException {
+         response.setStatus(status.value());
+         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+         Map<String, Object> body = Map.of(

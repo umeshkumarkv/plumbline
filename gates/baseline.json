@@ -1,0 +1,162 @@
+{
+ "fingerprints": {
+  "03fe958ad5553296": 1,
+  "05004e462d5411ae": 1,
+  "08633ffbd2e6ddbd": 1,
+  "1c695f3b1da7f435": 1,
+  "28bd76ec1f19cc7d": 1,
+  "295838d6e01b35e5": 1,
+  "30cf47d3945f1a67": 1,
+  "33d2c07ec208e9f5": 1,
+  "702d96a089a82cc5": 1,
+  "7e2c472739aafe8a": 1,
+  "81b06bd98b087a96": 1,
+  "849a16ef261ade21": 1,
+  "955ce9365b3467c8": 1,
+  "95a827fe0ee7a658": 1,
+  "a81e3fac32ec3d04": 1,
+  "b1a30d47faeb3d8e": 1,
+  "c2504abd60852383": 1,
+  "c3cf4875c8f9b003": 1,
+  "d0c06e3d2407d480": 1,
+  "e132541c226538b4": 1,
+  "f072549deccaf1c8": 1,
+  "f7f56d5734080999": 1,
+  "f85233f780f02038": 1,
+  "f8a2991d9c435c43": 1,
+  "fb4d934b52756c9d": 1,
+  "fbe64e80549c6d51": 1
+ },
+ "findings": [
+  {
+   "rule": "C1-legacy-date-time",
+   "path": "services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java",
+   "line": 16
+  },
+  {
+   "rule": "DOM-PERF-unbounded-findall",
+   "path": "services/auth-service/src/main/java/com/brokerdealer/authservice/service/UserService.java",
+   "line": 42
+  },
+  {
+   "rule": "DOM-PERF-unbounded-findall",
+   "path": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+   "line": 48
+  },
+  {
+   "rule": "C3-response-dto-mutable",
+   "path": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/response/MarketDataResponse.java",
+   "line": 9
+  },
+  {
+   "rule": "C1-primary-key-not-uuid",
+   "path": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/domain/Instrument.java",
+   "line": 17
+  },
+  {
+   "rule": "C1-primary-key-not-uuid",
+   "path": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/domain/Tick.java",
+   "line": 17
+  },
+  {
+   "rule": "DOM-PERF-unbounded-findall",
+   "path": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/AdminResetService.java",
+   "line": 31
+  },
+  {
+   "rule": "DOM-PERF-unbounded-findall",
+   "path": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/MarketDataService.java",
+   "line": 312
+  },
+  {
+   "rule": "DOM-PERF-unbounded-findall",
+   "path": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/PriceTickService.java",
+   "line": 63
+  },
+  {
+   "rule": "DOM-TIME-utc-trading-day",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+   "line": 131
+  },
+  {
+   "rule": "DOM-TIME-utc-trading-day",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+   "line": 156
+  },
+  {
+   "rule": "DOM-TIME-utc-trading-day",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+   "line": 194
+  },
+  {
+   "rule": "DOM-TIME-utc-trading-day",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+   "line": 381
+  },
+  {
+   "rule": "C1-primary-key-not-uuid",
+   "path": "services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskRuleConfig.java",
+   "line": 17
+  },
+  {
+   "rule": "DOM-TIME-utc-trading-day",
+   "path": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/KycVerifiedRule.java",
+   "line": 34
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/auth-service/src/main/java/com/brokerdealer/authservice/dto/response/LoginData.java",
+   "line": 8
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/response/ResponseMeta.java",
+   "line": 8
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/RiskAlertsData.java",
+   "line": 8
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/SubmitOrderData.java",
+   "line": 12
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/ServiceHealthEntry.java",
+   "line": 9
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/OrderListData.java",
+   "line": 10
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/ResponseMeta.java",
+   "line": 8
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/TradingSummaryData.java",
+   "line": 8
+  },
+  {
+   "rule": "C2-class-suffix",
+   "path": "services/audit-service/src/main/java/com/brokerdealer/auditservice/dto/response/ResponseMeta.java",
+   "line": 8
+  },
+  {
+   "rule": "C12-flyway-destructive",
+   "path": "services/marketdata-service/src/main/resources/db/migration/V12__fix_ticks_numeric_precision.sql",
+   "line": 11
+  },
+  {
+   "rule": "DOM-SM-direct-setstatus",
+   "path": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/MarketCloseScheduler.java",
+   "line": 101
+  }
+ ]
+}

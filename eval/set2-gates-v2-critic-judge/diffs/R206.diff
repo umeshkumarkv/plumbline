@@ -1,0 +1,166 @@
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/repository/OrderStatusLookupRepository.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/repository/OrderStatusLookupRepository.java
+@@ -0,0 +1,30 @@
++package com.brokerdealer.executionservice.repository;
++
++import lombok.RequiredArgsConstructor;
++import org.springframework.dao.EmptyResultDataAccessException;
++import org.springframework.jdbc.core.JdbcTemplate;
++import org.springframework.stereotype.Repository;
++
++import java.util.Optional;
++import java.util.UUID;
++
++/**
++ * Read-only lookup of the authoritative order status used as a pre-fill guard.
++ */
++@Repository
++@RequiredArgsConstructor
++public class OrderStatusLookupRepository {
++
++    private static final String SELECT_STATUS =
++            "SELECT status FROM order_schema.orders WHERE id = ?";
++
++    private final JdbcTemplate jdbcTemplate;
++
++    public Optional<String> findStatus(UUID orderId) {
++        try {
++            return Optional.ofNullable(jdbcTemplate.queryForObject(SELECT_STATUS, String.class, orderId));
++        } catch (EmptyResultDataAccessException e) {
++            return Optional.empty();
++        }
++    }
++}
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java
+@@ -1,22 +1,23 @@
+ package com.brokerdealer.executionservice.service;
+ 
+ import com.brokerdealer.executionservice.domain.OrderType;
+ import com.brokerdealer.executionservice.dto.request.OrderExecutionRequest;
+ import com.brokerdealer.executionservice.dto.response.ExecutionListResponse;
+ import com.brokerdealer.executionservice.dto.response.ExecutionResponse;
+ import com.brokerdealer.executionservice.dto.response.ResponseMeta;
+ import com.brokerdealer.executionservice.exception.ResourceNotFoundException;
+ import com.brokerdealer.executionservice.mapper.ExecutionMapper;
+ import com.brokerdealer.executionservice.repository.ExecutionRepository;
++import com.brokerdealer.executionservice.repository.OrderStatusLookupRepository;
+ import com.brokerdealer.executionservice.repository.PendingOrderExecutionRepository;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.stereotype.Service;
+ 
+ import java.time.Instant;
+ import java.util.List;
+ import java.util.UUID;
+ 
+ @Service
+ @RequiredArgsConstructor
+ @Slf4j
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java
+@@ -18,24 +18,27 @@
+ import java.util.List;
+ import java.util.UUID;
+ 
+ @Service
+ @RequiredArgsConstructor
+ @Slf4j
+ public class ExecutionService {
+ 
+     private final ExecutionRepository executionRepository;
+     private final PendingOrderExecutionRepository pendingRepository;
+     private final FillSimulationService fillSimulationService;
+     private final ExecutionMapper executionMapper;
++    private final OrderStatusLookupRepository orderStatusLookupRepository;
++
++    private static final String EXECUTABLE_STATUS = "SENT_TO_EXECUTION";
+ 
+     public ExecutionListResponse getExecutionsByOrderId(UUID orderId) {
+         List<ExecutionResponse> executions = executionRepository
+                 .findByOrderIdOrderByExecutedAtAsc(orderId)
+                 .stream()
+                 .map(executionMapper::toResponse)
+                 .toList();
+ 
+         if (executions.isEmpty()) {
+             throw new ResourceNotFoundException("ORDER_NOT_FOUND",
+                     "No executions found for order: " + orderId);
+         }
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java
+@@ -53,22 +53,29 @@
+     }
+ 
+     public void processFill(OrderExecutionRequest request) {
+         if (executionRepository.existsByOrderId(request.getOrderId())) {
+             log.warn("Idempotency: execution already exists for orderId={}", request.getOrderId());
+             return;
+         }
+         if (pendingRepository.existsByOrderId(request.getOrderId())) {
+             log.warn("Idempotency: pending execution already exists for orderId={}", request.getOrderId());
+             return;
+         }
+ 
++        String currentStatus = orderStatusLookupRepository.findStatus(request.getOrderId()).orElse(null);
++        if (!EXECUTABLE_STATUS.equals(currentStatus)) {
++            log.warn("Fill refused — order not executable: orderId={} status={}",
++                    request.getOrderId(), currentStatus);
++            return;
++        }
++
+         log.info("Processing fill: orderId={} orderType={} symbol={}",
+                 request.getOrderId(), request.getOrderType(), request.getSymbol());
+ 
+         if (request.getOrderType() == OrderType.MARKET) {
+             fillSimulationService.executeMarketFill(request);
+         } else {
+             fillSimulationService.initiateLimitFill(request);
+         }
+     }
+ }
+--- a/services/execution-service/src/test/java/com/brokerdealer/executionservice/service/ExecutionServiceStatusGuardTest.java
++++ b/services/execution-service/src/test/java/com/brokerdealer/executionservice/service/ExecutionServiceStatusGuardTest.java
+@@ -0,0 +1,42 @@
++package com.brokerdealer.executionservice.service;
++
++import com.brokerdealer.executionservice.domain.OrderType;
++import com.brokerdealer.executionservice.dto.request.OrderExecutionRequest;
++import com.brokerdealer.executionservice.repository.ExecutionRepository;
++import com.brokerdealer.executionservice.repository.OrderStatusLookupRepository;
++import com.brokerdealer.executionservice.repository.PendingOrderExecutionRepository;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.extension.ExtendWith;
++import org.mockito.InjectMocks;
++import org.mockito.Mock;
++import org.mockito.junit.jupiter.MockitoExtension;
++
++import java.util.Optional;
++import java.util.UUID;
++
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.Mockito.never;
++import static org.mockito.Mockito.verify;
++import static org.mockito.Mockito.when;
++
++@ExtendWith(MockitoExtension.class)
++class ExecutionServiceStatusGuardTest {
++
++    @Mock private ExecutionRepository executionRepository;
++    @Mock private PendingOrderExecutionRepository pendingRepository;
++    @Mock private FillSimulationService fillSimulationService;
++    @Mock private OrderStatusLookupRepository orderStatusLookupRepository;
++    @InjectMocks private ExecutionService executionService;
++
++    @Test
++    void shouldNotFillOrderThatIsNotSentToExecution() {
++        OrderExecutionRequest request = new OrderExecutionRequest();
++        request.setOrderId(UUID.randomUUID());
++        request.setOrderType(OrderType.MARKET);
++        when(orderStatusLookupRepository.findStatus(request.getOrderId())).thenReturn(Optional.of("ACCEPTED"));
++
++        executionService.processFill(request);
++
++        verify(fillSimulationService, never()).executeMarketFill(any());
++    }
++}

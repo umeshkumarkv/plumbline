@@ -1,0 +1,442 @@
+[
+  {
+    "id": "H01",
+    "title": "Rename fillValue to fillNotional in execution.completed payload",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/event/ExecutionCompletedEvent.java",
+        "find": "    private String fillValue;",
+        "replace": "    private String fillNotional;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": ".fillValue(execution.getFillValue().toPlainString())",
+        "replace": ".fillNotional(execution.getFillValue().toPlainString())"
+      }
+    ],
+    "kind": "kafka-payload"
+  },
+  {
+    "id": "H02",
+    "title": "Rename nested metadata key rejectionReason -> reason on RISK_REJECTED order.state.changed",
+    "unit": "order-service",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+        "find": "\"rejectionReason\",  rejectionReason  != null",
+        "replace": "\"reason\",  rejectionReason  != null"
+      }
+    ],
+    "kind": "kafka-payload"
+  },
+  {
+    "id": "H03",
+    "title": "Rename risk result value PASSED -> APPROVED",
+    "unit": "risk-service",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskResult.java",
+        "find": "return new RiskResult(\"PASSED\", null, null);",
+        "replace": "return new RiskResult(\"APPROVED\", null, null);"
+      }
+    ],
+    "kind": "kafka-payload"
+  },
+  {
+    "id": "H04",
+    "title": "Audit consumer reads fillPrice instead of executedPrice from execution.completed",
+    "unit": "audit-service",
+    "edits": [
+      {
+        "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java",
+        "find": "String executedPrice = (String) event.get(\"executedPrice\");",
+        "replace": "String executedPrice = (String) event.get(\"fillPrice\");"
+      }
+    ],
+    "kind": "kafka-consumer"
+  },
+  {
+    "id": "H05",
+    "title": "Audit service subscribes to risk.evaluation.result to log risk decisions",
+    "unit": "audit-service",
+    "edits": [
+      {
+        "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java",
+        "find": "    private UUID parseUuid(Object value) {",
+        "replace": "    @KafkaListener(topics = \"risk.evaluation.result\",\n                   groupId = \"audit-service-risk.evaluation.result-group\")\n    public void consumeRiskResult(Map<String, Object> event) {\n        UUID orderId = parseUuid(event.get(\"orderId\"));\n        if (orderId == null) {\n            return;\n        }\n        AuditLog auditLog = AuditLog.builder()\n                .entityType(\"RISK\")\n                .entityId(orderId)\n                .clientId(parseUuid(event.get(\"clientId\")))\n                .newState(String.valueOf(event.get(\"result\")))\n                .actorType(ActorType.SYSTEM)\n                .eventTimestamp(Instant.now())\n                .metadata(toJson(Map.of(\"violatedRuleCode\", String.valueOf(event.get(\"violatedRuleCode\")))))\n                .build();\n        auditLogRepository.save(auditLog);\n    }\n\n    private UUID parseUuid(Object value) {"
+      }
+    ],
+    "kind": "kafka-consumer"
+  },
+  {
+    "id": "H06",
+    "title": "Rename userId -> traderId in risk.evaluation.result payload",
+    "unit": "risk-service",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/RiskEvaluationResult.java",
+        "find": "    UUID userId;",
+        "replace": "    UUID traderId;"
+      },
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/kafka/consumer/RiskEvaluationConsumer.java",
+        "find": ".userId(request.getUserId())",
+        "replace": ".traderId(request.getUserId())"
+      }
+    ],
+    "kind": "kafka-payload"
+  },
+  {
+    "id": "H07",
+    "title": "Rename FillType.FULL -> COMPLETE (enum used in both execution.completed and GET /executions response)",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/domain/FillType.java",
+        "find": "    FULL,",
+        "replace": "    COMPLETE,"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": "return FillType.FULL;",
+        "replace": "return FillType.COMPLETE;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": "case FULL -> {",
+        "replace": "case COMPLETE -> {"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": "FillType.FULL, fillValue, 0, marketPrice);",
+        "replace": "FillType.COMPLETE, fillValue, 0, marketPrice);"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": "FillType.FULL, fillValue2, 0, marketPrice);",
+        "replace": "FillType.COMPLETE, fillValue2, 0, marketPrice);"
+      }
+    ],
+    "kind": "kafka-payload"
+  },
+  {
+    "id": "H08",
+    "title": "Move execution.completed topic name to a property and rename it to execution.fills",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/resources/application.yml",
+        "find": "app:\n  marketdata:\n",
+        "replace": "app:\n  kafka:\n    topic:\n      execution-completed: execution.fills\n  marketdata:\n"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/producer/ExecutionEventProducer.java",
+        "find": "private static final String EXECUTION_COMPLETED = \"execution.completed\";",
+        "replace": "@org.springframework.beans.factory.annotation.Value(\"${app.kafka.topic.execution-completed:execution.fills}\")\n    private String EXECUTION_COMPLETED;"
+      }
+    ],
+    "kind": "config"
+  },
+  {
+    "id": "H09",
+    "title": "Rename holdings[].quantity -> qty in client portfolio response",
+    "unit": "client-service",
+    "edits": [
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/HoldingDetailResponse.java",
+        "find": "    Integer quantity;",
+        "replace": "    Integer qty;"
+      },
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+        "find": ".quantity(holding.getQuantity())",
+        "replace": ".qty(holding.getQuantity())"
+      }
+    ],
+    "kind": "rest-response"
+  },
+  {
+    "id": "H10",
+    "title": "Rename holdings[].currentPrice -> lastPrice in client portfolio response",
+    "unit": "client-service",
+    "edits": [
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/HoldingDetailResponse.java",
+        "find": "    String currentPrice;",
+        "replace": "    String lastPrice;"
+      },
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+        "find": ".currentPrice(currentPrice != null ? currentPrice.toPlainString() : null)",
+        "replace": ".lastPrice(currentPrice != null ? currentPrice.toPlainString() : null)"
+      }
+    ],
+    "kind": "rest-response"
+  },
+  {
+    "id": "H11",
+    "title": "Rename notification SSE endpoint /api/v1/notifications/stream -> /api/v1/notifications/events",
+    "unit": "notification-service",
+    "edits": [
+      {
+        "file": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/controller/SseController.java",
+        "find": "@GetMapping(value = \"/stream\"",
+        "replace": "@GetMapping(value = \"/events\""
+      }
+    ],
+    "kind": "rest-path"
+  },
+  {
+    "id": "H12",
+    "title": "Change approve pending risk change from PATCH to POST",
+    "unit": "risk-service",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java",
+        "find": "@PatchMapping(\"/rules/pending-changes/{changeId}/approve\")",
+        "replace": "@PostMapping(\"/rules/pending-changes/{changeId}/approve\")"
+      }
+    ],
+    "kind": "rest-path"
+  },
+  {
+    "id": "H13",
+    "title": "Rename query parameter query -> term on GET /api/v1/market/instruments/search",
+    "unit": "marketdata-service",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/MarketDataController.java",
+        "find": "@RequestParam String query,",
+        "replace": "@RequestParam(\"term\") String query,"
+      }
+    ],
+    "kind": "rest-request"
+  },
+  {
+    "id": "H14",
+    "title": "Change @JsonProperty on SubmitOrderRequest.timeInForce from tif to timeInForce",
+    "unit": "order-service",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/request/SubmitOrderRequest.java",
+        "find": "@JsonProperty(\"tif\")",
+        "replace": "@JsonProperty(\"timeInForce\")"
+      }
+    ],
+    "kind": "rest-request"
+  },
+  {
+    "id": "H15",
+    "title": "Rename executedQty -> filledQty in GET /api/v1/executions/{orderId} response",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/response/ExecutionResponse.java",
+        "find": "    private Integer executedQty;",
+        "replace": "    private Integer filledQty;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/mapper/ExecutionMapper.java",
+        "find": "@Mapping(source = \"id\", target = \"executionId\")",
+        "replace": "@Mapping(source = \"id\", target = \"executionId\")\n    @Mapping(source = \"executedQty\", target = \"filledQty\")"
+      }
+    ],
+    "kind": "rest-response"
+  },
+  {
+    "id": "H16",
+    "title": "Execution MarketDataClient calls /api/v1/market/instrument/{symbol} instead of /api/v1/market/{symbol}",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/MarketDataClient.java",
+        "find": "String url = marketDataBaseUrl + \"/api/v1/market/{symbol}\";",
+        "replace": "String url = marketDataBaseUrl + \"/api/v1/market/instrument/{symbol}\";"
+      }
+    ],
+    "kind": "rest-client"
+  },
+  {
+    "id": "H17",
+    "title": "Gateway forwards username as X-User-Name instead of X-Username",
+    "unit": "api-gateway",
+    "edits": [
+      {
+        "file": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java",
+        "find": "static final String HEADER_USERNAME = \"X-Username\";",
+        "replace": "static final String HEADER_USERNAME = \"X-User-Name\";"
+      }
+    ],
+    "kind": "header"
+  },
+  {
+    "id": "H18",
+    "title": "Rename JWT claim role -> roles in issued tokens",
+    "unit": "auth-service",
+    "edits": [
+      {
+        "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java",
+        "find": "private static final String CLAIM_ROLE = \"role\";",
+        "replace": "private static final String CLAIM_ROLE = \"roles\";"
+      }
+    ],
+    "kind": "header"
+  },
+  {
+    "id": "H19",
+    "title": "Move marketdata-service to port 8094",
+    "unit": "marketdata-service",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/resources/application.yml",
+        "find": "  port: 8084",
+        "replace": "  port: 8094"
+      }
+    ],
+    "kind": "config"
+  },
+  {
+    "id": "H20",
+    "title": "Amend latest client-service migration to add cost_basis_ccy to holdings",
+    "unit": "client-service",
+    "edits": [
+      {
+        "file": "services/client-service/src/main/resources/db/migration/V7__remove_reserved_cash.sql",
+        "find": "ALTER TABLE client_schema.clients DROP COLUMN reserved_cash;",
+        "replace": "ALTER TABLE client_schema.clients DROP COLUMN reserved_cash;\nALTER TABLE client_schema.holdings ADD COLUMN cost_basis_ccy VARCHAR(3) NOT NULL DEFAULT 'USD';"
+      }
+    ],
+    "kind": "db-schema"
+  },
+  {
+    "id": "H21",
+    "title": "Gateway: change watchlist route predicate /api/v1/watchlists/** -> /api/v1/watchlist/**",
+    "unit": "api-gateway",
+    "edits": [
+      {
+        "file": "services/api-gateway/src/main/resources/application.yml",
+        "find": "            - Path=/api/v1/watchlists/**",
+        "replace": "            - Path=/api/v1/watchlist/**"
+      }
+    ],
+    "kind": "gateway"
+  },
+  {
+    "id": "H22",
+    "title": "Gateway listens on 8080 instead of 9090",
+    "unit": "api-gateway",
+    "edits": [
+      {
+        "file": "services/api-gateway/src/main/resources/application.yml",
+        "find": "  port: 9090",
+        "replace": "  port: 8080"
+      }
+    ],
+    "kind": "gateway"
+  },
+  {
+    "id": "H23",
+    "title": "Frontend fetches fills from /executions/order/{orderId}",
+    "unit": "frontend",
+    "edits": [
+      {
+        "file": "frontend/src/api/orderApi.ts",
+        "find": "http.get(`/executions/${orderId}`)",
+        "replace": "http.get(`/executions/order/${orderId}`)"
+      }
+    ],
+    "kind": "frontend"
+  },
+  {
+    "id": "H24",
+    "title": "Frontend sends {reason} instead of {rejectionReason} when rejecting a pending risk change",
+    "unit": "frontend",
+    "edits": [
+      {
+        "file": "frontend/src/api/riskApi.ts",
+        "find": "/reject`, { rejectionReason })",
+        "replace": "/reject`, { reason: rejectionReason })"
+      }
+    ],
+    "kind": "frontend"
+  },
+  {
+    "id": "H25",
+    "title": "Audit consumer private helper parseUuid trims whitespace",
+    "unit": "audit-service",
+    "edits": [
+      {
+        "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java",
+        "find": "return UUID.fromString(value.toString());",
+        "replace": "return UUID.fromString(value.toString().trim());"
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "H26",
+    "title": "Comment-only change on OrderStateChangedEvent.triggeredBy",
+    "unit": "order-service",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/kafka/OrderStateChangedEvent.java",
+        "find": "// \"USER:{userId}\" | \"SYSTEM:OMS\" | \"SYSTEM:RISK_ENGINE\"",
+        "replace": "// actor of the transition: \"USER:{userId}\" | \"SYSTEM:OMS\" | \"SYSTEM:RISK_ENGINE\""
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "H27",
+    "title": "Rename a unit test method in ClientServiceClientTest",
+    "unit": "order-service",
+    "edits": [
+      {
+        "file": "services/order-service/src/test/java/com/brokerdealer/orderservice/client/ClientServiceClientTest.java",
+        "find": "void shouldReturnNullWhenClientNotFound() {",
+        "replace": "void shouldReturnNullWhenClientServiceReturns404() {"
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "H28",
+    "title": "Reword execution.completed publish log line",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/producer/ExecutionEventProducer.java",
+        "find": "log.info(\"Published execution.completed: orderId={} executionId={} fillType={}\",",
+        "replace": "log.info(\"Execution event published: orderId={} executionId={} fillType={}\","
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "H29",
+    "title": "Refactor private computeFillValue helper (operand order, same result)",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": "return BigDecimal.valueOf(qty).multiply(price).setScale(2, RoundingMode.HALF_UP);",
+        "replace": "return price.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);"
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "H30",
+    "title": "Widen duplicate-order Redis window from 30s to 60s",
+    "unit": "risk-service",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/DuplicateOrderRule.java",
+        "find": "setIfAbsent(key, \"1\", Duration.ofSeconds(30))",
+        "replace": "setIfAbsent(key, \"1\", Duration.ofSeconds(60))"
+      }
+    ],
+    "kind": "internal"
+  }
+]

@@ -1,0 +1,27 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskRuleConfig.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskRuleConfig.java
+@@ -33,21 +33,22 @@
+     @Column(name = "threshold_unit", length = 50)
+     private String thresholdUnit;
+ 
+     @Column(name = "description", length = 500)
+     private String description;
+ 
+     @Column(name = "action", nullable = false, length = 20)
+     private String action;
+ 
+     @Column(name = "priority", nullable = false)
+     private Integer priority;
+ 
++    @Temporal(TemporalType.TIMESTAMP)
+     @Column(name = "updated_at", nullable = false)
+-    private Instant updatedAt;
++    private java.util.Date updatedAt;
+ 
+     @PrePersist
+     @PreUpdate
+     protected void onUpdate() {
+-        updatedAt = Instant.now();
++        updatedAt = new java.util.Date();
+     }
+ }

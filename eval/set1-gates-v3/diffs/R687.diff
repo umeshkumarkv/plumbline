@@ -1,0 +1,31 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskRuleService.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskRuleService.java
+@@ -27,24 +27,28 @@
+ 
+     private final RiskRuleConfigRepository riskRuleConfigRepository;
+     private final RiskRuleAuditRepository riskRuleAuditRepository;
+     private final RiskRuleMapper riskRuleMapper;
+     private final RiskEvaluationService riskEvaluationService;
+ 
+     public List<RiskRuleResponse> getAllRules() {
+         log.debug("Fetching all risk rules ordered by priority");
+         return riskRuleConfigRepository.findAllByOrderByPriorityAsc()
+                 .stream()
+                 .map(riskRuleMapper::toResponse)
+                 .toList();
++    }
++
++    public java.util.Optional<RiskRuleConfig> findRule(String ruleCode) {
++        return riskRuleConfigRepository.findById(ruleCode);
+     }
+ 
+     @Transactional
+     public RiskRuleResponse updateRule(String ruleCode, UpdateRiskRuleRequest request, String changedBy) {
+         if (request.getChangeReason() == null || request.getChangeReason().isBlank()) {
+             throw new ValidationException("VALIDATION_ERROR", "changeReason is required");
+         }
+ 
+         RiskRuleConfig rule = riskRuleConfigRepository.findById(ruleCode)
+                 .orElseThrow(() -> new RuleNotFoundException("RULE_NOT_FOUND",
+                         "Risk rule not found: " + ruleCode));
+ 

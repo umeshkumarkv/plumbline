@@ -1,0 +1,38 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/MarketCloseScheduler.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/MarketCloseScheduler.java
+@@ -44,30 +44,34 @@
+             List.of(OrderStatus.SENT_TO_EXECUTION, OrderStatus.PARTIALLY_FILLED);
+ 
+     private static final List<OrderStatus> NON_TERMINAL_STATUSES = List.of(
+             OrderStatus.NEW, OrderStatus.VALIDATED, OrderStatus.RISK_CHECK_PASSED,
+             OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION, OrderStatus.PARTIALLY_FILLED
+     );
+ 
+     private final OrderRepository orderRepository;
+     private final OrderEventProducer orderEventProducer;
+     private final RedisTemplate<String, Object> redisTemplate;
+     private final Clock clock;
+ 
++    private boolean isMarketHoliday(LocalDate date) {
++        return US_MARKET_HOLIDAYS_2026.contains(date);
++    }
++
+     @Scheduled(cron = "0 0 16 * * MON-FRI", zone = "America/New_York")
+     @Transactional
+     public void runMarketCloseScheduler() {
+         LocalDate today = LocalDate.now(clock);
+ 
+-        if (US_MARKET_HOLIDAYS_2026.contains(today)) {
++        if (isMarketHoliday(today)) {
+             log.info("market close skipped — US market holiday: date={}", today);
+             return;
+         }
+ 
+         List<Order> dayOrders = orderRepository.findByTimeInForceAndStatusIn(
+                 TimeInForce.DAY, EXPIRY_ELIGIBLE_STATUSES);
+         dayOrders.forEach(o -> expireOrder(o, TRIGGERED_BY_SCHEDULER, "DAY order expired at market close"));
+ 
+         List<Order> gtdOrders = orderRepository.findByTimeInForceAndExpiryDateAndStatusIn(
+                 TimeInForce.GTD, today, EXPIRY_ELIGIBLE_STATUSES);
+         gtdOrders.forEach(o -> expireOrder(o, TRIGGERED_BY_SCHEDULER, "GTD order reached gtdDate at market close"));
+ 

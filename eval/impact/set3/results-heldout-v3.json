@@ -1,0 +1,597 @@
+{
+ "summary": {
+  "scenarios": 25,
+  "tp": 18,
+  "fp": 4,
+  "fn": 9,
+  "disputed_hit": 0,
+  "disputed_miss": 0,
+  "recall": 0.667,
+  "precision": 0.818,
+  "controls": {
+   "n": 7,
+   "clean": 6
+  },
+  "judge_agreement_units": 27,
+  "judge_disputed_units": 0
+ },
+ "rows": [
+  {
+   "id": "F01",
+   "kind": "kafka",
+   "title": "Publish executedPrice on execution.completed as a JSON number (BigDecimal) instead of a string",
+   "unit": "execution-service",
+   "predicted": [
+    "audit-service",
+    "client-service",
+    "notification-service"
+   ],
+   "agreed": [
+    "audit-service",
+    "client-service",
+    "notification-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "audit-service",
+    "client-service",
+    "notification-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "audit-service": [
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: executedPrice)",
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: executedPrice)"
+    ],
+    "client-service": [
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: executedPrice)",
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: executedPrice)"
+    ],
+    "notification-service": [
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: executedPrice)",
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: executedPrice)"
+    ]
+   }
+  },
+  {
+   "id": "F02",
+   "kind": "kafka",
+   "title": "Rename remainingQuantity to remainingQty in the execution.completed event",
+   "unit": "execution-service",
+   "predicted": [
+    "notification-service"
+   ],
+   "agreed": [
+    "notification-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "notification-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "notification-service": [
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: remainingQty, remainingQuantity)",
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: remainingQty, remainingQuantity)"
+    ]
+   }
+  },
+  {
+   "id": "F03",
+   "kind": "kafka",
+   "title": "Emit order.state.changed timestamp as epoch-millis string instead of ISO-8601",
+   "unit": "order-service",
+   "predicted": [
+    "audit-service",
+    "notification-service"
+   ],
+   "agreed": [
+    "audit-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "audit-service"
+   ],
+   "fp": [
+    "notification-service"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "audit-service": [
+     "consumes `order.state.changed`; order-service changed the payload contract (keys: Instant, getTimestamp, parse, setTimestamp, time, timestamp, toEpochMilli, valueOf)",
+     "consumes `order.state.changed`; order-service changed the payload contract (keys: Instant, getTimestamp, parse, setTimestamp, time, timestamp, toEpochMilli, valueOf)"
+    ],
+    "notification-service": [
+     "consumes `order.state.changed`; order-service changed the payload contract (keys: Instant, getTimestamp, parse, setTimestamp, time, timestamp, toEpochMilli, valueOf)",
+     "consumes `order.state.changed`; order-service changed the payload contract (keys: Instant, getTimestamp, parse, setTimestamp, time, timestamp, toEpochMilli, valueOf)"
+    ]
+   }
+  },
+  {
+   "id": "F04",
+   "kind": "kafka",
+   "title": "Change order-service consumer group id for execution.completed listener",
+   "unit": "order-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F05",
+   "kind": "kafka",
+   "title": "Move rejectionReason/violatedRuleCode out of metadata map into top-level fields on order.state.changed",
+   "unit": "order-service",
+   "predicted": [
+    "audit-service"
+   ],
+   "agreed": [
+    "audit-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "audit-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "audit-service": [
+     "consumes `order.state.changed`; order-service changed the payload contract (keys: rejectionReason, violatedRuleCode)",
+     "consumes `order.state.changed`; order-service changed the payload contract (keys: rejectionReason, violatedRuleCode)"
+    ]
+   }
+  },
+  {
+   "id": "F06",
+   "kind": "kafka",
+   "title": "Rename violatedRuleCode to ruleCode in risk.evaluation.result payload",
+   "unit": "risk-service",
+   "predicted": [
+    "notification-service",
+    "order-service"
+   ],
+   "agreed": [
+    "notification-service",
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "notification-service",
+    "order-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "notification-service": [
+     "consumes `risk.evaluation.result`; risk-service changed the payload contract (keys: ruleCode, violatedRuleCode)",
+     "consumes `risk.evaluation.result`; risk-service changed the payload contract (keys: ruleCode, violatedRuleCode)"
+    ],
+    "order-service": [
+     "consumes `risk.evaluation.result`; risk-service changed the payload contract (keys: ruleCode, violatedRuleCode)",
+     "consumes `risk.evaluation.result`; risk-service changed the payload contract (keys: ruleCode, violatedRuleCode)"
+    ]
+   }
+  },
+  {
+   "id": "F07",
+   "kind": "rest",
+   "title": "Format kycExpiryDate in portfolio response as dd-MM-yyyy",
+   "unit": "client-service",
+   "predicted": [],
+   "agreed": [
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [
+    "order-service"
+   ],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F08",
+   "kind": "rest",
+   "title": "Return executedAt from GET /executions/{orderId} as epoch millis instead of ISO instant",
+   "unit": "execution-service",
+   "predicted": [],
+   "agreed": [
+    "frontend",
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [
+    "frontend",
+    "order-service"
+   ],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F09",
+   "kind": "rest",
+   "title": "Lower default pageSize on GET /api/v1/orders from 50 to 20",
+   "unit": "order-service",
+   "predicted": [
+    "frontend"
+   ],
+   "agreed": [
+    "frontend"
+   ],
+   "disputed": [],
+   "tp": [
+    "frontend"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "frontend": [
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:22); endpoint contract changed",
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:49); endpoint contract changed",
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:22); endpoint contract changed",
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:49); endpoint contract changed"
+    ]
+   }
+  },
+  {
+   "id": "F10",
+   "kind": "rest",
+   "title": "Add GET /api/v1/market/instrument/{symbol}/quote endpoint returning bid/ask only",
+   "unit": "marketdata-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F11",
+   "kind": "rest",
+   "title": "Require ticketReference on PATCH /api/v1/risk/rules/{ruleCode} (change-management traceability)",
+   "unit": "risk-service",
+   "predicted": [],
+   "agreed": [
+    "frontend"
+   ],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [
+    "frontend"
+   ],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F12",
+   "kind": "rest",
+   "title": "Return market holiday dates as MM/dd/yyyy",
+   "unit": "marketdata-service",
+   "predicted": [],
+   "agreed": [
+    "frontend",
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [
+    "frontend",
+    "order-service"
+   ],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F13",
+   "kind": "rest",
+   "title": "Omit null fields from audit records (@JsonInclude NON_NULL)",
+   "unit": "audit-service",
+   "predicted": [],
+   "agreed": [
+    "frontend"
+   ],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [
+    "frontend"
+   ],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F14",
+   "kind": "header",
+   "title": "Rename forwarded identity header X-User-Id to X-Auth-User-Id in gateway",
+   "unit": "api-gateway",
+   "predicted": [
+    "auth-service",
+    "marketdata-service",
+    "order-service",
+    "risk-service"
+   ],
+   "agreed": [
+    "auth-service",
+    "marketdata-service",
+    "order-service",
+    "risk-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "auth-service",
+    "marketdata-service",
+    "order-service",
+    "risk-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "auth-service": [
+     "reads key(s) X-User-Id that api-gateway changed in services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java"
+    ],
+    "order-service": [
+     "reads key(s) X-User-Id that api-gateway changed in services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java"
+    ],
+    "marketdata-service": [
+     "reads key(s) X-User-Id that api-gateway changed in services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java"
+    ],
+    "risk-service": [
+     "reads key(s) X-User-Id that api-gateway changed in services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java"
+    ]
+   }
+  },
+  {
+   "id": "F15",
+   "kind": "header",
+   "title": "Issue username in JWT as OIDC-style preferred_username claim",
+   "unit": "auth-service",
+   "predicted": [
+    "api-gateway",
+    "frontend"
+   ],
+   "agreed": [
+    "api-gateway"
+   ],
+   "disputed": [],
+   "tp": [
+    "api-gateway"
+   ],
+   "fp": [
+    "frontend"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "api-gateway": [
+     "reads key(s) username that auth-service changed in services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java"
+    ],
+    "frontend": [
+     "reads key(s) username that auth-service changed in services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java"
+    ]
+   }
+  },
+  {
+   "id": "F16",
+   "kind": "config",
+   "title": "Move audit-service to port 8097",
+   "unit": "audit-service",
+   "predicted": [
+    "api-gateway",
+    "order-service"
+   ],
+   "agreed": [
+    "api-gateway",
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "api-gateway",
+    "order-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "api-gateway": [
+     "references audit-service at audit-service:8087; audit-service's port changed",
+     "references audit-service at audit-service:8087; audit-service's port changed"
+    ],
+    "order-service": [
+     "references audit-service at audit-service:8087; audit-service's port changed"
+    ]
+   }
+  },
+  {
+   "id": "F17",
+   "kind": "config",
+   "title": "Change Redis key prefix for revoked JWTs to auth:revoked:",
+   "unit": "auth-service",
+   "predicted": [],
+   "agreed": [
+    "api-gateway"
+   ],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [
+    "api-gateway"
+   ],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F18",
+   "kind": "gateway",
+   "title": "Move api-gateway listen port from 9090 to 8080",
+   "unit": "api-gateway",
+   "predicted": [
+    "frontend"
+   ],
+   "agreed": [
+    "frontend"
+   ],
+   "disputed": [],
+   "tp": [
+    "frontend"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "frontend": [
+     "references api-gateway at api-gateway:9090; api-gateway's port changed",
+     "references api-gateway at localhost:9090; api-gateway's port changed"
+    ]
+   }
+  },
+  {
+   "id": "F19",
+   "kind": "frontend",
+   "title": "Send timeInForce instead of tif in order submission body",
+   "unit": "frontend",
+   "predicted": [
+    "execution-service",
+    "order-service"
+   ],
+   "agreed": [
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "order-service"
+   ],
+   "fp": [
+    "execution-service"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "execution-service": [
+     "frontend changed how it uses execution-service (frontend/src/api/orderApi.ts) (keys: timeInForce)"
+    ],
+    "order-service": [
+     "frontend changed how it uses order-service (frontend/src/api/orderApi.ts) (keys: timeInForce)"
+    ]
+   }
+  },
+  {
+   "id": "F20",
+   "kind": "frontend",
+   "title": "Add to watchlist via POST /watchlists with JSON body instead of path variable",
+   "unit": "frontend",
+   "predicted": [],
+   "agreed": [
+    "marketdata-service"
+   ],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [
+    "marketdata-service"
+   ],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F21",
+   "kind": "internal",
+   "title": "Reorder FillType enum constants (persisted as STRING)",
+   "unit": "execution-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F22",
+   "kind": "internal",
+   "title": "Shorten marketdata price cache TTL from 30s to 10s",
+   "unit": "marketdata-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F23",
+   "kind": "internal",
+   "title": "Rename private helper upsertHolding to applyBuyToHolding",
+   "unit": "client-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "F24",
+   "kind": "internal",
+   "title": "Rename SubmitOrderRequest.expiryDate to traderExpiryDate (JSON name gtdDate kept)",
+   "unit": "order-service",
+   "predicted": [
+    "frontend"
+   ],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [
+    "frontend"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "frontend": [
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:22); endpoint contract changed (keys: expiryDate, traderExpiryDate)",
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:49); endpoint contract changed (keys: expiryDate, traderExpiryDate)",
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:22); endpoint contract changed (keys: expiryDate, traderExpiryDate)",
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:49); endpoint contract changed (keys: expiryDate, traderExpiryDate)"
+    ]
+   }
+  },
+  {
+   "id": "F25",
+   "kind": "internal",
+   "title": "Increase client-service circuit-breaker open-state wait from 10s to 30s",
+   "unit": "order-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  }
+ ]
+}

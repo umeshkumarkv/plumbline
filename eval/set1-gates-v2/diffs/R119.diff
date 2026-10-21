@@ -1,0 +1,26 @@
+--- a/services/execution-service/src/main/resources/db/migration/V5__rebuild_pending_order_executions.sql
++++ b/services/execution-service/src/main/resources/db/migration/V5__rebuild_pending_order_executions.sql
+@@ -0,0 +1,23 @@
++-- execution-service V5 — rebuild pending_order_executions with tighter column sizes
++
++DROP TABLE IF EXISTS execution_schema.pending_order_executions CASCADE;
++
++CREATE TABLE execution_schema.pending_order_executions (
++    id          UUID          NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
++    order_id    UUID          NOT NULL,
++    client_id   UUID          NOT NULL,
++    symbol      VARCHAR(6)    NOT NULL,
++    side        VARCHAR(10)   NOT NULL,
++    order_type  VARCHAR(10)   NOT NULL,
++    quantity    INTEGER       NOT NULL CHECK (quantity > 0),
++    limit_price NUMERIC(19,4) NOT NULL,
++    last_price  NUMERIC(19,4) NOT NULL,
++    order_value NUMERIC(19,4) NOT NULL,
++    status      VARCHAR(10)   NOT NULL DEFAULT 'PENDING',
++    created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
++    updated_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
++    CONSTRAINT uq_pending_order_id UNIQUE (order_id)
++);
++
++CREATE INDEX IF NOT EXISTS idx_pending_executions_status   ON execution_schema.pending_order_executions (status);
++CREATE INDEX IF NOT EXISTS idx_pending_executions_order_id ON execution_schema.pending_order_executions (order_id);

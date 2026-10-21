@@ -1,0 +1,75 @@
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/config/SchedulingConfig.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/config/SchedulingConfig.java
+@@ -0,0 +1,9 @@
++package com.brokerdealer.clientservice.config;
++
++import org.springframework.context.annotation.Configuration;
++import org.springframework.scheduling.annotation.EnableScheduling;
++
++@Configuration
++@EnableScheduling
++public class SchedulingConfig {
++}
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/service/DailyCounterResetService.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/service/DailyCounterResetService.java
+@@ -0,0 +1,60 @@
++package com.brokerdealer.clientservice.service;
++
++import com.brokerdealer.clientservice.domain.Client;
++import com.brokerdealer.clientservice.repository.ClientRepository;
++import lombok.RequiredArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
++import org.springframework.data.redis.core.RedisTemplate;
++import org.springframework.scheduling.annotation.Scheduled;
++import org.springframework.stereotype.Service;
++import org.springframework.transaction.annotation.Transactional;
++
++import java.math.BigDecimal;
++import java.util.ArrayList;
++import java.util.List;
++
++/**
++ * Resets per-client daily trading counters at the start of each ET trading day.
++ * Daily limits reset at midnight ET (client-service CLAUDE.md §11).
++ */
++@Service
++@RequiredArgsConstructor
++@Slf4j
++public class DailyCounterResetService {
++
++    private static final BigDecimal ZERO_MONEY = new BigDecimal("0.00");
++
++    private final ClientRepository clientRepository;
++    private final RedisTemplate<String, Object> redisTemplate;
++
++    @Scheduled(cron = "0 0 0 * * *", zone = "America/New_York")
++    @Transactional
++    public void resetDailyCounters() {
++        List<Client> clients = clientRepository.findAll();
++        List<Client> changed = new ArrayList<>();
++
++        for (Client client : clients) {
++            boolean alreadyReset = client.getDailyOrderCount() == 0
++                    && client.getDailyOrderValue().compareTo(BigDecimal.ZERO) == 0
++                    && client.getTurnoverToday().compareTo(BigDecimal.ZERO) == 0;
++            if (alreadyReset) {
++                continue;
++            }
++            BigDecimal previousTurnover = client.getTurnoverToday();
++            Integer previousCount = client.getDailyOrderCount();
++
++            client.setDailyOrderCount(0);
++            client.setDailyOrderValue(ZERO_MONEY);
++            client.setTurnoverToday(ZERO_MONEY);
++            changed.add(client);
++
++            log.info("Daily counters reset: clientId={} previousOrderCount={} previousTurnover={}",
++                    client.getId(), previousCount, previousTurnover);
++        }
++
++        clientRepository.saveAll(changed);
++        changed.forEach(c -> redisTemplate.delete("client:portfolio:" + c.getId()));
++        log.info("Daily counter reset complete: clientsReset={} clientsScanned={}",
++                changed.size(), clients.size());
++    }
++}

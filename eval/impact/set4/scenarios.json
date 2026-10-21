@@ -1,0 +1,392 @@
+[
+  {
+    "id": "Q01",
+    "title": "execution.completed: shorten remainingQuantity key to remainingQty",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/event/ExecutionCompletedEvent.java",
+        "find": "    private Integer remainingQuantity;",
+        "replace": "    private Integer remainingQty;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": ".remainingQuantity(execution.getRemainingQuantity())",
+        "replace": ".remainingQty(execution.getRemainingQuantity())"
+      }
+    ],
+    "kind": "kafka"
+  },
+  {
+    "id": "Q02",
+    "title": "order.state.changed: tag trader-initiated transitions as TRADER:<id> instead of USER:<id>",
+    "unit": "order-service",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+        "find": ".triggeredBy(\"USER:\" + userId)",
+        "replace": ".triggeredBy(\"TRADER:\" + userId)"
+      },
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/kafka/OrderStateChangedEvent.java",
+        "find": "// \"USER:{userId}\" | \"SYSTEM:OMS\"",
+        "replace": "// \"TRADER:{userId}\" | \"SYSTEM:OMS\""
+      }
+    ],
+    "kind": "kafka"
+  },
+  {
+    "id": "Q03",
+    "title": "risk.evaluation.result: stop echoing userId (PII minimisation)",
+    "unit": "risk-service",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/kafka/consumer/RiskEvaluationConsumer.java",
+        "find": "                .userId(request.getUserId())\n",
+        "replace": ""
+      },
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/RiskEvaluationResult.java",
+        "find": "    UUID userId;\n",
+        "replace": ""
+      }
+    ],
+    "kind": "kafka"
+  },
+  {
+    "id": "Q04",
+    "title": "risk.evaluation.requested: rename hasCrossingOpenOrder to selfCrossDetected",
+    "unit": "order-service",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/kafka/RiskEvaluationRequestedEvent.java",
+        "find": "private Boolean hasCrossingOpenOrder;",
+        "replace": "private Boolean selfCrossDetected;"
+      },
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+        "find": ".hasCrossingOpenOrder(hasCrossingOpenOrder)",
+        "replace": ".selfCrossDetected(hasCrossingOpenOrder)"
+      }
+    ],
+    "kind": "kafka"
+  },
+  {
+    "id": "Q05",
+    "title": "execution.completed: normalise fillValue (strip trailing zeros)",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": ".fillValue(execution.getFillValue().toPlainString())",
+        "replace": ".fillValue(execution.getFillValue().stripTrailingZeros().toPlainString())"
+      }
+    ],
+    "kind": "kafka"
+  },
+  {
+    "id": "Q06",
+    "title": "Portfolio API: rename maxOpenOrders to maxDailyOrders",
+    "unit": "client-service",
+    "edits": [
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/PortfolioResponse.java",
+        "find": "    Integer maxOpenOrders;",
+        "replace": "    Integer maxDailyOrders;"
+      },
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+        "find": ".maxOpenOrders(client.getMaxOpenOrders())",
+        "replace": ".maxDailyOrders(client.getMaxOpenOrders())"
+      }
+    ],
+    "kind": "rest"
+  },
+  {
+    "id": "Q07",
+    "title": "Executions API: rename executionVenue to venue",
+    "unit": "execution-service",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/response/ExecutionResponse.java",
+        "find": "    private String executionVenue;",
+        "replace": "    private String venue;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/mapper/ExecutionMapper.java",
+        "find": "    ExecutionResponse toResponse(Execution execution);",
+        "replace": "    @Mapping(source = \"executionVenue\", target = \"venue\")\n    ExecutionResponse toResponse(Execution execution);"
+      }
+    ],
+    "kind": "rest"
+  },
+  {
+    "id": "Q08",
+    "title": "Market hours API: rename marketOpen to open",
+    "unit": "marketdata-service",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/dto/response/MarketHoursResponse.java",
+        "find": "    Boolean marketOpen;",
+        "replace": "    Boolean open;"
+      },
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/MarketDataService.java",
+        "find": "                .marketOpen(open)\n",
+        "replace": "                .open(open)\n"
+      },
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/MarketDataService.java",
+        "find": "hours.getMarketOpen()",
+        "replace": "hours.getOpen()"
+      }
+    ],
+    "kind": "rest"
+  },
+  {
+    "id": "Q09",
+    "title": "Holidays API: rename holidayName to name",
+    "unit": "marketdata-service",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/dto/response/MarketHolidayResponse.java",
+        "find": "    String holidayName;",
+        "replace": "    String name;"
+      },
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/mapper/MarketHolidayMapper.java",
+        "find": "    MarketHolidayResponse toResponse(MarketHoliday holiday);",
+        "replace": "    @Mapping(source = \"holidayName\", target = \"name\")\n    MarketHolidayResponse toResponse(MarketHoliday holiday);"
+      }
+    ],
+    "kind": "rest"
+  },
+  {
+    "id": "Q10",
+    "title": "Orders list API: rename createdAfter query param to createdFrom",
+    "unit": "order-service",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java",
+        "find": "@RequestParam(required = false) String createdAfter,",
+        "replace": "@RequestParam(name = \"createdFrom\", required = false) String createdAfter,"
+      }
+    ],
+    "kind": "rest"
+  },
+  {
+    "id": "Q11",
+    "title": "Risk maker-checker: reject body field rejectionReason -> reason",
+    "unit": "risk-service",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/request/RejectPendingChangeRequest.java",
+        "find": "    private String rejectionReason;",
+        "replace": "    private String reason;"
+      },
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java",
+        "find": "request.getRejectionReason()",
+        "replace": "request.getReason()"
+      }
+    ],
+    "kind": "rest"
+  },
+  {
+    "id": "Q12",
+    "title": "Audit API: return eventTimestamp as epoch millis",
+    "unit": "audit-service",
+    "edits": [
+      {
+        "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/dto/response/AuditLogResponse.java",
+        "find": "    String eventTimestamp;",
+        "replace": "    Long eventTimestamp;"
+      },
+      {
+        "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/service/AuditService.java",
+        "find": "log.getEventTimestamp().toString()",
+        "replace": "log.getEventTimestamp().toEpochMilli()"
+      }
+    ],
+    "kind": "rest"
+  },
+  {
+    "id": "Q13",
+    "title": "JWT: rename role claim to authority",
+    "unit": "auth-service",
+    "edits": [
+      {
+        "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java",
+        "find": "CLAIM_ROLE = \"role\";",
+        "replace": "CLAIM_ROLE = \"authority\";"
+      }
+    ],
+    "kind": "header"
+  },
+  {
+    "id": "Q14",
+    "title": "risk-service: move HTTP port 8085 -> 8095",
+    "unit": "risk-service",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/resources/application.yml",
+        "find": "  port: 8085",
+        "replace": "  port: 8095"
+      }
+    ],
+    "kind": "config"
+  },
+  {
+    "id": "Q15",
+    "title": "auth-service: rename Redis token-blacklist key prefix",
+    "unit": "auth-service",
+    "edits": [
+      {
+        "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java",
+        "find": "BLACKLIST_PREFIX = \"auth:blacklist:\";",
+        "replace": "BLACKLIST_PREFIX = \"auth:revoked:\";"
+      }
+    ],
+    "kind": "config"
+  },
+  {
+    "id": "Q16",
+    "title": "api-gateway: forward username as X-User-Name instead of X-Username",
+    "unit": "api-gateway",
+    "edits": [
+      {
+        "file": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java",
+        "find": "HEADER_USERNAME = \"X-Username\";",
+        "replace": "HEADER_USERNAME = \"X-User-Name\";"
+      }
+    ],
+    "kind": "gateway"
+  },
+  {
+    "id": "Q17",
+    "title": "Order entry: send timeInForce instead of tif",
+    "unit": "frontend",
+    "edits": [
+      {
+        "file": "frontend/src/api/orderApi.ts",
+        "find": "    tif:                order.tif,",
+        "replace": "    timeInForce:        order.tif,"
+      }
+    ],
+    "kind": "frontend"
+  },
+  {
+    "id": "Q18",
+    "title": "Notifications: switch SSE endpoint to /notifications/subscribe",
+    "unit": "frontend",
+    "edits": [
+      {
+        "file": "frontend/src/hooks/useNotifications.ts",
+        "find": "const SSE_URL = '/api/v1/notifications/stream'",
+        "replace": "const SSE_URL = '/api/v1/notifications/subscribe'"
+      }
+    ],
+    "kind": "frontend"
+  },
+  {
+    "id": "Q19",
+    "title": "Watchlist: add symbol via POST body instead of path",
+    "unit": "frontend",
+    "edits": [
+      {
+        "file": "frontend/src/api/watchlistApi.ts",
+        "find": "const res = await http.post(`/watchlists/${symbol}`)",
+        "replace": "const res = await http.post('/watchlists', { symbol })"
+      }
+    ],
+    "kind": "frontend"
+  },
+  {
+    "id": "Q20",
+    "title": "Risk: skip qty-spike check when average history qty < 10",
+    "unit": "risk-service",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/OrderQtySpikeCheckRule.java",
+        "find": "if (avgQty.compareTo(BigDecimal.ZERO) == 0) {",
+        "replace": "if (avgQty.compareTo(BigDecimal.TEN) < 0) {"
+      },
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/OrderQtySpikeCheckRule.java",
+        "find": "skipped: avgOrderQty is 0 (no history)",
+        "replace": "skipped: avgOrderQty below 10 (insufficient history)"
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "Q21",
+    "title": "client-service tests: assert clientId on empty-holdings portfolio",
+    "unit": "client-service",
+    "edits": [
+      {
+        "file": "services/client-service/src/test/java/com/brokerdealer/clientservice/service/ClientServiceTest.java",
+        "find": "        assertThat(result.getHoldings()).isEmpty();\n        assertThat(result.getCashBalance()).isEqualTo(\"50000.00\");",
+        "replace": "        assertThat(result.getHoldings()).isEmpty();\n        assertThat(result.getClientId()).isEqualTo(id);\n        assertThat(result.getCashBalance()).isEqualTo(\"50000.00\");"
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "Q22",
+    "title": "order.execution.requested: add optional routingDestination (not yet consumed)",
+    "unit": "order-service",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/kafka/OrderExecutionRequestedEvent.java",
+        "find": "    BigDecimal lastPrice;\n}",
+        "replace": "    BigDecimal lastPrice;\n    String routingDestination;\n}"
+      },
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+        "find": "                .lastPrice(order.getLastPrice())\n                .build());",
+        "replace": "                .lastPrice(order.getLastPrice())\n                .routingDestination(order.getRoutingDestination())\n                .build());"
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "Q23",
+    "title": "marketdata: halve instrument price cache TTL",
+    "unit": "marketdata-service",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/MarketDataService.java",
+        "find": "CACHE_TTL = Duration.ofSeconds(30);",
+        "replace": "CACHE_TTL = Duration.ofSeconds(15);"
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "Q24",
+    "title": "notification: drop emitter on IllegalStateException during push",
+    "unit": "notification-service",
+    "edits": [
+      {
+        "file": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/service/SseEmitterRegistry.java",
+        "find": "        } catch (IOException e) {\n            log.warn(\"SseEmitterRegistry: send failed for userId={}, removing emitter\", userId);",
+        "replace": "        } catch (IOException | IllegalStateException e) {\n            log.warn(\"SseEmitterRegistry: send failed for userId={}, removing emitter\", userId);"
+      }
+    ],
+    "kind": "internal"
+  },
+  {
+    "id": "Q25",
+    "title": "audit: log unparseable event timestamps before falling back to now()",
+    "unit": "audit-service",
+    "edits": [
+      {
+        "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java",
+        "find": "        } catch (Exception e) {\n            return Instant.now();",
+        "replace": "        } catch (Exception e) {\n            log.warn(\"Unparseable event timestamp '{}', using now()\", timestamp);\n            return Instant.now();"
+      }
+    ],
+    "kind": "internal"
+  }
+]

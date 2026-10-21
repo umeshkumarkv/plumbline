@@ -1,0 +1,1398 @@
+[
+ {
+  "id": "P01",
+  "control": false,
+  "kind": "mechanical",
+  "category": "money-as-long-cents/double",
+  "rule_ref": "CLAUDE.md \u00a710 (never float/double for money), \u00a713a (BigDecimal only, never long)",
+  "pr_title": "order-service: GET /api/v1/orders/open-exposure \u2014 per-client open buy/sell notional",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/response/OpenExposureResponse.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.dto.response;\n\nimport lombok.Builder;\nimport lombok.Value;\n\nimport java.util.UUID;\n\n@Value\n@Builder\npublic class OpenExposureResponse {\n    OpenExposureData data;\n    ResponseMeta meta;\n\n    @Value\n    @Builder\n    public static class OpenExposureData {\n        UUID clientId;\n        Integer openBuyCount;\n        Integer openSellCount;\n        String openBuyNotional;\n        String openSellNotional;\n        String netNotional;\n    }\n}\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OpenExposureService.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.service;\n\nimport com.brokerdealer.orderservice.domain.Order;\nimport com.brokerdealer.orderservice.domain.OrderSide;\nimport com.brokerdealer.orderservice.domain.OrderStatus;\nimport com.brokerdealer.orderservice.dto.response.OpenExposureResponse;\nimport com.brokerdealer.orderservice.dto.response.ResponseMeta;\nimport com.brokerdealer.orderservice.repository.OrderRepository;\nimport lombok.RequiredArgsConstructor;\nimport lombok.extern.slf4j.Slf4j;\nimport org.springframework.stereotype.Service;\n\nimport java.math.BigDecimal;\nimport java.math.RoundingMode;\nimport java.time.Instant;\nimport java.util.List;\nimport java.util.UUID;\n\n@Service\n@RequiredArgsConstructor\n@Slf4j\npublic class OpenExposureService {\n\n    private static final List<OrderStatus> OPEN_STATUSES = List.of(\n            OrderStatus.NEW, OrderStatus.VALIDATED, OrderStatus.RISK_CHECK_PASSED,\n            OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION, OrderStatus.PARTIALLY_FILLED);\n\n    private final OrderRepository orderRepository;\n\n    public OpenExposureResponse getOpenExposure(UUID clientId) {\n        log.debug(\"Computing open exposure: clientId={}\", clientId);\n        List<Order> openOrders = orderRepository.findAll((root, query, cb) -> cb.and(\n                cb.equal(root.get(\"clientId\"), clientId),\n                root.get(\"status\").in(OPEN_STATUSES)));\n\n        long buyCents = 0L;\n        long sellCents = 0L;\n        int buyCount = 0;\n        int sellCount = 0;\n        for (Order order : openOrders) {\n            if (order.getOrderValue() == null) {\n                continue;\n            }\n            long cents = order.getOrderValue().movePointRight(2)\n                    .setScale(0, RoundingMode.HALF_UP)\n                    .longValueExact();\n            if (order.getSide() == OrderSide.BUY) {\n                buyCents += cents;\n                buyCount++;\n            } else {\n                sellCents += cents;\n                sellCount++;\n            }\n        }\n\n        BigDecimal buyNotional = BigDecimal.valueOf(buyCents / 100.0).setScale(2, RoundingMode.HALF_UP);\n        BigDecimal sellNotional = BigDecimal.valueOf(sellCents / 100.0).setScale(2, RoundingMode.HALF_UP);\n        BigDecimal netNotional = buyNotional.subtract(sellNotional);\n\n        return OpenExposureResponse.builder()\n                .data(OpenExposureResponse.OpenExposureData.builder()\n                        .clientId(clientId)\n                        .openBuyCount(buyCount)\n                        .openSellCount(sellCount)\n                        .openBuyNotional(buyNotional.toPlainString())\n                        .openSellNotional(sellNotional.toPlainString())\n                        .netNotional(netNotional.toPlainString())\n                        .build())\n                .meta(ResponseMeta.builder()\n                        .timestamp(Instant.now().toString())\n                        .requestId(UUID.randomUUID().toString())\n                        .build())\n                .build();\n    }\n}\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.orderservice.dto.response.OrderListResponse;\n",
+    "replace": "import com.brokerdealer.orderservice.dto.response.OpenExposureResponse;\nimport com.brokerdealer.orderservice.dto.response.OrderListResponse;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.orderservice.service.OrderService;\n",
+    "replace": "import com.brokerdealer.orderservice.service.OpenExposureService;\nimport com.brokerdealer.orderservice.service.OrderService;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java",
+    "op": "replace",
+    "find": "    private final OrderService orderService;\n",
+    "replace": "    private final OrderService orderService;\n    private final OpenExposureService openExposureService;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java",
+    "op": "replace",
+    "find": "    @GetMapping(\"/status-counts\")\n",
+    "replace": "    @GetMapping(\"/open-exposure\")\n    public ResponseEntity<OpenExposureResponse> getOpenExposure(@RequestParam UUID clientId) {\n        return ResponseEntity.ok(openExposureService.getOpenExposure(clientId));\n    }\n\n    @GetMapping(\"/status-counts\")\n"
+   }
+  ],
+  "defect_location": "services/order-service/.../service/OpenExposureService.java \u2014 `long cents = ...longValueExact()` accumulation and `BigDecimal.valueOf(buyCents / 100.0)` / `BigDecimal.valueOf(sellCents / 100.0)`",
+  "description": "Monetary aggregation is done in long cents and converted back via double division (cents / 100.0). Money must be BigDecimal end-to-end; long and double for money are explicitly banned (\u00a710, \u00a713a). Double conversion loses precision for large notionals (>2^53 cents) and BigDecimal.valueOf(double) reintroduces binary floating error."
+ },
+ {
+  "id": "P02",
+  "control": false,
+  "kind": "mechanical",
+  "category": "sql-injection-string-format",
+  "rule_ref": "CLAUDE.md \u00a713 coding conventions / OWASP injection (real bug); \u00a74 repository layer",
+  "pr_title": "audit-service: honour entityType filter on GET /api/v1/audit/trail",
+  "edits": [
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/repository/AuditLogQueryRepository.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.auditservice.repository;\n\nimport com.brokerdealer.auditservice.dto.response.AuditLogResponse;\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.jdbc.core.JdbcTemplate;\nimport org.springframework.jdbc.core.RowMapper;\nimport org.springframework.stereotype.Repository;\n\nimport java.sql.Timestamp;\nimport java.util.List;\n\n@Repository\n@RequiredArgsConstructor\npublic class AuditLogQueryRepository {\n\n    private static final String SELECT_BY_ENTITY_TYPE =\n            \"SELECT id, entity_type, entity_id, previous_state, new_state, actor_id, actor_type, \"\n                    + \"event_timestamp, metadata FROM audit_schema.audit_logs \"\n                    + \"WHERE entity_type = '%s' ORDER BY event_timestamp DESC LIMIT %d OFFSET %d\";\n\n    private static final String COUNT_BY_ENTITY_TYPE =\n            \"SELECT COUNT(*) FROM audit_schema.audit_logs WHERE entity_type = ?\";\n\n    private static final RowMapper<AuditLogResponse> ROW_MAPPER = (rs, rowNum) -> {\n        Timestamp ts = rs.getTimestamp(\"event_timestamp\");\n        return AuditLogResponse.builder()\n                .id(rs.getString(\"id\"))\n                .entityType(rs.getString(\"entity_type\"))\n                .entityId(rs.getString(\"entity_id\"))\n                .previousState(rs.getString(\"previous_state\"))\n                .newState(rs.getString(\"new_state\"))\n                .actorId(rs.getString(\"actor_id\"))\n                .actorType(rs.getString(\"actor_type\"))\n                .eventTimestamp(ts != null ? ts.toInstant().toString() : null)\n                .metadata(rs.getString(\"metadata\"))\n                .build();\n    };\n\n    private final JdbcTemplate jdbcTemplate;\n\n    public List<AuditLogResponse> findByEntityType(String entityType, int limit, int offset) {\n        String sql = String.format(SELECT_BY_ENTITY_TYPE, entityType.toUpperCase(), limit, offset);\n        return jdbcTemplate.query(sql, ROW_MAPPER);\n    }\n\n    public long countByEntityType(String entityType) {\n        Long count = jdbcTemplate.queryForObject(COUNT_BY_ENTITY_TYPE, Long.class, entityType.toUpperCase());\n        return count != null ? count : 0L;\n    }\n}\n"
+   },
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/service/AuditService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.auditservice.repository.AuditLogRepository;\n",
+    "replace": "import com.brokerdealer.auditservice.repository.AuditLogQueryRepository;\nimport com.brokerdealer.auditservice.repository.AuditLogRepository;\n"
+   },
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/service/AuditService.java",
+    "op": "replace",
+    "find": "    private final AuditLogRepository auditLogRepository;\n",
+    "replace": "    private static final int MAX_PAGE_SIZE = 100;\n\n    private final AuditLogRepository auditLogRepository;\n    private final AuditLogQueryRepository auditLogQueryRepository;\n"
+   },
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/service/AuditService.java",
+    "op": "replace",
+    "find": "    public AuditTrailResponse getOrderAuditTrail(UUID orderId) {\n",
+    "replace": "    public AuditTrailResponse getAuditTrailByEntityType(String entityType, int page, int size) {\n        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);\n        int offset = Math.max(page, 0) * pageSize;\n\n        List<AuditLogResponse> records = auditLogQueryRepository.findByEntityType(entityType, pageSize, offset);\n        long total = auditLogQueryRepository.countByEntityType(entityType);\n\n        log.debug(\"getAuditTrailByEntityType: entityType={} page={} size={} total={}\",\n                entityType, page, pageSize, total);\n\n        return AuditTrailResponse.builder()\n                .data(AuditTrailData.builder()\n                        .records(records)\n                        .totalElements(total)\n                        .build())\n                .meta(ResponseMeta.builder()\n                        .timestamp(Instant.now().toString())\n                        .requestId(UUID.randomUUID().toString())\n                        .build())\n                .build();\n    }\n\n    public AuditTrailResponse getOrderAuditTrail(UUID orderId) {\n"
+   },
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/controller/AuditController.java",
+    "op": "replace",
+    "find": "        return ResponseEntity.ok(auditService.getAuditTrail(clientId, page, size));\n",
+    "replace": "        if (entityType != null && !entityType.isBlank()) {\n            return ResponseEntity.ok(auditService.getAuditTrailByEntityType(entityType, page, size));\n        }\n        return ResponseEntity.ok(auditService.getAuditTrail(clientId, page, size));\n"
+   }
+  ],
+  "defect_location": "services/audit-service/.../repository/AuditLogQueryRepository.java \u2014 SELECT_BY_ENTITY_TYPE uses `entity_type = '%s'` and findByEntityType builds SQL with String.format(..., entityType.toUpperCase(), ...)",
+  "description": "The user-supplied entityType query parameter is interpolated into SQL via String.format, giving SQL injection on the audit trail endpoint (e.g. entityType=x' OR '1'='1). The count query right next to it correctly uses a bind parameter, which makes the injected one easy to miss."
+ },
+ {
+  "id": "P03",
+  "control": false,
+  "kind": "mechanical",
+  "category": "hardcoded-secret-default",
+  "rule_ref": "CLAUDE.md \u00a710 (never hardcode credentials, API keys, or secrets), \u00a714",
+  "pr_title": "execution-service: send service token on marketdata price-monitor calls",
+  "edits": [
+   {
+    "file": "services/execution-service/src/main/resources/application.yml",
+    "op": "replace",
+    "find": "app:\n  marketdata:\n    base-url: ${MARKETDATA_SERVICE_URL:http://localhost:8084}\n",
+    "replace": "app:\n  marketdata:\n    base-url: ${MARKETDATA_SERVICE_URL:http://localhost:8084}\n    token-header: X-Service-Token\n    service-token: ${MARKETDATA_SERVICE_TOKEN:mdsvc-4f9c2e7a1b8d4630a5e2c91f07d3b6aa}\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/config/ServiceTokenInterceptor.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.config;\n\nimport lombok.extern.slf4j.Slf4j;\nimport org.springframework.beans.factory.annotation.Value;\nimport org.springframework.http.HttpRequest;\nimport org.springframework.http.client.ClientHttpRequestExecution;\nimport org.springframework.http.client.ClientHttpRequestInterceptor;\nimport org.springframework.http.client.ClientHttpResponse;\nimport org.springframework.stereotype.Component;\n\nimport java.io.IOException;\n\n/**\n * Adds the service-to-service token and SYSTEM role headers to outbound calls\n * made to marketdata-service by the LIMIT order price monitor (SCRUM-48).\n * Requests to any other host are passed through unchanged.\n */\n@Component\n@Slf4j\npublic class ServiceTokenInterceptor implements ClientHttpRequestInterceptor {\n\n    private static final String ROLE_HEADER = \"X-User-Role\";\n    private static final String SYSTEM_ROLE = \"SYSTEM\";\n\n    private final String serviceToken;\n    private final String tokenHeader;\n    private final String marketDataBaseUrl;\n\n    public ServiceTokenInterceptor(@Value(\"${app.marketdata.service-token}\") String serviceToken,\n                                   @Value(\"${app.marketdata.token-header:X-Service-Token}\") String tokenHeader,\n                                   @Value(\"${app.marketdata.base-url:http://localhost:8084}\") String marketDataBaseUrl) {\n        this.serviceToken = serviceToken;\n        this.tokenHeader = tokenHeader;\n        this.marketDataBaseUrl = marketDataBaseUrl;\n    }\n\n    @Override\n    public ClientHttpResponse intercept(HttpRequest request, byte[] body,\n                                        ClientHttpRequestExecution execution) throws IOException {\n        if (request.getURI().toString().startsWith(marketDataBaseUrl)) {\n            request.getHeaders().set(tokenHeader, serviceToken);\n            request.getHeaders().set(ROLE_HEADER, SYSTEM_ROLE);\n            log.debug(\"Service token attached: host={} path={}\",\n                    request.getURI().getHost(), request.getURI().getPath());\n        }\n        return execution.execute(request, body);\n    }\n}\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/config/RestTemplateConfig.java",
+    "op": "replace",
+    "find": "    @Bean\n    public RestTemplate restTemplate() {\n        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();\n        factory.setConnectTimeout(3000);\n        factory.setReadTimeout(3000);\n        return new RestTemplate(factory);\n    }\n",
+    "replace": "    /**\n     * No connection pool \u2014 SimpleClientHttpRequestFactory per CLAUDE.md \u00a711.\n     * The service token interceptor is applied to marketdata-service calls only.\n     */\n    @Bean\n    public RestTemplate restTemplate(ServiceTokenInterceptor serviceTokenInterceptor) {\n        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();\n        factory.setConnectTimeout(3000);\n        factory.setReadTimeout(3000);\n        RestTemplate restTemplate = new RestTemplate(factory);\n        restTemplate.getInterceptors().add(serviceTokenInterceptor);\n        return restTemplate;\n    }\n"
+   }
+  ],
+  "defect_location": "services/execution-service/src/main/resources/application.yml \u2014 `service-token: ${MARKETDATA_SERVICE_TOKEN:mdsvc-4f9c2e7a1b8d4630a5e2c91f07d3b6aa}`",
+  "description": "A real-looking service credential is committed as the default value of the env-var placeholder. If MARKETDATA_SERVICE_TOKEN is unset the hardcoded secret is silently used in every environment, and the secret is now in git history. Secrets must come from the environment with no committed default."
+ },
+ {
+  "id": "P04",
+  "control": false,
+  "kind": "mechanical",
+  "category": "enum-ordinal-persistence",
+  "rule_ref": "CLAUDE.md \u00a713a (enums stored as STRING never ORDINAL), \u00a713f (@Enumerated(EnumType.STRING) on ALL enums)",
+  "pr_title": "risk-service: classify persisted risk warnings by severity",
+  "edits": [
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/WarningSeverity.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.riskservice.domain;\n\n/**\n * Severity assigned to a persisted WARN-action risk rule hit.\n * Used by the operations dashboard to sort and colour warning rows.\n */\npublic enum WarningSeverity {\n    LOW,\n    MEDIUM,\n    HIGH;\n\n    /**\n     * Default severity for a WARN-action rule code. Fat-finger price and notional\n     * warnings are the most actionable; spike checks are informational.\n     */\n    public static WarningSeverity forRuleCode(String ruleCode) {\n        if (ruleCode == null) {\n            return LOW;\n        }\n        return switch (ruleCode) {\n            case \"NOTIONAL_VALUE_CHECK\", \"PRICE_DEVIATION_CHECK\" -> HIGH;\n            case \"ORDER_QTY_SPIKE_CHECK\", \"ORDER_VALUE_SPIKE_CHECK\" -> MEDIUM;\n            default -> LOW;\n        };\n    }\n}\n"
+   },
+   {
+    "file": "services/risk-service/src/main/resources/db/migration/V15__add_severity_to_risk_warnings.sql",
+    "op": "new_file",
+    "content": "-- Severity classification for persisted risk warnings\nALTER TABLE risk_schema.risk_warnings\n    ADD COLUMN IF NOT EXISTS severity SMALLINT NOT NULL DEFAULT 0;\n\nCREATE INDEX IF NOT EXISTS idx_risk_warnings_severity\n    ON risk_schema.risk_warnings (severity);\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskWarning.java",
+    "op": "replace",
+    "find": "import jakarta.persistence.Entity;\n",
+    "replace": "import jakarta.persistence.Entity;\nimport jakarta.persistence.Enumerated;\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskWarning.java",
+    "op": "replace",
+    "find": "    @Column(name = \"reason\", nullable = false)\n    private String reason;\n",
+    "replace": "    @Column(name = \"reason\", nullable = false)\n    private String reason;\n\n    @Enumerated\n    @Column(name = \"severity\", nullable = false)\n    private WarningSeverity severity;\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/domain/RiskWarning.java",
+    "op": "replace",
+    "find": "    @Column(name = \"created_at\", nullable = false, updatable = false)\n    private Instant createdAt;\n",
+    "replace": "    @Column(name = \"created_at\", nullable = false, updatable = false)\n    private Instant createdAt;\n\n    @jakarta.persistence.PrePersist\n    protected void onCreate() {\n        if (severity == null) {\n            severity = WarningSeverity.forRuleCode(ruleCode);\n        }\n        if (createdAt == null) {\n            createdAt = Instant.now();\n        }\n    }\n"
+   }
+  ],
+  "defect_location": "services/risk-service/.../domain/RiskWarning.java \u2014 `@Enumerated` (no EnumType) on `private WarningSeverity severity;` plus V15 column `severity SMALLINT`",
+  "description": "Bare @Enumerated defaults to EnumType.ORDINAL, and the migration matches it with a SMALLINT column, so severity is persisted by ordinal. Reordering or inserting an enum constant silently remaps all historical rows. Rule requires @Enumerated(EnumType.STRING) with a VARCHAR column."
+ },
+ {
+  "id": "P05",
+  "control": false,
+  "kind": "mechanical",
+  "category": "field-injection",
+  "rule_ref": "CLAUDE.md \u00a713e (always constructor injection, never @Autowired on fields)",
+  "pr_title": "client-service: GET /api/v1/clients/{id}/portfolio/summary \u2014 cost basis vs market value",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/PortfolioSummaryResponse.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.clientservice.dto.response;\n\nimport lombok.Builder;\nimport lombok.Value;\n\nimport java.util.UUID;\n\n@Value\n@Builder\npublic class PortfolioSummaryResponse {\n    UUID clientId;\n    Integer positionCount;\n    String totalCostBasis;\n    String totalMarketValue;\n    Integer unpricedPositions;\n}\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/PortfolioSummaryService.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.clientservice.service;\n\nimport com.brokerdealer.clientservice.client.MarketDataClient;\nimport com.brokerdealer.clientservice.domain.Holding;\nimport com.brokerdealer.clientservice.dto.response.PortfolioSummaryResponse;\nimport com.brokerdealer.clientservice.exception.ClientNotFoundException;\nimport com.brokerdealer.clientservice.repository.ClientRepository;\nimport com.brokerdealer.clientservice.repository.HoldingRepository;\nimport lombok.RequiredArgsConstructor;\nimport lombok.extern.slf4j.Slf4j;\nimport org.springframework.beans.factory.annotation.Autowired;\nimport org.springframework.stereotype.Service;\n\nimport java.math.BigDecimal;\nimport java.math.RoundingMode;\nimport java.util.List;\nimport java.util.UUID;\n\n@Service\n@RequiredArgsConstructor\n@Slf4j\npublic class PortfolioSummaryService {\n\n    private final ClientRepository clientRepository;\n    private final HoldingRepository holdingRepository;\n\n    @Autowired\n    private MarketDataClient marketDataClient;\n\n    public PortfolioSummaryResponse getSummary(UUID clientId) {\n        log.debug(\"Building portfolio summary: clientId={}\", clientId);\n        if (!clientRepository.existsById(clientId)) {\n            throw new ClientNotFoundException(\"CLIENT_NOT_FOUND\", \"Client not found: \" + clientId);\n        }\n\n        List<Holding> holdings = holdingRepository.findByClientId(clientId).stream()\n                .filter(h -> h.getQuantity() != null && h.getQuantity() > 0)\n                .toList();\n\n        BigDecimal costBasis = BigDecimal.ZERO;\n        BigDecimal marketValue = BigDecimal.ZERO;\n        int unpriced = 0;\n        for (Holding holding : holdings) {\n            BigDecimal qty = BigDecimal.valueOf(holding.getQuantity());\n            costBasis = costBasis.add(holding.getAvgPrice().multiply(qty));\n            BigDecimal lastPrice = marketDataClient.getLastPrice(holding.getSymbol());\n            if (lastPrice == null) {\n                unpriced++;\n                continue;\n            }\n            marketValue = marketValue.add(lastPrice.multiply(qty));\n        }\n\n        return PortfolioSummaryResponse.builder()\n                .clientId(clientId)\n                .positionCount(holdings.size())\n                .totalCostBasis(costBasis.setScale(2, RoundingMode.HALF_UP).toPlainString())\n                .totalMarketValue(marketValue.setScale(2, RoundingMode.HALF_UP).toPlainString())\n                .unpricedPositions(unpriced)\n                .build();\n    }\n}\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.clientservice.dto.response.PortfolioResponse;\n",
+    "replace": "import com.brokerdealer.clientservice.dto.response.PortfolioResponse;\nimport com.brokerdealer.clientservice.dto.response.PortfolioSummaryResponse;\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.clientservice.service.ClientService;\n",
+    "replace": "import com.brokerdealer.clientservice.service.ClientService;\nimport com.brokerdealer.clientservice.service.PortfolioSummaryService;\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "    private final ClientService clientService;\n",
+    "replace": "    private final ClientService clientService;\n    private final PortfolioSummaryService portfolioSummaryService;\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "    @PatchMapping(\"/{id}/default-route\")\n",
+    "replace": "    @GetMapping(\"/{id}/portfolio/summary\")\n    public ResponseEntity<Map<String, Object>> getPortfolioSummary(@PathVariable UUID id) {\n        log.debug(\"GET /api/v1/clients/{}/portfolio/summary\", id);\n        PortfolioSummaryResponse data = portfolioSummaryService.getSummary(id);\n        return ResponseEntity.ok(buildSuccessResponse(data));\n    }\n\n    @PatchMapping(\"/{id}/default-route\")\n"
+   }
+  ],
+  "defect_location": "services/client-service/.../service/PortfolioSummaryService.java \u2014 `@Autowired private MarketDataClient marketDataClient;`",
+  "description": "One collaborator is field-injected with @Autowired alongside @RequiredArgsConstructor final fields. Violates mandatory constructor injection; the dependency is hidden from the constructor so unit tests constructing the service get a null MarketDataClient (NPE)."
+ },
+ {
+  "id": "P06",
+  "control": false,
+  "kind": "mechanical",
+  "category": "completablefuture-chain",
+  "rule_ref": "CLAUDE.md \u00a711 (do NOT use CompletableFuture chains to avoid blocking \u2014 just block)",
+  "pr_title": "order-service: fetch fills concurrently when building the order list page",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "import java.util.UUID;\n",
+    "replace": "import java.util.UUID;\nimport java.util.concurrent.CompletableFuture;\nimport java.util.concurrent.ExecutorService;\nimport java.util.concurrent.Executors;\nimport java.util.concurrent.TimeUnit;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "    private static final Duration STATUS_COUNTS_TTL = Duration.ofSeconds(15);\n",
+    "replace": "    private static final Duration STATUS_COUNTS_TTL = Duration.ofSeconds(15);\n\n    /**\n     * Fill lookups for a page of orders are independent REST calls to execution-service;\n     * issuing them concurrently keeps the blotter page latency close to a single call.\n     */\n    private static final long FILL_FETCH_TIMEOUT_MS = 3000;\n    private static final ExecutorService FILL_FETCH_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "        List<OrderResponse> items = ordersPage.getContent().stream()\n                .map(o -> {\n                    List<ExecutionItem> fills = FILL_FETCH_STATUSES.contains(o.getStatus())\n                            ? executionServiceClient.getFills(o.getId())\n                            : Collections.emptyList();\n                    return toOrderResponse(o, fills);\n                })\n                .toList();\n",
+    "replace": "        List<CompletableFuture<OrderResponse>> pending = ordersPage.getContent().stream()\n                .map(o -> CompletableFuture\n                        .supplyAsync(() -> fetchFillsIfNeeded(o), FILL_FETCH_EXECUTOR)\n                        .orTimeout(FILL_FETCH_TIMEOUT_MS, TimeUnit.MILLISECONDS)\n                        .exceptionally(ex -> {\n                            log.warn(\"Fill fetch failed: orderId={} error={}\", o.getId(), ex.getMessage());\n                            return Collections.emptyList();\n                        })\n                        .thenApply(fills -> toOrderResponse(o, fills)))\n                .toList();\n\n        List<OrderResponse> items = pending.stream()\n                .map(CompletableFuture::join)\n                .toList();\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "    private Specification<Order> buildOrderSpec(",
+    "replace": "    /**\n     * Only FILLED / PARTIALLY_FILLED orders can have executions; skip the remote call otherwise.\n     */\n    private List<ExecutionItem> fetchFillsIfNeeded(Order order) {\n        if (!FILL_FETCH_STATUSES.contains(order.getStatus())) {\n            return Collections.emptyList();\n        }\n        return executionServiceClient.getFills(order.getId());\n    }\n\n    @jakarta.annotation.PreDestroy\n    void shutdownFillFetchExecutor() {\n        FILL_FETCH_EXECUTOR.shutdown();\n    }\n\n    private Specification<Order> buildOrderSpec("
+   }
+  ],
+  "defect_location": "services/order-service/.../service/OrderService.java getOrders \u2014 `CompletableFuture.supplyAsync(...).orTimeout(...).exceptionally(...).thenApply(...)` plus FILL_FETCH_EXECUTOR",
+  "description": "Introduces a CompletableFuture async chain (with a dedicated executor) to parallelise blocking REST calls. \u00a711 forbids CompletableFuture chains to avoid blocking \u2014 the project mandates plain blocking code on virtual threads. It also swallows per-order fill failures into an empty list."
+ },
+ {
+  "id": "P07",
+  "control": false,
+  "kind": "mechanical",
+  "category": "exception-mapping",
+  "rule_ref": "CLAUDE.md \u00a713i (domain exceptions with errorCode mapped to envelope; never generic exceptions from business logic)",
+  "pr_title": "client-service: GET /api/v1/clients/{id}/portfolio/holdings/{symbol} \u2014 single position lookup",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    private HoldingDetailResponse buildHoldingDetail(Holding holding) {\n",
+    "replace": "    public HoldingDetailResponse getHolding(UUID clientId, String symbol) {\n        log.debug(\"Fetching holding: clientId={} symbol={}\", clientId, symbol);\n        if (symbol == null || !symbol.toUpperCase().matches(\"[A-Z]{1,6}\")) {\n            throw new ValidationException(\"INVALID_SYMBOL\", \"symbol must be 1-6 letters A-Z\");\n        }\n        if (!clientRepository.existsById(clientId)) {\n            throw new ClientNotFoundException(\"CLIENT_NOT_FOUND\", \"Client not found: \" + clientId);\n        }\n        Holding holding = holdingRepository.findByClientIdAndSymbol(clientId, symbol.toUpperCase())\n                .orElseThrow();\n        return buildHoldingDetail(holding);\n    }\n\n    private HoldingDetailResponse buildHoldingDetail(Holding holding) {\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "    @PatchMapping(\"/{id}/default-route\")\n",
+    "replace": "    @GetMapping(\"/{id}/portfolio/holdings/{symbol}\")\n    public ResponseEntity<Map<String, Object>> getHolding(@PathVariable UUID id,\n                                                          @PathVariable String symbol) {\n        log.debug(\"GET /api/v1/clients/{}/portfolio/holdings/{}\", id, symbol);\n        HoldingDetailResponse data = clientService.getHolding(id, symbol);\n        return ResponseEntity.ok(buildSuccessResponse(data));\n    }\n\n    @PatchMapping(\"/{id}/default-route\")\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.clientservice.dto.response.ClientProfileResponse;\n",
+    "replace": "import com.brokerdealer.clientservice.dto.response.ClientProfileResponse;\nimport com.brokerdealer.clientservice.dto.response.HoldingDetailResponse;\n"
+   },
+   {
+    "file": "services/client-service/src/test/java/com/brokerdealer/clientservice/service/ClientServiceHoldingLookupTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.clientservice.service;\n\nimport com.brokerdealer.clientservice.client.MarketDataClient;\nimport com.brokerdealer.clientservice.domain.Holding;\nimport com.brokerdealer.clientservice.dto.response.HoldingDetailResponse;\nimport com.brokerdealer.clientservice.exception.ValidationException;\nimport com.brokerdealer.clientservice.repository.ClientRepository;\nimport com.brokerdealer.clientservice.repository.HoldingRepository;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.Mock;\nimport org.mockito.junit.jupiter.MockitoExtension;\n\nimport java.math.BigDecimal;\nimport java.util.Optional;\nimport java.util.UUID;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatThrownBy;\nimport static org.mockito.Mockito.when;\n\n@ExtendWith(MockitoExtension.class)\nclass ClientServiceHoldingLookupTest {\n\n    @Mock private ClientRepository clientRepository;\n    @Mock private HoldingRepository holdingRepository;\n    @Mock private MarketDataClient marketDataClient;\n    @InjectMocks private ClientService clientService;\n\n    @Test\n    void shouldReturnHoldingWithMarketValue() {\n        UUID clientId = UUID.randomUUID();\n        when(clientRepository.existsById(clientId)).thenReturn(true);\n        when(holdingRepository.findByClientIdAndSymbol(clientId, \"AAPL\")).thenReturn(Optional.of(\n                Holding.builder().clientId(clientId).symbol(\"AAPL\").quantity(10)\n                        .avgPrice(new BigDecimal(\"150.0000\")).build()));\n        when(marketDataClient.getLastPrice(\"AAPL\")).thenReturn(new BigDecimal(\"160.00\"));\n\n        HoldingDetailResponse result = clientService.getHolding(clientId, \"aapl\");\n\n        assertThat(result.getMarketValue()).isEqualTo(\"1600.00\");\n        assertThat(result.getUnrealisedPnL()).isEqualTo(\"100.00\");\n    }\n\n    @Test\n    void shouldRejectInvalidSymbol() {\n        assertThatThrownBy(() -> clientService.getHolding(UUID.randomUUID(), \"AAPL1\"))\n                .isInstanceOf(ValidationException.class);\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/client-service/.../service/ClientService.java getHolding \u2014 `holdingRepository.findByClientIdAndSymbol(...).orElseThrow();`",
+  "description": "No-arg Optional.orElseThrow() throws java.util.NoSuchElementException when the client has no position in the symbol. GlobalExceptionHandler maps it to 500 INTERNAL_ERROR instead of a 404 domain error with an errorCode, so a routine 'no position' case looks like a server failure. Must throw a custom exception carrying an errorCode."
+ },
+ {
+  "id": "P08",
+  "control": false,
+  "kind": "mechanical",
+  "category": "logging-monetary-info",
+  "rule_ref": "CLAUDE.md \u00a713h (never log BigDecimal monetary values at INFO or above), \u00a710",
+  "pr_title": "client-service: midnight-ET reset of daily order counters and turnover",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/config/SchedulingConfig.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.clientservice.config;\n\nimport org.springframework.context.annotation.Configuration;\nimport org.springframework.scheduling.annotation.EnableScheduling;\n\n@Configuration\n@EnableScheduling\npublic class SchedulingConfig {\n}\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/DailyCounterResetService.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.clientservice.service;\n\nimport com.brokerdealer.clientservice.domain.Client;\nimport com.brokerdealer.clientservice.repository.ClientRepository;\nimport lombok.RequiredArgsConstructor;\nimport lombok.extern.slf4j.Slf4j;\nimport org.springframework.data.redis.core.RedisTemplate;\nimport org.springframework.scheduling.annotation.Scheduled;\nimport org.springframework.stereotype.Service;\nimport org.springframework.transaction.annotation.Transactional;\n\nimport java.math.BigDecimal;\nimport java.util.ArrayList;\nimport java.util.List;\n\n/**\n * Resets per-client daily trading counters at the start of each ET trading day.\n * Daily limits reset at midnight ET (client-service CLAUDE.md \u00a711).\n */\n@Service\n@RequiredArgsConstructor\n@Slf4j\npublic class DailyCounterResetService {\n\n    private static final BigDecimal ZERO_MONEY = new BigDecimal(\"0.00\");\n\n    private final ClientRepository clientRepository;\n    private final RedisTemplate<String, Object> redisTemplate;\n\n    @Scheduled(cron = \"0 0 0 * * *\", zone = \"America/New_York\")\n    @Transactional\n    public void resetDailyCounters() {\n        List<Client> clients = clientRepository.findAll();\n        List<Client> changed = new ArrayList<>();\n\n        for (Client client : clients) {\n            boolean alreadyReset = client.getDailyOrderCount() == 0\n                    && client.getDailyOrderValue().compareTo(BigDecimal.ZERO) == 0\n                    && client.getTurnoverToday().compareTo(BigDecimal.ZERO) == 0;\n            if (alreadyReset) {\n                continue;\n            }\n            BigDecimal previousTurnover = client.getTurnoverToday();\n            Integer previousCount = client.getDailyOrderCount();\n\n            client.setDailyOrderCount(0);\n            client.setDailyOrderValue(ZERO_MONEY);\n            client.setTurnoverToday(ZERO_MONEY);\n            changed.add(client);\n\n            log.info(\"Daily counters reset: clientId={} previousOrderCount={} previousTurnover={}\",\n                    client.getId(), previousCount, previousTurnover);\n        }\n\n        clientRepository.saveAll(changed);\n        changed.forEach(c -> redisTemplate.delete(\"client:portfolio:\" + c.getId()));\n        log.info(\"Daily counter reset complete: clientsReset={} clientsScanned={}\",\n                changed.size(), clients.size());\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/client-service/.../service/DailyCounterResetService.java \u2014 `log.info(\"Daily counters reset: clientId={} previousOrderCount={} previousTurnover={}\", ..., previousTurnover)`",
+  "description": "Logs the client's BigDecimal turnover (a monetary value) at INFO level for every client every night. \u00a713h forbids monetary values at INFO or above; log IDs and states only (or move amounts to DEBUG)."
+ },
+ {
+  "id": "P09",
+  "control": false,
+  "kind": "mechanical",
+  "category": "migration-edit-applied",
+  "rule_ref": "Flyway versioned-migration immutability (real bug) / CLAUDE.md \u00a72 Flyway, \u00a719 update rule",
+  "pr_title": "order-service: persist a pre-trade estimated commission on each order",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/resources/db/migration/V5__add_last_price_and_order_value.sql",
+    "op": "replace",
+    "find": "ALTER TABLE order_schema.orders\n    ADD COLUMN IF NOT EXISTS last_price NUMERIC(19, 4),\n    ADD COLUMN IF NOT EXISTS order_value NUMERIC(19, 4);",
+    "replace": "-- estimated_commission: pre-trade commission estimate stored at order entry\nALTER TABLE order_schema.orders\n    ADD COLUMN IF NOT EXISTS last_price NUMERIC(19, 4),\n    ADD COLUMN IF NOT EXISTS order_value NUMERIC(19, 4),\n    ADD COLUMN IF NOT EXISTS estimated_commission NUMERIC(19, 4);"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/domain/Order.java",
+    "op": "replace",
+    "find": "    @Column(name = \"order_value\", precision = 19, scale = 4)\n    private BigDecimal orderValue;\n",
+    "replace": "    @Column(name = \"order_value\", precision = 19, scale = 4)\n    private BigDecimal orderValue;\n\n    /**\n     * Pre-trade commission estimate (bps of orderValue, bounded by min/max).\n     * Informational only \u2014 actual commission is applied on fills.\n     */\n    @Column(name = \"estimated_commission\", precision = 19, scale = 4)\n    private BigDecimal estimatedCommission;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "    private final RedisTemplate<String, Object> redisTemplate;\n\n    @Transactional\n    public SubmitOrderResponse submitOrder(",
+    "replace": "    private final RedisTemplate<String, Object> redisTemplate;\n\n    /** Commission schedule used for the pre-trade estimate stored on the order. */\n    @org.springframework.beans.factory.annotation.Value(\"${commission.rate-bps:5}\")\n    private BigDecimal commissionRateBps;\n\n    @org.springframework.beans.factory.annotation.Value(\"${commission.minimum:1.00}\")\n    private BigDecimal commissionMinimum;\n\n    @org.springframework.beans.factory.annotation.Value(\"${commission.maximum:250.00}\")\n    private BigDecimal commissionMaximum;\n\n    @Transactional\n    public SubmitOrderResponse submitOrder("
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "                .orderValue(orderValue)\n                .status(OrderStatus.NEW)\n",
+    "replace": "                .orderValue(orderValue)\n                .estimatedCommission(estimateCommission(orderValue))\n                .status(OrderStatus.NEW)\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "    private String resolveRoutingDestination(String requested) {\n",
+    "replace": "    /**\n     * Estimated commission at order entry: basis points on notional, bounded by the\n     * per-order minimum and maximum. Kept at 4dp like other monetary order columns.\n     */\n    private BigDecimal estimateCommission(BigDecimal orderValue) {\n        if (orderValue == null || orderValue.signum() <= 0) {\n            return commissionMinimum.setScale(4, RoundingMode.HALF_UP);\n        }\n        BigDecimal commission = orderValue\n                .multiply(commissionRateBps)\n                .divide(BigDecimal.valueOf(10_000), 4, RoundingMode.HALF_UP);\n        if (commission.compareTo(commissionMinimum) < 0) {\n            return commissionMinimum.setScale(4, RoundingMode.HALF_UP);\n        }\n        if (commission.compareTo(commissionMaximum) > 0) {\n            return commissionMaximum.setScale(4, RoundingMode.HALF_UP);\n        }\n        return commission;\n    }\n\n    private String resolveRoutingDestination(String requested) {\n"
+   }
+  ],
+  "defect_location": "services/order-service/src/main/resources/db/migration/V5__add_last_price_and_order_value.sql \u2014 new `ADD COLUMN IF NOT EXISTS estimated_commission` appended to an already-applied migration",
+  "description": "The column is added by editing the already-released V5 migration instead of adding V8. Every existing database has V5 recorded with the old checksum, so Flyway validate fails on startup (checksum mismatch) and the column is never created there; ddl-auto=validate then also fails on the new entity field. New schema changes require a new versioned migration."
+ },
+ {
+  "id": "P10",
+  "control": false,
+  "kind": "mechanical",
+  "category": "timestamp-type-localdatetime",
+  "rule_ref": "CLAUDE.md \u00a713a (UTC timestamps are Instant \u2014 never Date/Calendar/long), \u00a75 (every transition timestamped in UTC)",
+  "pr_title": "order-service: record lifecycle milestone timestamps (risk checked, sent to execution, completed)",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/resources/db/migration/V8__add_order_milestone_timestamps.sql",
+    "op": "new_file",
+    "content": "-- Lifecycle milestone timestamps for order latency reporting\nALTER TABLE order_schema.orders\n    ADD COLUMN IF NOT EXISTS risk_checked_at       TIMESTAMP NULL,\n    ADD COLUMN IF NOT EXISTS sent_to_execution_at  TIMESTAMP NULL,\n    ADD COLUMN IF NOT EXISTS completed_at          TIMESTAMP NULL;\n\nCREATE INDEX IF NOT EXISTS idx_orders_sent_to_execution_at\n    ON order_schema.orders (sent_to_execution_at);\n\nCOMMENT ON COLUMN order_schema.orders.risk_checked_at IS 'Time the risk-service result was applied';\nCOMMENT ON COLUMN order_schema.orders.sent_to_execution_at IS 'Time order.execution.requested was published';\nCOMMENT ON COLUMN order_schema.orders.completed_at IS 'Time the order reached a terminal state';\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/domain/Order.java",
+    "op": "replace",
+    "find": "    @Column(name = \"routing_destination\", length = 50)\n    private String routingDestination;\n",
+    "replace": "    @Column(name = \"routing_destination\", length = 50)\n    private String routingDestination;\n\n    // --- Lifecycle milestones (latency reporting) ---\n    @Column(name = \"risk_checked_at\")\n    private java.time.LocalDateTime riskCheckedAt;\n\n    @Column(name = \"sent_to_execution_at\")\n    private java.time.LocalDateTime sentToExecutionAt;\n\n    @Column(name = \"completed_at\")\n    private java.time.LocalDateTime completedAt;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "import java.time.Instant;\n",
+    "replace": "import java.time.Instant;\nimport java.time.LocalDateTime;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "        order.setStatus(OrderStatus.RISK_REJECTED);\n",
+    "replace": "        order.setStatus(OrderStatus.RISK_REJECTED);\n        order.setRiskCheckedAt(LocalDateTime.now());\n        order.setCompletedAt(order.getRiskCheckedAt());\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "    private void transitionState(Order order, OrderStatus from, OrderStatus to, String triggeredBy) {\n        order.setStatus(to);\n",
+    "replace": "    private void transitionState(Order order, OrderStatus from, OrderStatus to, String triggeredBy) {\n        stampMilestone(order, to);\n        order.setStatus(to);\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "    private void evictRedisOrderState(UUID orderId) {\n",
+    "replace": "    /**\n     * Records the time an order reached a lifecycle milestone so that\n     * risk and execution latency can be reported per order.\n     */\n    private void stampMilestone(Order order, OrderStatus to) {\n        LocalDateTime now = LocalDateTime.now();\n        switch (to) {\n            case RISK_CHECK_PASSED -> order.setRiskCheckedAt(now);\n            case SENT_TO_EXECUTION -> order.setSentToExecutionAt(now);\n            case FILLED, REJECTED, EXPIRED -> order.setCompletedAt(now);\n            default -> {\n                // no milestone for intermediate states\n            }\n        }\n    }\n\n    private void evictRedisOrderState(UUID orderId) {\n"
+   }
+  ],
+  "defect_location": "services/order-service/.../domain/Order.java `java.time.LocalDateTime riskCheckedAt / sentToExecutionAt / completedAt`; OrderStateMachineService.stampMilestone `LocalDateTime.now()`; V8 columns `TIMESTAMP` (without time zone)",
+  "description": "New lifecycle timestamps use zone-less LocalDateTime from the JVM default zone and TIMESTAMP WITHOUT TIME ZONE columns, while createdAt/updatedAt on the same entity are Instant/UTC. Pods in different zones (or a DST change) write inconsistent values and latency math against createdAt is wrong. UTC timestamps must be Instant (\u00a713a) / TIMESTAMPTZ."
+ },
+ {
+  "id": "P11",
+  "control": false,
+  "kind": "judgement",
+  "category": "layering-logic-in-controller",
+  "rule_ref": "CLAUDE.md \u00a74 (controller \u2014 REST endpoints only, no business logic; service holds all business logic)",
+  "pr_title": "execution-service: GET /api/v1/executions/symbol/{symbol}/vwap \u2014 intraday VWAP per symbol",
+  "edits": [
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/repository/ExecutionRepository.java",
+    "op": "replace",
+    "find": "    List<Execution> findByOrderIdOrderByExecutedAtAsc(UUID orderId);\n",
+    "replace": "    List<Execution> findByOrderIdOrderByExecutedAtAsc(UUID orderId);\n\n    List<Execution> findBySymbolAndFillTypeInAndExecutedAtBetween(String symbol,\n                                                                  List<com.brokerdealer.executionservice.domain.FillType> fillTypes,\n                                                                  java.time.Instant from,\n                                                                  java.time.Instant to);\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/response/VwapResponse.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.dto.response;\n\nimport lombok.Builder;\nimport lombok.Value;\n\n@Value\n@Builder\npublic class VwapResponse {\n    private VwapData data;\n    private ResponseMeta meta;\n\n    @Value\n    @Builder\n    public static class VwapData {\n        private String symbol;\n        private String tradeDate;\n        private Integer fillCount;\n        private Integer totalQuantity;\n        private String vwap;\n    }\n}\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/controller/ExecutionController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.executionservice.dto.response.ExecutionListResponse;\nimport com.brokerdealer.executionservice.service.ExecutionService;\n",
+    "replace": "import com.brokerdealer.executionservice.domain.Execution;\nimport com.brokerdealer.executionservice.domain.FillType;\nimport com.brokerdealer.executionservice.dto.response.ExecutionListResponse;\nimport com.brokerdealer.executionservice.dto.response.ResponseMeta;\nimport com.brokerdealer.executionservice.dto.response.VwapResponse;\nimport com.brokerdealer.executionservice.exception.ResourceNotFoundException;\nimport com.brokerdealer.executionservice.repository.ExecutionRepository;\nimport com.brokerdealer.executionservice.service.ExecutionService;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/controller/ExecutionController.java",
+    "op": "replace",
+    "find": "import java.util.UUID;\n",
+    "replace": "import java.math.BigDecimal;\nimport java.math.RoundingMode;\nimport java.time.Instant;\nimport java.time.LocalDate;\nimport java.time.ZoneId;\nimport java.util.List;\nimport java.util.UUID;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/controller/ExecutionController.java",
+    "op": "replace",
+    "find": "    private final ExecutionService executionService;\n",
+    "replace": "    private static final ZoneId ET_ZONE = ZoneId.of(\"America/New_York\");\n\n    private final ExecutionService executionService;\n    private final ExecutionRepository executionRepository;\n\n    @GetMapping(\"/symbol/{symbol}/vwap\")\n    public ResponseEntity<VwapResponse> getIntradayVwap(@PathVariable String symbol) {\n        String normalised = symbol.toUpperCase();\n        LocalDate tradeDate = LocalDate.now(ET_ZONE);\n        Instant from = tradeDate.atStartOfDay(ET_ZONE).toInstant();\n        Instant to = tradeDate.plusDays(1).atStartOfDay(ET_ZONE).toInstant();\n\n        List<Execution> fills = executionRepository.findBySymbolAndFillTypeInAndExecutedAtBetween(\n                normalised, List.of(FillType.FULL, FillType.PARTIAL), from, to);\n        if (fills.isEmpty()) {\n            throw new ResourceNotFoundException(\"NO_EXECUTIONS\", \"No executions today for symbol: \" + normalised);\n        }\n\n        int totalQty = fills.stream().mapToInt(Execution::getExecutedQty).sum();\n        BigDecimal notional = fills.stream()\n                .map(e -> e.getExecutedPrice().multiply(BigDecimal.valueOf(e.getExecutedQty())))\n                .reduce(BigDecimal.ZERO, BigDecimal::add);\n        BigDecimal vwap = notional.divide(BigDecimal.valueOf(totalQty), 4, RoundingMode.HALF_UP);\n\n        log.debug(\"VWAP computed: symbol={} fills={}\", normalised, fills.size());\n        return ResponseEntity.ok(VwapResponse.builder()\n                .data(VwapResponse.VwapData.builder()\n                        .symbol(normalised)\n                        .tradeDate(tradeDate.toString())\n                        .fillCount(fills.size())\n                        .totalQuantity(totalQty)\n                        .vwap(vwap.toPlainString())\n                        .build())\n                .meta(ResponseMeta.builder()\n                        .timestamp(Instant.now().toString())\n                        .requestId(UUID.randomUUID().toString())\n                        .build())\n                .build());\n    }\n"
+   }
+  ],
+  "defect_location": "services/execution-service/.../controller/ExecutionController.java \u2014 getIntradayVwap injects ExecutionRepository and performs the query, trade-date windowing and VWAP calculation directly in the controller",
+  "description": "Business logic (date windowing, aggregation, VWAP division) and repository access live in the REST controller, bypassing the service layer. \u00a74 says controllers contain REST endpoints only, no business logic; all logic and orchestration belong in .service."
+ },
+ {
+  "id": "P12",
+  "control": false,
+  "kind": "judgement",
+  "category": "entity-leak",
+  "rule_ref": "CLAUDE.md \u00a74 (.dto \u2014 never expose entities), \u00a713g (never expose JPA entities from service methods)",
+  "pr_title": "marketdata-service: GET /api/v1/market/holidays/upcoming?limit=",
+  "edits": [
+   {
+    "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/MarketDataService.java",
+    "op": "replace",
+    "find": "    public List<InstrumentSummaryResponse> getInstruments() {\n",
+    "replace": "    public List<MarketHoliday> getUpcomingHolidays(int limit) {\n        if (limit < 1 || limit > 20) {\n            throw new ValidationException(\"VALIDATION_ERROR\", \"limit must be between 1 and 20\");\n        }\n        LocalDate today = LocalDate.now(ZoneId.of(timezone));\n        log.debug(\"Fetching upcoming holidays: from={} limit={}\", today, limit);\n        return marketHolidayRepository.findAllByOrderByHolidayDateAsc().stream()\n                .filter(h -> !h.getHolidayDate().isBefore(today))\n                .limit(limit)\n                .toList();\n    }\n\n    public List<InstrumentSummaryResponse> getInstruments() {\n"
+   },
+   {
+    "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/MarketDataService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.marketdataservice.domain.Instrument;\n",
+    "replace": "import com.brokerdealer.marketdataservice.domain.Instrument;\nimport com.brokerdealer.marketdataservice.domain.MarketHoliday;\nimport com.brokerdealer.marketdataservice.exception.ValidationException;\n"
+   },
+   {
+    "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/MarketDataController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.marketdataservice.domain.SearchType;\n",
+    "replace": "import com.brokerdealer.marketdataservice.domain.MarketHoliday;\nimport com.brokerdealer.marketdataservice.domain.SearchType;\n"
+   },
+   {
+    "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/MarketDataController.java",
+    "op": "replace",
+    "find": "    @GetMapping(\"/instruments/search\")\n",
+    "replace": "    @GetMapping(\"/holidays/upcoming\")\n    public ResponseEntity<Map<String, Object>> getUpcomingHolidays(\n            @RequestParam(defaultValue = \"5\") int limit) {\n        log.debug(\"GET /api/v1/market/holidays/upcoming?limit={}\", limit);\n        List<MarketHoliday> data = marketDataService.getUpcomingHolidays(limit);\n        return ResponseEntity.ok(buildSuccessResponse(data));\n    }\n\n    @GetMapping(\"/instruments/search\")\n"
+   },
+   {
+    "file": "services/marketdata-service/src/test/java/com/brokerdealer/marketdataservice/service/UpcomingHolidaysValidationTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.marketdataservice.service;\n\nimport com.brokerdealer.marketdataservice.exception.ValidationException;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.junit.jupiter.MockitoExtension;\n\nimport static org.assertj.core.api.Assertions.assertThatThrownBy;\n\n@ExtendWith(MockitoExtension.class)\nclass UpcomingHolidaysValidationTest {\n\n    @InjectMocks\n    private MarketDataService marketDataService;\n\n    @Test\n    void shouldRejectZeroLimit() {\n        assertThatThrownBy(() -> marketDataService.getUpcomingHolidays(0))\n                .isInstanceOf(ValidationException.class);\n    }\n\n    @Test\n    void shouldRejectLimitAboveMaximum() {\n        assertThatThrownBy(() -> marketDataService.getUpcomingHolidays(21))\n                .isInstanceOf(ValidationException.class);\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/marketdata-service/.../service/MarketDataService.java `public List<MarketHoliday> getUpcomingHolidays(int limit)` and MarketDataController `List<MarketHoliday> data = ...; buildSuccessResponse(data)`",
+  "description": "The service returns JPA entities and the controller serialises the MarketHoliday entity straight into the API response, although a MarketHolidayResponse DTO and MarketHolidayMapper already exist. Entities must be mapped to DTOs before leaving the service; the JSON contract is now coupled to the table (holidayDate becomes a LocalDate array/format per Jackson config)."
+ },
+ {
+  "id": "P13",
+  "control": false,
+  "kind": "judgement",
+  "category": "missing-role-check",
+  "rule_ref": "CLAUDE.md \u00a714 (role matrix \u2014 TRADER cannot configure risk), \u00a76 L2 check #14 (marginCallActive)",
+  "pr_title": "client-service: PATCH /api/v1/clients/{id}/margin-call?active= \u2014 set or clear margin call flag",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    @Transactional\n    public void processExecutionFill(Map<String, Object> payload) {\n",
+    "replace": "    /**\n     * Sets or clears the margin call flag consulted by order-service Level 2 check #14.\n     * Idempotent: an unchanged value is not re-saved.\n     */\n    @Transactional\n    public ClientProfileResponse updateMarginCall(UUID id, Boolean marginCallActive) {\n        log.debug(\"Updating margin call flag: clientId={}\", id);\n        if (marginCallActive == null) {\n            throw new ValidationException(\"VALIDATION_ERROR\", \"active is required\");\n        }\n        Client client = clientRepository.findById(id)\n                .orElseThrow(() -> new ClientNotFoundException(\"CLIENT_NOT_FOUND\",\n                        \"Client not found: \" + id));\n\n        if (marginCallActive.equals(client.getMarginCallActive())) {\n            log.debug(\"Margin call flag unchanged: clientId={} marginCallActive={}\", id, marginCallActive);\n            return clientMapper.toProfileResponse(client);\n        }\n\n        client.setMarginCallActive(marginCallActive);\n        clientRepository.save(client);\n        evictPortfolioCache(id);\n\n        log.info(\"Margin call flag updated: clientId={} marginCallActive={}\", id, marginCallActive);\n        return clientMapper.toProfileResponse(client);\n    }\n\n    @Transactional\n    public void processExecutionFill(Map<String, Object> payload) {\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "    private Map<String, Object> buildSuccessResponse(Object data) {\n",
+    "replace": "    @PatchMapping(\"/{id}/margin-call\")\n    public ResponseEntity<Map<String, Object>> updateMarginCall(\n            @PathVariable UUID id,\n            @RequestParam Boolean active) {\n        log.debug(\"PATCH /api/v1/clients/{}/margin-call active={}\", id, active);\n        ClientProfileResponse data = clientService.updateMarginCall(id, active);\n        return ResponseEntity.ok(buildSuccessResponse(data));\n    }\n\n    private Map<String, Object> buildSuccessResponse(Object data) {\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/filter/RoleAuthorizationFilter.java",
+    "op": "replace",
+    "find": "        // PATCH /default-route \u2014 ADMIN only\n",
+    "replace": "        // PATCH /margin-call \u2014 desk roles only; read-only VIEWER cannot change account flags\n        if (\"PATCH\".equalsIgnoreCase(method) && path.endsWith(\"/margin-call\")) {\n            return !\"VIEWER\".equals(role);\n        }\n        // PATCH /default-route \u2014 ADMIN only\n"
+   }
+  ],
+  "defect_location": "services/client-service/.../filter/RoleAuthorizationFilter.java \u2014 `if (\"PATCH\"... path.endsWith(\"/margin-call\")) { return !\"VIEWER\".equals(role); }`",
+  "description": "The new margin-call endpoint is authorised with a deny-list (everyone except VIEWER), so TRADER (and the SYSTEM pseudo-role) can clear the margin-call flag on any client \u2014 including their own \u2014 and thereby bypass Level 2 check #14. Per the role matrix TRADER cannot configure risk; this should be an allow-list (e.g. OPERATIONS/ADMIN)."
+ },
+ {
+  "id": "P14",
+  "control": false,
+  "kind": "judgement",
+  "category": "api-contract-money-as-number",
+  "rule_ref": "CLAUDE.md \u00a712 (all monetary values in JSON: String representation of BigDecimal)",
+  "pr_title": "execution-service: GET /api/v1/executions/{orderId}/summary \u2014 filled qty, avg price, total value",
+  "edits": [
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/response/ExecutionSummaryResponse.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.dto.response;\n\nimport lombok.Builder;\nimport lombok.Value;\n\nimport java.math.BigDecimal;\n\n@Value\n@Builder\npublic class ExecutionSummaryResponse {\n    private ExecutionSummaryData data;\n    private ResponseMeta meta;\n\n    @Value\n    @Builder\n    public static class ExecutionSummaryData {\n        private String orderId;\n        private Integer fillCount;\n        private Integer filledQuantity;\n        private Integer remainingQuantity;\n        private BigDecimal avgExecutedPrice;\n        private BigDecimal totalFillValue;\n        private String lastExecutedAt;\n    }\n}\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "    public void processFill(OrderExecutionRequest request) {\n",
+    "replace": "    public ExecutionSummaryResponse getExecutionSummary(UUID orderId) {\n        List<Execution> executions = executionRepository.findByOrderIdOrderByExecutedAtAsc(orderId);\n        if (executions.isEmpty()) {\n            throw new ResourceNotFoundException(\"ORDER_NOT_FOUND\",\n                    \"No executions found for order: \" + orderId);\n        }\n\n        List<Execution> fills = executions.stream()\n                .filter(e -> e.getFillType() != FillType.REJECTED)\n                .toList();\n        int filledQty = fills.stream().mapToInt(Execution::getExecutedQty).sum();\n        BigDecimal totalValue = fills.stream()\n                .map(Execution::getFillValue)\n                .reduce(BigDecimal.ZERO, BigDecimal::add)\n                .setScale(2, RoundingMode.HALF_UP);\n        BigDecimal avgPrice = filledQty == 0 ? null : fills.stream()\n                .map(e -> e.getExecutedPrice().multiply(BigDecimal.valueOf(e.getExecutedQty())))\n                .reduce(BigDecimal.ZERO, BigDecimal::add)\n                .divide(BigDecimal.valueOf(filledQty), 4, RoundingMode.HALF_UP);\n        Execution last = executions.get(executions.size() - 1);\n\n        return ExecutionSummaryResponse.builder()\n                .data(ExecutionSummaryResponse.ExecutionSummaryData.builder()\n                        .orderId(orderId.toString())\n                        .fillCount(fills.size())\n                        .filledQuantity(filledQty)\n                        .remainingQuantity(last.getRemainingQuantity())\n                        .avgExecutedPrice(avgPrice)\n                        .totalFillValue(totalValue)\n                        .lastExecutedAt(last.getExecutedAt().toString())\n                        .build())\n                .meta(ResponseMeta.builder()\n                        .timestamp(Instant.now().toString())\n                        .requestId(UUID.randomUUID().toString())\n                        .build())\n                .build();\n    }\n\n    public void processFill(OrderExecutionRequest request) {\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.executionservice.domain.OrderType;\n",
+    "replace": "import com.brokerdealer.executionservice.domain.Execution;\nimport com.brokerdealer.executionservice.domain.FillType;\nimport com.brokerdealer.executionservice.domain.OrderType;\nimport com.brokerdealer.executionservice.dto.response.ExecutionSummaryResponse;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "import java.time.Instant;\n",
+    "replace": "import java.math.BigDecimal;\nimport java.math.RoundingMode;\nimport java.time.Instant;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/controller/ExecutionController.java",
+    "op": "replace",
+    "find": "        return ResponseEntity.ok(response);\n    }\n",
+    "replace": "        return ResponseEntity.ok(response);\n    }\n\n    @GetMapping(\"/{orderId}/summary\")\n    public ResponseEntity<com.brokerdealer.executionservice.dto.response.ExecutionSummaryResponse> getExecutionSummary(\n            @PathVariable UUID orderId) {\n        log.debug(\"GET /api/v1/executions/{}/summary\", orderId);\n        return ResponseEntity.ok(executionService.getExecutionSummary(orderId));\n    }\n"
+   }
+  ],
+  "defect_location": "services/execution-service/.../dto/response/ExecutionSummaryResponse.java \u2014 `private BigDecimal avgExecutedPrice; private BigDecimal totalFillValue;`",
+  "description": "Monetary fields in the response DTO are BigDecimal, so Jackson emits them as JSON numbers (e.g. 152.3 / 1.523E+4 style) instead of String representations. \u00a712 requires all monetary JSON values to be Strings; the existing ExecutionResponse uses toPlainString() Strings, so clients parsing this endpoint get a different contract and can lose precision in JS doubles."
+ },
+ {
+  "id": "P15",
+  "control": false,
+  "kind": "judgement",
+  "category": "unbounded-query",
+  "rule_ref": "CLAUDE.md \u00a713g/\u00a712 REST standards (paged lists; MAX_PAGE_SIZE convention in OrderService) \u2014 real perf/DoS bug",
+  "pr_title": "order-service: GET /api/v1/orders/blotter \u2014 full-day blotter view without paging controls",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java",
+    "op": "replace",
+    "find": "    @GetMapping(\"/status-counts\")\n",
+    "replace": "    @GetMapping(\"/blotter\")\n    public ResponseEntity<OrderListResponse> getBlotter(\n            @RequestParam(required = false) String status,\n            @RequestParam(required = false) String side,\n            @RequestParam(required = false) String createdAfter) {\n        return ResponseEntity.ok(orderService.getBlotter(status, side, createdAfter));\n    }\n\n    @GetMapping(\"/status-counts\")\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "    private Specification<Order> buildOrderSpec(",
+    "replace": "    /**\n     * Blotter view for the trading desk: every order matching the filters in a single\n     * response, newest first, without per-order fill lookups.\n     */\n    public OrderListResponse getBlotter(String status, String side, String createdAfter) {\n        Instant createdAfterInstant = null;\n        if (createdAfter != null && !createdAfter.isBlank()) {\n            try {\n                createdAfterInstant = Instant.parse(createdAfter);\n            } catch (DateTimeParseException e) {\n                throw new ValidationException(\"VALIDATION_ERROR\",\n                        \"Invalid createdAfter format: must be ISO 8601 UTC (e.g. 2026-05-18T00:00:00Z)\");\n            }\n        }\n\n        Specification<Order> spec = buildOrderSpec(status, null, side, null, createdAfterInstant);\n        List<Order> orders = orderRepository.findAll(spec,\n                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, \"createdAt\"));\n\n        List<OrderResponse> items = orders.stream()\n                .map(o -> toOrderResponse(o, Collections.emptyList()))\n                .toList();\n        log.debug(\"Blotter built: status={} side={} count={}\", status, side, items.size());\n\n        return OrderListResponse.builder()\n                .data(OrderListData.builder()\n                        .orders(items)\n                        .page(0)\n                        .pageSize(items.size())\n                        .totalCount((long) items.size())\n                        .totalPages(1)\n                        .build())\n                .meta(ResponseMeta.builder()\n                        .timestamp(Instant.now().toString())\n                        .requestId(UUID.randomUUID().toString())\n                        .build())\n                .build();\n    }\n\n    private Specification<Order> buildOrderSpec("
+   }
+  ],
+  "defect_location": "services/order-service/.../service/OrderService.java getBlotter \u2014 `orderRepository.findAll(spec, Sort.by(DESC, \"createdAt\"))` with all filters optional",
+  "description": "The blotter loads every matching order into memory in one query with no page size or cap; with no filters (or a wide createdAfter) it returns the whole orders table across all clients. The existing list endpoint clamps to MAX_PAGE_SIZE=200 \u2014 this endpoint bypasses that, an unbounded query / memory-DoS vector."
+ },
+ {
+  "id": "P16",
+  "control": false,
+  "kind": "judgement",
+  "category": "swallowed-exception-kafka",
+  "rule_ref": "CLAUDE.md \u00a77 (retry 3x with backoff, then DLT {topic}.DLT)",
+  "pr_title": "execution-service: harden order.execution.requested consumer (input validation + metrics)",
+  "edits": [
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.executionservice.service.ExecutionService;\nimport lombok.RequiredArgsConstructor;\n",
+    "replace": "import com.brokerdealer.executionservice.service.ExecutionService;\nimport io.micrometer.core.instrument.MeterRegistry;\nimport lombok.RequiredArgsConstructor;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java",
+    "op": "replace",
+    "find": "    private final ExecutionService executionService;\n",
+    "replace": "    private static final String METRIC_RECEIVED = \"execution.requests.received\";\n    private static final String METRIC_SKIPPED = \"execution.requests.skipped\";\n    private static final String METRIC_FAILED = \"execution.requests.failed\";\n\n    private final ExecutionService executionService;\n    private final MeterRegistry meterRegistry;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java",
+    "op": "replace",
+    "find": "        log.info(\"Received order.execution.requested: orderId={} orderType={}\",\n                event.getOrderId(), event.getOrderType());\n        executionService.processFill(event);\n",
+    "replace": "        log.info(\"Received order.execution.requested: orderId={} orderType={}\",\n                event.getOrderId(), event.getOrderType());\n        meterRegistry.counter(METRIC_RECEIVED).increment();\n\n        if (isMalformed(event)) {\n            log.warn(\"Skipping malformed execution request: orderId={}\", event.getOrderId());\n            meterRegistry.counter(METRIC_SKIPPED, \"reason\", \"malformed\").increment();\n            return;\n        }\n        if (event.getOrderType() == null) {\n            log.warn(\"Skipping execution request without orderType: orderId={}\", event.getOrderId());\n            meterRegistry.counter(METRIC_SKIPPED, \"reason\", \"missing_order_type\").increment();\n            return;\n        }\n\n        try {\n            executionService.processFill(event);\n        } catch (Exception e) {\n            meterRegistry.counter(METRIC_FAILED, \"orderType\", event.getOrderType().name()).increment();\n            log.error(\"Failed to process execution request: orderId={}, error={}\",\n                    event.getOrderId(), e.getMessage(), e);\n        }\n    }\n\n    /**\n     * A request is malformed when it cannot be filled at all: missing symbol/side or a\n     * non-positive quantity. LIMIT requests additionally need a limit price.\n     */\n    private boolean isMalformed(OrderExecutionRequest event) {\n        if (event.getQuantity() == null || event.getQuantity() <= 0) {\n            return true;\n        }\n        if (event.getSymbol() == null || event.getSide() == null) {\n            return true;\n        }\n        return event.getOrderType() == com.brokerdealer.executionservice.domain.OrderType.LIMIT\n                && event.getLimitPrice() == null;\n"
+   }
+  ],
+  "defect_location": "services/execution-service/.../kafka/consumer/OrderExecutionConsumer.java \u2014 `try { executionService.processFill(event); } catch (Exception e) { ...counter...; log.error(...); }`",
+  "description": "All processing failures (DB down, transient errors) are caught and only logged, so the listener returns normally and the offset is committed. The 3x exponential retry and .DLT routing never trigger, and the order is stranded in SENT_TO_EXECUTION forever. The malformed-input skips are fine; the catch-all swallow is the defect."
+ },
+ {
+  "id": "P17",
+  "control": false,
+  "kind": "judgement",
+  "category": "non-idempotent-consumer",
+  "rule_ref": "CLAUDE.md \u00a77 (idempotent consumers; at-least-once delivery)",
+  "pr_title": "client-service: maintain dailyOrderCount from order.state.changed NEW events",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/kafka/consumer/OrderEventConsumer.java",
+    "op": "replace",
+    "find": "        log.debug(\"order.state.changed received: orderId={} toState={}\",\n                payload.get(\"orderId\"), payload.get(\"toState\"));\n",
+    "replace": "        log.debug(\"order.state.changed received: orderId={} toState={}\",\n                payload.get(\"orderId\"), payload.get(\"toState\"));\n\n        String toState = (String) payload.get(\"toState\");\n        Object fromState = payload.get(\"fromState\");\n        Object clientIdValue = payload.get(\"clientId\");\n        if (!\"NEW\".equals(toState) || fromState != null || clientIdValue == null) {\n            return;\n        }\n\n        java.util.UUID clientId = parseUuid(clientIdValue);\n        if (clientId == null) {\n            log.warn(\"order.state.changed with invalid clientId skipped: orderId={}\", payload.get(\"orderId\"));\n            return;\n        }\n        clientService.recordNewOrder(clientId);\n    }\n\n    /**\n     * Parses a UUID carried as a JSON string; returns null for malformed values so that\n     * a bad payload is skipped instead of being retried forever.\n     */\n    private java.util.UUID parseUuid(Object value) {\n        try {\n            return java.util.UUID.fromString(value.toString());\n        } catch (IllegalArgumentException e) {\n            return null;\n        }\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    @Transactional\n    public void processExecutionFill(Map<String, Object> payload) {\n",
+    "replace": "    /**\n     * Increments the client's daily order counter when order-service publishes the\n     * initial NEW transition for an order. Used by the activity dashboard and by the\n     * daily order limit shown on the portfolio screen.\n     */\n    @Transactional\n    public void recordNewOrder(UUID clientId) {\n        Client client = clientRepository.findById(clientId)\n                .orElseThrow(() -> new ClientNotFoundException(\"CLIENT_NOT_FOUND\",\n                        \"Client not found: \" + clientId));\n\n        int current = client.getDailyOrderCount() != null ? client.getDailyOrderCount() : 0;\n        client.setDailyOrderCount(current + 1);\n        clientRepository.save(client);\n        evictPortfolioCache(clientId);\n\n        log.debug(\"Daily order count incremented: clientId={} dailyOrderCount={}\",\n                clientId, client.getDailyOrderCount());\n    }\n\n    @Transactional\n    public void processExecutionFill(Map<String, Object> payload) {\n"
+   }
+  ],
+  "defect_location": "services/client-service/.../service/ClientService.java recordNewOrder \u2014 unconditional `client.setDailyOrderCount(current + 1)` keyed only on clientId (no orderId dedupe); called from OrderEventConsumer",
+  "description": "order.state.changed is at-least-once; a redelivery or consumer rebalance replays NEW events and increments dailyOrderCount again. Nothing records which orderIds were already counted, so the counter drifts upward and clients can be blocked by the daily order limit. \u00a77 requires idempotent consumers that check state before applying."
+ },
+ {
+  "id": "P18",
+  "control": false,
+  "kind": "judgement",
+  "category": "secret-in-logs",
+  "rule_ref": "CLAUDE.md \u00a713h (never log passwords/tokens/secrets or full request bodies), \u00a710",
+  "pr_title": "auth-service: ADMIN password reset \u2014 PATCH /api/v1/users/{userId}/password",
+  "edits": [
+   {
+    "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/dto/request/ResetPasswordRequest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.authservice.dto.request;\n\nimport jakarta.validation.constraints.NotBlank;\nimport jakarta.validation.constraints.Size;\nimport lombok.Data;\n\n@Data\npublic class ResetPasswordRequest {\n\n    @NotBlank(message = \"newPassword is required\")\n    @Size(min = 12, max = 128, message = \"newPassword must be 12-128 characters\")\n    private String newPassword;\n\n    @Size(max = 200, message = \"reason must be at most 200 characters\")\n    private String reason;\n}\n"
+   },
+   {
+    "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/service/UserService.java",
+    "op": "replace",
+    "find": "    private UserResponse toResponse(User user) {\n",
+    "replace": "    public UserStatusResponse resetPassword(UUID targetId, UUID callerAdminId,\n                                            com.brokerdealer.authservice.dto.request.ResetPasswordRequest request) {\n        log.info(\"Admin password reset: targetId={} callerAdminId={} request={}\", targetId, callerAdminId, request);\n\n        User user = userRepository.findById(targetId)\n                .orElseThrow(() -> new UserNotFoundException(\"USER_NOT_FOUND\", \"User not found: \" + targetId));\n\n        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));\n        user.setUpdatedAt(Instant.now());\n        User saved = userRepository.save(user);\n\n        log.info(\"Password reset completed: userId={}\", saved.getId());\n        return UserStatusResponse.builder()\n                .userId(saved.getId())\n                .status(saved.getStatus().name())\n                .updatedAt(saved.getUpdatedAt())\n                .build();\n    }\n\n    private UserResponse toResponse(User user) {\n"
+   },
+   {
+    "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/controller/UserController.java",
+    "op": "replace",
+    "find": "    private UUID resolveCallerId(String header) {\n",
+    "replace": "    @PatchMapping(\"/{userId}/password\")\n    @PreAuthorize(\"hasRole('ADMIN')\")\n    public ResponseEntity<Map<String, Object>> resetPassword(\n            @PathVariable UUID userId,\n            @Valid @RequestBody com.brokerdealer.authservice.dto.request.ResetPasswordRequest request,\n            HttpServletRequest httpRequest) {\n\n        log.debug(\"PATCH /api/v1/users/{}/password\", userId);\n\n        UUID callerAdminId = resolveCallerId(httpRequest.getHeader(\"X-User-Id\"));\n        UserStatusResponse result = userService.resetPassword(userId, callerAdminId, request);\n\n        Map<String, Object> meta = Map.of(\n                \"timestamp\", Instant.now().toString(),\n                \"requestId\", UUID.randomUUID().toString()\n        );\n\n        return ResponseEntity.ok(Map.of(\"data\", result, \"meta\", meta));\n    }\n\n    private UUID resolveCallerId(String header) {\n"
+   }
+  ],
+  "defect_location": "services/auth-service/.../service/UserService.java resetPassword \u2014 `log.info(\"Admin password reset: targetId={} callerAdminId={} request={}\", ..., request)`",
+  "description": "The whole ResetPasswordRequest is logged at INFO; Lombok @Data generates toString() including newPassword, so every reset writes the cleartext password to the logs. \u00a713h forbids logging passwords or full request bodies."
+ },
+ {
+  "id": "P19",
+  "control": false,
+  "kind": "judgement",
+  "category": "missing-transaction-multi-write",
+  "rule_ref": "CLAUDE.md \u00a74 service orchestration / client-service \u00a710 (never allow inconsistent holdings) \u2014 real atomicity bug",
+  "pr_title": "client-service: POST /api/v1/clients/{id}/position-journal \u2014 move shares between accounts (OPERATIONS)",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    private void upsertHolding(UUID clientId, String symbol, int executedQty, BigDecimal executedPrice) {\n",
+    "replace": "    /**\n     * Moves shares of one symbol from a source account to a target account at the\n     * source's average cost (operations journal). Cash balances are not affected.\n     */\n    public Map<String, Object> journalPosition(UUID sourceClientId, UUID targetClientId,\n                                               String symbol, Integer quantity) {\n        if (symbol == null || !symbol.matches(\"[A-Z]{1,6}\")) {\n            throw new ValidationException(\"VALIDATION_ERROR\", \"symbol must be 1-6 uppercase letters\");\n        }\n        if (quantity == null || quantity <= 0) {\n            throw new ValidationException(\"VALIDATION_ERROR\", \"quantity must be greater than 0\");\n        }\n        if (sourceClientId.equals(targetClientId)) {\n            throw new ValidationException(\"INVALID_JOURNAL\", \"source and target client must differ\");\n        }\n        if (!clientRepository.existsById(sourceClientId) || !clientRepository.existsById(targetClientId)) {\n            throw new ClientNotFoundException(\"CLIENT_NOT_FOUND\", \"Source or target client not found\");\n        }\n\n        Holding source = holdingRepository.findByClientIdAndSymbol(sourceClientId, symbol)\n                .orElseThrow(() -> new ValidationException(\"INSUFFICIENT_HOLDINGS\",\n                        \"No position in \" + symbol + \" to journal\"));\n        if (source.getQuantity() < quantity) {\n            throw new ValidationException(\"INSUFFICIENT_HOLDINGS\",\n                    \"Journal quantity exceeds position in \" + symbol);\n        }\n\n        source.setQuantity(source.getQuantity() - quantity);\n        holdingRepository.save(source);\n        upsertHolding(targetClientId, symbol, quantity, source.getAvgPrice());\n\n        evictPortfolioCache(sourceClientId);\n        evictPortfolioCache(targetClientId);\n        log.info(\"Position journal applied: sourceClientId={} targetClientId={} symbol={} qty={}\",\n                sourceClientId, targetClientId, symbol, quantity);\n\n        return Map.of(\"sourceClientId\", sourceClientId, \"targetClientId\", targetClientId,\n                \"symbol\", symbol, \"quantity\", quantity);\n    }\n\n    private void upsertHolding(UUID clientId, String symbol, int executedQty, BigDecimal executedPrice) {\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "    private Map<String, Object> buildSuccessResponse(Object data) {\n",
+    "replace": "    @PostMapping(\"/{id}/position-journal\")\n    public ResponseEntity<Map<String, Object>> journalPosition(\n            @PathVariable UUID id,\n            @RequestParam UUID targetClientId,\n            @RequestParam String symbol,\n            @RequestParam Integer quantity) {\n        log.debug(\"POST /api/v1/clients/{}/position-journal targetClientId={} symbol={}\", id, targetClientId, symbol);\n        return ResponseEntity.ok(buildSuccessResponse(\n                clientService.journalPosition(id, targetClientId, symbol, quantity)));\n    }\n\n    private Map<String, Object> buildSuccessResponse(Object data) {\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/filter/RoleAuthorizationFilter.java",
+    "op": "replace",
+    "find": "        // PATCH /default-route \u2014 ADMIN only\n",
+    "replace": "        // POST /position-journal \u2014 OPERATIONS only\n        if (\"POST\".equalsIgnoreCase(method) && path.endsWith(\"/position-journal\")) {\n            return \"OPERATIONS\".equals(role);\n        }\n        // PATCH /default-route \u2014 ADMIN only\n"
+   }
+  ],
+  "defect_location": "services/client-service/.../service/ClientService.java journalPosition \u2014 public method performing two holding writes (`holdingRepository.save(source)` then `upsertHolding(target...)`) without @Transactional",
+  "description": "The journal debits the source holding and credits the target holding as two independent auto-committed writes (no @Transactional, unlike every other mutating method in ClientService). A failure in upsertHolding (constraint, optimistic lock, DB blip) leaves shares removed from the source and never added to the target \u2014 position disappears; concurrent journals can also oversell the source."
+ },
+ {
+  "id": "P20",
+  "control": false,
+  "kind": "judgement",
+  "category": "null-return-contract",
+  "rule_ref": "CLAUDE.md \u00a713g (return Optional, never null; throw domain exceptions)",
+  "pr_title": "marketdata-service: GET /api/v1/market/holidays/{date} \u2014 is a given date a market holiday",
+  "edits": [
+   {
+    "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/MarketDataService.java",
+    "op": "replace",
+    "find": "    public List<InstrumentSummaryResponse> getInstruments() {\n",
+    "replace": "    /**\n     * Returns the holiday entry for the given date, used by the order ticket date picker\n     * to explain why a GTD date is not selectable.\n     */\n    public MarketHolidayResponse getHoliday(LocalDate date) {\n        log.debug(\"Fetching market holiday: date={}\", date);\n        return marketHolidayRepository.findById(date)\n                .map(marketHolidayMapper::toResponse)\n                .orElse(null);\n    }\n\n    public List<InstrumentSummaryResponse> getInstruments() {\n"
+   },
+   {
+    "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/MarketDataController.java",
+    "op": "replace",
+    "find": "    @GetMapping(\"/instruments/search\")\n",
+    "replace": "    @GetMapping(\"/holidays/{date}\")\n    public ResponseEntity<Map<String, Object>> getHoliday(\n            @PathVariable @org.springframework.format.annotation.DateTimeFormat(\n                    iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {\n        log.debug(\"GET /api/v1/market/holidays/{}\", date);\n        MarketHolidayResponse data = marketDataService.getHoliday(date);\n        return ResponseEntity.ok(buildSuccessResponse(data));\n    }\n\n    @GetMapping(\"/instruments/search\")\n"
+   },
+   {
+    "file": "services/marketdata-service/src/test/java/com/brokerdealer/marketdataservice/service/MarketHolidayLookupTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.marketdataservice.service;\n\nimport com.brokerdealer.marketdataservice.domain.MarketHoliday;\nimport com.brokerdealer.marketdataservice.dto.response.MarketHolidayResponse;\nimport com.brokerdealer.marketdataservice.mapper.MarketHolidayMapper;\nimport com.brokerdealer.marketdataservice.repository.MarketHolidayRepository;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.Mock;\nimport org.mockito.junit.jupiter.MockitoExtension;\n\nimport java.time.LocalDate;\nimport java.util.Optional;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.mockito.Mockito.when;\n\n@ExtendWith(MockitoExtension.class)\nclass MarketHolidayLookupTest {\n\n    @Mock private MarketHolidayRepository marketHolidayRepository;\n    @Mock private MarketHolidayMapper marketHolidayMapper;\n    @InjectMocks private MarketDataService marketDataService;\n\n    @Test\n    void shouldReturnHolidayWhenDateIsHoliday() {\n        LocalDate thanksgiving = LocalDate.of(2026, 11, 26);\n        MarketHoliday holiday = MarketHoliday.builder().holidayDate(thanksgiving).holidayName(\"Thanksgiving\").build();\n        when(marketHolidayRepository.findById(thanksgiving)).thenReturn(Optional.of(holiday));\n        when(marketHolidayMapper.toResponse(holiday)).thenReturn(\n                MarketHolidayResponse.builder().holidayDate(\"2026-11-26\").holidayName(\"Thanksgiving\").build());\n\n        assertThat(marketDataService.getHoliday(thanksgiving).getHolidayName()).isEqualTo(\"Thanksgiving\");\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/marketdata-service/.../service/MarketDataService.java getHoliday \u2014 `.orElse(null)`; consumed by MarketDataController.getHoliday \u2192 buildSuccessResponse(data) which uses Map.of",
+  "description": "The service signals 'not a holiday' by returning null instead of Optional/domain exception. The controller passes it into buildSuccessResponse, whose Map.of(\"data\", data, ...) throws NullPointerException on a null value, so every non-holiday date (the common case) returns 500 INTERNAL_ERROR. The test only covers the holiday path."
+ },
+ {
+  "id": "P21",
+  "control": false,
+  "kind": "domain",
+  "category": "state-machine-backward-transition",
+  "rule_ref": "CLAUDE.md \u00a75 (valid transitions only), \u00a710 (never allow order state to move backwards)",
+  "pr_title": "order-service: enforce an explicit transition table in OrderStateMachineService",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/exception/IllegalStateTransitionException.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.exception;\n\nimport com.brokerdealer.orderservice.domain.OrderStatus;\n\nimport java.util.UUID;\n\npublic class IllegalStateTransitionException extends RuntimeException {\n\n    private final String errorCode = \"ILLEGAL_STATE_TRANSITION\";\n\n    public IllegalStateTransitionException(UUID orderId, OrderStatus from, OrderStatus to) {\n        super(\"Illegal order state transition: orderId=\" + orderId + \" \" + from + \" -> \" + to);\n    }\n\n    public String getErrorCode() {\n        return errorCode;\n    }\n}\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.orderservice.exception.OrderNotFoundException;\n",
+    "replace": "import com.brokerdealer.orderservice.exception.IllegalStateTransitionException;\nimport com.brokerdealer.orderservice.exception.OrderNotFoundException;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "import java.util.Collections;\n",
+    "replace": "import java.util.Collections;\nimport java.util.EnumMap;\nimport java.util.EnumSet;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "    private static final String TRIGGERED_BY_RISK_ENGINE = \"SYSTEM:RISK_ENGINE\";\n",
+    "replace": "    /**\n     * Allowed forward transitions per CLAUDE.md \u00a75. Any transition not listed here is\n     * rejected before anything is persisted or published.\n     */\n    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = new EnumMap<>(OrderStatus.class);\n\n    static {\n        ALLOWED_TRANSITIONS.put(OrderStatus.NEW,\n                EnumSet.of(OrderStatus.VALIDATED, OrderStatus.REJECTED));\n        ALLOWED_TRANSITIONS.put(OrderStatus.VALIDATED,\n                EnumSet.of(OrderStatus.RISK_CHECK_PASSED, OrderStatus.RISK_REJECTED));\n        ALLOWED_TRANSITIONS.put(OrderStatus.RISK_CHECK_PASSED,\n                EnumSet.of(OrderStatus.ACCEPTED));\n        ALLOWED_TRANSITIONS.put(OrderStatus.ACCEPTED,\n                EnumSet.of(OrderStatus.SENT_TO_EXECUTION));\n        ALLOWED_TRANSITIONS.put(OrderStatus.SENT_TO_EXECUTION,\n                EnumSet.of(OrderStatus.PARTIALLY_FILLED, OrderStatus.FILLED,\n                        OrderStatus.REJECTED, OrderStatus.EXPIRED));\n        ALLOWED_TRANSITIONS.put(OrderStatus.PARTIALLY_FILLED,\n                EnumSet.of(OrderStatus.FILLED, OrderStatus.EXPIRED, OrderStatus.SENT_TO_EXECUTION));\n    }\n\n    private static final String TRIGGERED_BY_RISK_ENGINE = \"SYSTEM:RISK_ENGINE\";\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "    private void transitionState(Order order, OrderStatus from, OrderStatus to, String triggeredBy) {\n        order.setStatus(to);\n",
+    "replace": "    static boolean isAllowedTransition(OrderStatus from, OrderStatus to) {\n        return ALLOWED_TRANSITIONS.getOrDefault(from, Collections.emptySet()).contains(to);\n    }\n\n    private void transitionState(Order order, OrderStatus from, OrderStatus to, String triggeredBy) {\n        if (!isAllowedTransition(from, to)) {\n            log.warn(\"Rejected state transition: orderId={} {} -> {}\", order.getId(), from, to);\n            throw new IllegalStateTransitionException(order.getId(), from, to);\n        }\n        order.setStatus(to);\n"
+   },
+   {
+    "file": "services/order-service/src/test/java/com/brokerdealer/orderservice/service/OrderStateTransitionTableTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.service;\n\nimport com.brokerdealer.orderservice.domain.OrderStatus;\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\nclass OrderStateTransitionTableTest {\n\n    @Test\n    void shouldAllowHappyPath() {\n        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.NEW, OrderStatus.VALIDATED)).isTrue();\n        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION)).isTrue();\n        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.SENT_TO_EXECUTION, OrderStatus.FILLED)).isTrue();\n    }\n\n    @Test\n    void shouldRejectTransitionsOutOfTerminalStates() {\n        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.FILLED, OrderStatus.NEW)).isFalse();\n        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.EXPIRED, OrderStatus.FILLED)).isFalse();\n        assertThat(OrderStateMachineService.isAllowedTransition(OrderStatus.RISK_REJECTED, OrderStatus.VALIDATED)).isFalse();\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/order-service/.../service/OrderStateMachineService.java ALLOWED_TRANSITIONS \u2014 `PARTIALLY_FILLED -> EnumSet.of(FILLED, EXPIRED, SENT_TO_EXECUTION)`",
+  "description": "The new transition table whitelists PARTIALLY_FILLED -> SENT_TO_EXECUTION, a backward move not in the \u00a75 transition list. A re-delivered/late order.execution.requested path or re-route could move a partially filled order back, contradicting 'never allow order state to move backwards'. Tests only cover terminal states, so it goes unnoticed."
+ },
+ {
+  "id": "P22",
+  "control": false,
+  "kind": "domain",
+  "category": "risk-gate-bypass",
+  "rule_ref": "CLAUDE.md \u00a710 (never execute a trade without RISK_CHECK_PASSED), \u00a75 transition chain",
+  "pr_title": "risk/order: surface WARNED risk results end-to-end (risk-service publishes WARNED; order-service routes with warnings)",
+  "edits": [
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java",
+    "op": "replace",
+    "find": "        if (!warnings.isEmpty()) {\n            riskWarningRepository.saveAll(warnings);\n            log.info(\"Risk warnings persisted: orderId={} count={}\", request.getOrderId(), warnings.size());\n        }\n",
+    "replace": "        if (!warnings.isEmpty()) {\n            riskWarningRepository.saveAll(warnings);\n            log.info(\"Risk warnings persisted: orderId={} count={}\", request.getOrderId(), warnings.size());\n            String warnedRules = warnings.stream().map(RiskWarning::getRuleCode).collect(Collectors.joining(\",\"));\n            return RiskResult.warned(warnedRules, warnings.size() + \" risk warning(s) raised\");\n        }\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/kafka/consumer/RiskResultConsumer.java",
+    "op": "replace",
+    "find": "        } else if (\"REJECTED\".equals(event.getResult())) {\n",
+    "replace": "        } else if (\"WARNED\".equals(event.getResult())) {\n            orderStateMachineService.transitionOnRiskWarned(orderId, event.getViolatedRuleCode());\n        } else if (\"REJECTED\".equals(event.getResult())) {\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+    "op": "replace",
+    "find": "    @Transactional\n    public void transitionOnRiskRejected(",
+    "replace": "    /**\n     * WARN-action rules never block an order; the warning rule codes are carried on the\n     * order.state.changed metadata so the blotter and audit trail can flag the order.\n     */\n    @Transactional\n    public void transitionOnRiskWarned(UUID orderId, String warnedRuleCodes) {\n        Order order = orderRepository.findById(orderId)\n                .orElseThrow(() -> new OrderNotFoundException(orderId));\n\n        if (IDEMPOTENT_SKIP_STATES_FOR_RISK_RESULT.contains(order.getStatus())\n                || order.getStatus() != OrderStatus.NEW) {\n            log.warn(\"Skipping risk-warned event: orderId={} status={}\", orderId, order.getStatus());\n            return;\n        }\n\n        transitionState(order, OrderStatus.NEW, OrderStatus.VALIDATED, TRIGGERED_BY_RISK_ENGINE);\n        transitionState(order, OrderStatus.VALIDATED, OrderStatus.ACCEPTED, TRIGGERED_BY_RISK_ENGINE);\n        transitionState(order, OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION, TRIGGERED_BY_OMS);\n\n        orderEventProducer.publishOrderExecutionRequested(OrderExecutionRequestedEvent.builder()\n                .orderId(order.getId())\n                .clientId(order.getClientId())\n                .symbol(order.getSymbol())\n                .side(order.getSide().name())\n                .orderType(order.getOrderType().name())\n                .quantity(order.getQuantity())\n                .limitPrice(order.getLimitPrice())\n                .timeInForce(order.getTimeInForce().name())\n                .orderValue(order.getOrderValue())\n                .lastPrice(order.getLastPrice())\n                .build());\n\n        evictRedisOrderState(orderId);\n        log.info(\"Order routed with risk warnings: orderId={} warnedRules={}\", orderId, warnedRuleCodes);\n    }\n\n    @Transactional\n    public void transitionOnRiskRejected("
+   }
+  ],
+  "defect_location": "services/order-service/.../service/OrderStateMachineService.java transitionOnRiskWarned \u2014 `transitionState(order, VALIDATED, ACCEPTED, ...)` skips RISK_CHECK_PASSED before publishing order.execution.requested",
+  "description": "For WARNED results the order goes NEW -> VALIDATED -> ACCEPTED -> SENT_TO_EXECUTION, never entering RISK_CHECK_PASSED, then is routed to execution. This violates the \u00a75 chain and 'never execute a trade without RISK_CHECK_PASSED'; audit trail/consumers keyed on RISK_CHECK_PASSED never see it. The copy of transitionOnRiskPassed looks right at a glance."
+ },
+ {
+  "id": "P23",
+  "control": false,
+  "kind": "domain",
+  "category": "market-hours-timezone",
+  "rule_ref": "CLAUDE.md \u00a710 (market hours 09:30\u201316:00 ET; always America/New_York \u2014 never UTC for market hours)",
+  "pr_title": "execution-service: only fill pending LIMIT orders during the regular session",
+  "edits": [
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/MarketSessionGuard.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.service;\n\nimport org.springframework.stereotype.Component;\n\nimport java.time.DayOfWeek;\nimport java.time.Instant;\nimport java.time.LocalTime;\nimport java.time.ZoneOffset;\nimport java.time.ZonedDateTime;\n\n/**\n * Regular trading session guard for the LIMIT order price monitor.\n * Pre- and post-market trading are out of scope for the POC (CLAUDE.md \u00a718).\n */\n@Component\npublic class MarketSessionGuard {\n\n    static final LocalTime SESSION_OPEN = LocalTime.of(9, 30);\n    static final LocalTime SESSION_CLOSE = LocalTime.of(16, 0);\n\n    public boolean isRegularSession() {\n        return isRegularSession(Instant.now());\n    }\n\n    boolean isRegularSession(Instant instant) {\n        ZonedDateTime now = instant.atZone(ZoneOffset.UTC);\n        DayOfWeek day = now.getDayOfWeek();\n        if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {\n            return false;\n        }\n        LocalTime time = now.toLocalTime();\n        return !time.isBefore(SESSION_OPEN) && time.isBefore(SESSION_CLOSE);\n    }\n}\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+    "op": "replace",
+    "find": "    private final MarketDataClient marketDataClient;\n",
+    "replace": "    private final MarketDataClient marketDataClient;\n    private final MarketSessionGuard marketSessionGuard;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+    "op": "replace",
+    "find": "    public void monitorPendingLimitOrders() {\n        List<PendingOrderExecution> pending = pendingRepository.findByStatus(PendingStatus.PENDING);\n",
+    "replace": "    public void monitorPendingLimitOrders() {\n        if (!marketSessionGuard.isRegularSession()) {\n            log.debug(\"Price monitor idle: outside regular trading session\");\n            return;\n        }\n        List<PendingOrderExecution> pending = pendingRepository.findByStatus(PendingStatus.PENDING);\n"
+   },
+   {
+    "file": "services/execution-service/src/test/java/com/brokerdealer/executionservice/service/MarketSessionGuardTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.service;\n\nimport org.junit.jupiter.api.Test;\n\nimport java.time.Instant;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\nclass MarketSessionGuardTest {\n\n    private final MarketSessionGuard guard = new MarketSessionGuard();\n\n    @Test\n    void shouldBeOpenMidSession() {\n        assertThat(guard.isRegularSession(Instant.parse(\"2026-10-13T14:00:00Z\"))).isTrue();\n    }\n\n    @Test\n    void shouldBeClosedBeforeOpen() {\n        assertThat(guard.isRegularSession(Instant.parse(\"2026-10-13T08:00:00Z\"))).isFalse();\n    }\n\n    @Test\n    void shouldBeClosedOnWeekend() {\n        assertThat(guard.isRegularSession(Instant.parse(\"2026-10-17T15:00:00Z\"))).isFalse();\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/execution-service/.../service/MarketSessionGuard.java \u2014 `ZonedDateTime now = instant.atZone(ZoneOffset.UTC);` compared against 09:30/16:00",
+  "description": "The session window is evaluated in UTC, not America/New_York. 09:30\u201316:00 UTC is 05:30\u201312:00 ET (EDT), so the monitor stops filling LIMIT orders at noon ET and runs pre-market; weekday boundaries are also shifted. The tests pick instants that pass in both zones."
+ },
+ {
+  "id": "P24",
+  "control": false,
+  "kind": "domain",
+  "category": "money-rounding-client-cash",
+  "rule_ref": "CLAUDE.md \u00a713a (money scale 2 via setScale(2, RoundingMode.HALF_UP))",
+  "pr_title": "client-service: apply per-fill commission to cash balance",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/resources/application.yml",
+    "op": "replace",
+    "find": "services:\n  marketdata:\n",
+    "replace": "client:\n  commission:\n    rate: ${CLIENT_COMMISSION_RATE:0.0005}\n\nservices:\n  marketdata:\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    private final RedisTemplate<String, Object> redisTemplate;\n",
+    "replace": "    private final RedisTemplate<String, Object> redisTemplate;\n\n    @org.springframework.beans.factory.annotation.Value(\"${client.commission.rate:0.0005}\")\n    private BigDecimal commissionRate;\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "            } else {\n                client.setCashBalance(client.getCashBalance().subtract(fillValue)\n                        .setScale(2, RoundingMode.HALF_UP));\n",
+    "replace": "            } else {\n                BigDecimal commission = computeCommission(fillValue);\n                BigDecimal totalDebit = fillValue.add(commission).setScale(2, RoundingMode.HALF_UP);\n                client.setCashBalance(client.getCashBalance().subtract(totalDebit)\n                        .setScale(2, RoundingMode.HALF_UP));\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "            client.setCashBalance(client.getCashBalance().add(fillValue).setScale(2, RoundingMode.HALF_UP));\n",
+    "replace": "            BigDecimal commission = computeCommission(fillValue);\n            BigDecimal netProceeds = fillValue.subtract(commission).setScale(2, BigDecimal.ROUND_DOWN);\n            client.setCashBalance(client.getCashBalance().add(netProceeds).setScale(2, RoundingMode.HALF_UP));\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    private void reduceHolding(UUID clientId, String symbol, int executedQty) {\n",
+    "replace": "    /**\n     * Commission charged on each executed tranche: fillValue x configured rate,\n     * kept at 4dp until applied to the client's cash balance.\n     */\n    private BigDecimal computeCommission(BigDecimal fillValue) {\n        if (fillValue == null || fillValue.signum() <= 0) {\n            return BigDecimal.ZERO;\n        }\n        return fillValue.multiply(commissionRate).setScale(4, RoundingMode.HALF_UP);\n    }\n\n    private void reduceHolding(UUID clientId, String symbol, int executedQty) {\n"
+   },
+   {
+    "file": "services/client-service/src/test/java/com/brokerdealer/clientservice/service/CommissionApplicationTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.clientservice.service;\n\nimport com.brokerdealer.clientservice.domain.Client;\nimport com.brokerdealer.clientservice.repository.ClientRepository;\nimport com.brokerdealer.clientservice.repository.HoldingRepository;\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.Mock;\nimport org.mockito.junit.jupiter.MockitoExtension;\nimport org.springframework.data.redis.core.RedisTemplate;\nimport org.springframework.test.util.ReflectionTestUtils;\n\nimport java.math.BigDecimal;\nimport java.util.Map;\nimport java.util.Optional;\nimport java.util.UUID;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.mockito.Mockito.when;\n\n@ExtendWith(MockitoExtension.class)\nclass CommissionApplicationTest {\n\n    @Mock private ClientRepository clientRepository;\n    @Mock private HoldingRepository holdingRepository;\n    @Mock private RedisTemplate<String, Object> redisTemplate;\n    @InjectMocks private ClientService clientService;\n\n    @BeforeEach\n    void setUp() {\n        ReflectionTestUtils.setField(clientService, \"commissionRate\", new BigDecimal(\"0.0005\"));\n    }\n\n    @Test\n    void shouldDebitFillValuePlusCommissionOnBuy() {\n        UUID clientId = UUID.randomUUID();\n        Client client = Client.builder().id(clientId).cashBalance(new BigDecimal(\"10000.00\"))\n                .turnoverToday(BigDecimal.ZERO).build();\n        when(clientRepository.findById(clientId)).thenReturn(Optional.of(client));\n        when(holdingRepository.findByClientIdAndSymbol(clientId, \"AAPL\")).thenReturn(Optional.empty());\n\n        clientService.processExecutionFill(Map.of(\"clientId\", clientId.toString(), \"side\", \"BUY\",\n                \"fillType\", \"FULL\", \"executedQty\", 10, \"executedPrice\", \"100.00\",\n                \"fillValue\", \"1000.00\", \"symbol\", \"AAPL\"));\n\n        assertThat(client.getCashBalance()).isEqualByComparingTo(\"8999.50\");\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/client-service/.../service/ClientService.java processExecutionFill SELL branch \u2014 `fillValue.subtract(commission).setScale(2, BigDecimal.ROUND_DOWN)`",
+  "description": "SELL net proceeds credited to client cash are truncated with the deprecated BigDecimal.ROUND_DOWN, while BUY debits use HALF_UP. Every sale systematically shorts the client up to a cent (asymmetric rounding against the client); money must be scaled with RoundingMode.HALF_UP. The test only exercises the BUY path."
+ },
+ {
+  "id": "P25",
+  "control": false,
+  "kind": "domain",
+  "category": "buying-power-unsettled-proceeds",
+  "rule_ref": "CLAUDE.md \u00a76 L2 check #13 (BUY \u2014 buyingPower >= orderValue), client-service \u00a711 (buyingPower = cashBalance - reserved)",
+  "pr_title": "order-service: extract BuyingPowerCalculator and account for in-flight sell orders",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/repository/OrderRepository.java",
+    "op": "replace",
+    "find": "    // Count orders grouped by status for a given ET date range\n",
+    "replace": "    // Sum of orderValue for open (non-terminal) SELL and SHORT_SELL orders for a client.\n    @Query(\"SELECT COALESCE(SUM(o.orderValue), 0) FROM Order o \" +\n           \"WHERE o.clientId = :clientId \" +\n           \"AND o.side IN (com.brokerdealer.orderservice.domain.OrderSide.SELL, \" +\n           \"com.brokerdealer.orderservice.domain.OrderSide.SHORT_SELL) \" +\n           \"AND o.status IN :openStatuses\")\n    BigDecimal sumOpenSellOrderValues(@Param(\"clientId\") UUID clientId,\n                                      @Param(\"openStatuses\") List<OrderStatus> openStatuses);\n\n    // Count orders grouped by status for a given ET date range\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/BuyingPowerCalculator.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.service;\n\nimport com.brokerdealer.orderservice.domain.OrderStatus;\nimport com.brokerdealer.orderservice.repository.OrderRepository;\nimport lombok.RequiredArgsConstructor;\nimport lombok.extern.slf4j.Slf4j;\nimport org.springframework.stereotype.Component;\n\nimport java.math.BigDecimal;\nimport java.math.RoundingMode;\nimport java.util.List;\nimport java.util.UUID;\n\n/**\n * Level 2 check #13 helper: available cash for a new BUY order, combining the settled\n * cash balance from client-service with this service's view of in-flight orders.\n */\n@Component\n@RequiredArgsConstructor\n@Slf4j\npublic class BuyingPowerCalculator {\n\n    private final OrderRepository orderRepository;\n\n    public BigDecimal availableCash(UUID clientId, BigDecimal settledCash, List<OrderStatus> openStatuses) {\n        BigDecimal committedBuy = orderRepository.sumOpenBuyOrderValues(clientId, openStatuses);\n        BigDecimal pendingSellProceeds = orderRepository.sumOpenSellOrderValues(clientId, openStatuses);\n        BigDecimal available = combine(settledCash,\n                committedBuy != null ? committedBuy : BigDecimal.ZERO,\n                pendingSellProceeds != null ? pendingSellProceeds : BigDecimal.ZERO);\n        log.debug(\"Buying power computed: clientId={}\", clientId);\n        return available;\n    }\n\n    static BigDecimal combine(BigDecimal settledCash, BigDecimal committedBuy, BigDecimal pendingSellProceeds) {\n        return settledCash\n                .subtract(committedBuy)\n                .add(pendingSellProceeds)\n                .setScale(2, RoundingMode.HALF_UP);\n    }\n}\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "    private final RedisTemplate<String, Object> redisTemplate;\n\n    @Transactional\n    public SubmitOrderResponse submitOrder(",
+    "replace": "    private final RedisTemplate<String, Object> redisTemplate;\n    private final BuyingPowerCalculator buyingPowerCalculator;\n\n    @Transactional\n    public SubmitOrderResponse submitOrder("
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "            BigDecimal committedBuyValue = orderRepository.sumOpenBuyOrderValues(\n                    request.getClientId(), OPEN_STATUSES);\n            if (committedBuyValue == null) committedBuyValue = BigDecimal.ZERO;\n            availableCash = cashBalance.subtract(committedBuyValue).setScale(2, RoundingMode.HALF_UP);\n",
+    "replace": "            availableCash = buyingPowerCalculator.availableCash(\n                    request.getClientId(), cashBalance, OPEN_STATUSES);\n"
+   }
+  ],
+  "defect_location": "services/order-service/.../service/BuyingPowerCalculator.java combine \u2014 `.add(pendingSellProceeds)` (fed by sumOpenSellOrderValues over open SELL/SHORT_SELL orders)",
+  "description": "Buying power now credits the notional of open, unfilled SELL and SHORT_SELL orders as if the cash already existed. A client can place a sell (that may never fill, or a short with no cash at all) and immediately spend the proceeds on BUYs, overstating buying power and defeating check #13. Unexecuted proceeds must not count; the tests don't cover a non-zero sell input."
+ },
+ {
+  "id": "P26",
+  "control": false,
+  "kind": "domain",
+  "category": "self-trade-crossing-inverted",
+  "rule_ref": "CLAUDE.md \u00a76 L2 check #12 (no open opposite order at crossing price)",
+  "pr_title": "order-service: extract SelfTradeDetector and include SHORT_SELL as an opposite side",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/repository/OrderRepository.java",
+    "op": "replace",
+    "find": "    // Count orders submitted today (UTC) for a client\n",
+    "replace": "    List<Order> findByClientIdAndSymbolAndSideInAndStatusIn(UUID clientId, String symbol,\n                                                            List<OrderSide> sides, List<OrderStatus> statuses);\n\n    // Count orders submitted today (UTC) for a client\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/SelfTradeDetector.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.service;\n\nimport com.brokerdealer.orderservice.domain.Order;\nimport com.brokerdealer.orderservice.domain.OrderSide;\nimport com.brokerdealer.orderservice.domain.OrderStatus;\nimport com.brokerdealer.orderservice.repository.OrderRepository;\nimport lombok.RequiredArgsConstructor;\nimport lombok.extern.slf4j.Slf4j;\nimport org.springframework.stereotype.Component;\n\nimport java.math.BigDecimal;\nimport java.util.List;\nimport java.util.UUID;\n\n/**\n * Level 2 check #12: detects an open order from the same client on the opposite side\n * of the book that the new order would trade against.\n * SELL and SHORT_SELL are both treated as the sell side of the book.\n */\n@Component\n@RequiredArgsConstructor\n@Slf4j\npublic class SelfTradeDetector {\n\n    private static final List<OrderSide> SELL_SIDES = List.of(OrderSide.SELL, OrderSide.SHORT_SELL);\n    private static final List<OrderSide> BUY_SIDES = List.of(OrderSide.BUY);\n\n    private final OrderRepository orderRepository;\n\n    public boolean hasCrossingOpenOrder(UUID clientId, String symbol, OrderSide side,\n                                        BigDecimal limitPrice, List<OrderStatus> openStatuses) {\n        List<OrderSide> oppositeSides = side == OrderSide.BUY ? SELL_SIDES : BUY_SIDES;\n        List<Order> opposite = orderRepository.findByClientIdAndSymbolAndSideInAndStatusIn(\n                clientId, symbol, oppositeSides, openStatuses);\n        boolean crossing = opposite.stream().anyMatch(o -> crosses(side, limitPrice, o.getLimitPrice()));\n        if (crossing) {\n            log.debug(\"Crossing open order detected: clientId={} symbol={} side={}\", clientId, symbol, side);\n        }\n        return crossing;\n    }\n\n    static boolean crosses(OrderSide side, BigDecimal newLimit, BigDecimal restingLimit) {\n        if (newLimit == null || restingLimit == null) {\n            return true;\n        }\n        return side == OrderSide.BUY\n                ? restingLimit.compareTo(newLimit) >= 0\n                : restingLimit.compareTo(newLimit) <= 0;\n    }\n}\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "        OrderSide oppositeSide = requestedSide == OrderSide.BUY ? OrderSide.SELL : OrderSide.BUY;\n        List<Order> oppositeOrders = orderRepository.findByClientIdAndSymbolAndSideAndStatusIn(\n                request.getClientId(), request.getSymbol(), oppositeSide, OPEN_STATUSES);\n        // capture limitPrice in an effectively final variable for use in the lambda\n        final BigDecimal crossingPrice = limitPrice;\n        boolean hasCrossingOpenOrder = oppositeOrders.stream().anyMatch(o -> {\n            if (crossingPrice == null) return true;\n            if (o.getLimitPrice() == null) return true;\n            return requestedSide == OrderSide.BUY\n                    ? o.getLimitPrice().compareTo(crossingPrice) <= 0\n                    : o.getLimitPrice().compareTo(crossingPrice) >= 0;\n        });\n",
+    "replace": "        boolean hasCrossingOpenOrder = selfTradeDetector.hasCrossingOpenOrder(\n                request.getClientId(), request.getSymbol(), requestedSide, limitPrice, OPEN_STATUSES);\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "    private final RedisTemplate<String, Object> redisTemplate;\n\n    @Transactional\n    public SubmitOrderResponse submitOrder(",
+    "replace": "    private final RedisTemplate<String, Object> redisTemplate;\n    private final SelfTradeDetector selfTradeDetector;\n\n    @Transactional\n    public SubmitOrderResponse submitOrder("
+   }
+  ],
+  "defect_location": "services/order-service/.../service/SelfTradeDetector.java crosses \u2014 `side == BUY ? restingLimit.compareTo(newLimit) >= 0 : restingLimit.compareTo(newLimit) <= 0`",
+  "description": "The crossing comparison is inverted relative to the original logic. A BUY crosses a resting SELL when the sell limit <= buy limit; the refactor flags only sells priced at/above the buy (which do NOT cross) and misses real crosses (e.g. BUY @101 vs own SELL @100 passes). Tests only cover null and equal prices, where both versions agree."
+ },
+ {
+  "id": "P27",
+  "control": false,
+  "kind": "domain",
+  "category": "double-count-equity",
+  "rule_ref": "client-service \u00a711 portfolio valuation (real domain bug: double-counting holdings value)",
+  "pr_title": "client-service: add totalMarketValue, totalUnrealisedPnL and totalEquity to portfolio response",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/PortfolioResponse.java",
+    "op": "replace",
+    "find": "    String cashBalance;\n    List<HoldingDetailResponse> holdings;\n",
+    "replace": "    String cashBalance;\n    String totalMarketValue;\n    String totalUnrealisedPnL;\n    String totalEquity;\n    List<HoldingDetailResponse> holdings;\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "        List<HoldingDetailResponse> holdingDetails = holdings.stream()\n                .map(this::buildHoldingDetail)\n                .toList();\n",
+    "replace": "        List<HoldingDetailResponse> holdingDetails = holdings.stream()\n                .map(this::buildHoldingDetail)\n                .toList();\n\n        BigDecimal totalMarketValue = sumField(holdingDetails, HoldingDetailResponse::getMarketValue);\n        BigDecimal totalUnrealisedPnL = sumField(holdingDetails, HoldingDetailResponse::getUnrealisedPnL);\n        BigDecimal totalEquity = client.getCashBalance()\n                .add(totalMarketValue)\n                .add(totalUnrealisedPnL)\n                .setScale(2, RoundingMode.HALF_UP);\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "                .cashBalance(client.getCashBalance().setScale(2, RoundingMode.HALF_UP).toPlainString())\n                .holdings(holdingDetails)\n",
+    "replace": "                .cashBalance(client.getCashBalance().setScale(2, RoundingMode.HALF_UP).toPlainString())\n                .totalMarketValue(totalMarketValue.setScale(2, RoundingMode.HALF_UP).toPlainString())\n                .totalUnrealisedPnL(totalUnrealisedPnL.setScale(2, RoundingMode.HALF_UP).toPlainString())\n                .totalEquity(totalEquity.toPlainString())\n                .holdings(holdingDetails)\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    private HoldingDetailResponse buildHoldingDetail(Holding holding) {\n",
+    "replace": "    /**\n     * Sums a String-encoded monetary field across holdings; unpriced holdings\n     * (marketdata unavailable, null value) contribute zero.\n     */\n    private BigDecimal sumField(List<HoldingDetailResponse> details,\n                                java.util.function.Function<HoldingDetailResponse, String> field) {\n        return details.stream()\n                .map(field)\n                .filter(java.util.Objects::nonNull)\n                .map(BigDecimal::new)\n                .reduce(BigDecimal.ZERO, BigDecimal::add);\n    }\n\n    private HoldingDetailResponse buildHoldingDetail(Holding holding) {\n"
+   },
+   {
+    "file": "services/client-service/src/test/java/com/brokerdealer/clientservice/service/PortfolioTotalsTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.clientservice.service;\n\nimport com.brokerdealer.clientservice.client.MarketDataClient;\nimport com.brokerdealer.clientservice.domain.Client;\nimport com.brokerdealer.clientservice.domain.Holding;\nimport com.brokerdealer.clientservice.dto.response.PortfolioResponse;\nimport com.brokerdealer.clientservice.repository.ClientRepository;\nimport com.brokerdealer.clientservice.repository.HoldingRepository;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.Mock;\nimport org.mockito.junit.jupiter.MockitoExtension;\n\nimport java.math.BigDecimal;\nimport java.util.List;\nimport java.util.Optional;\nimport java.util.UUID;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.mockito.Mockito.when;\n\n@ExtendWith(MockitoExtension.class)\nclass PortfolioTotalsTest {\n\n    @Mock private ClientRepository clientRepository;\n    @Mock private HoldingRepository holdingRepository;\n    @Mock private MarketDataClient marketDataClient;\n    @InjectMocks private ClientService clientService;\n\n    @Test\n    void shouldSumMarketValueAcrossPricedHoldings() {\n        UUID clientId = UUID.randomUUID();\n        when(clientRepository.findById(clientId)).thenReturn(Optional.of(Client.builder()\n                .id(clientId).name(\"Test Client\").cashBalance(new BigDecimal(\"1000.00\")).build()));\n        when(holdingRepository.findByClientId(clientId)).thenReturn(List.of(\n                Holding.builder().clientId(clientId).symbol(\"AAPL\").quantity(10).avgPrice(new BigDecimal(\"100.0000\")).build(),\n                Holding.builder().clientId(clientId).symbol(\"MSFT\").quantity(5).avgPrice(new BigDecimal(\"300.0000\")).build()));\n        when(marketDataClient.getLastPrice(\"AAPL\")).thenReturn(new BigDecimal(\"110.00\"));\n        when(marketDataClient.getLastPrice(\"MSFT\")).thenReturn(null);\n\n        PortfolioResponse portfolio = clientService.getPortfolio(clientId);\n\n        assertThat(portfolio.getTotalMarketValue()).isEqualTo(\"1100.00\");\n        assertThat(portfolio.getTotalUnrealisedPnL()).isEqualTo(\"100.00\");\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/client-service/.../service/ClientService.java getPortfolio \u2014 `totalEquity = cashBalance.add(totalMarketValue).add(totalUnrealisedPnL)`",
+  "description": "Account equity adds both the market value of holdings and their unrealised P&L. Market value (qty x price) already embeds the P&L (qty x (price - avg)), so gains/losses are double-counted: equity should be cash + market value. Clients with gains appear richer and losses are overstated."
+ },
+ {
+  "id": "P28",
+  "control": false,
+  "kind": "domain",
+  "category": "cross-service-db-access",
+  "rule_ref": "CLAUDE.md \u00a73 (no service reads another service's schema; cross-service via REST or Kafka only), execution-service \u00a710",
+  "pr_title": "execution-service: refuse to fill orders that are not in SENT_TO_EXECUTION",
+  "edits": [
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/repository/OrderStatusLookupRepository.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.repository;\n\nimport lombok.RequiredArgsConstructor;\nimport org.springframework.dao.EmptyResultDataAccessException;\nimport org.springframework.jdbc.core.JdbcTemplate;\nimport org.springframework.stereotype.Repository;\n\nimport java.util.Optional;\nimport java.util.UUID;\n\n/**\n * Read-only lookup of the authoritative order status used as a pre-fill guard.\n */\n@Repository\n@RequiredArgsConstructor\npublic class OrderStatusLookupRepository {\n\n    private static final String SELECT_STATUS =\n            \"SELECT status FROM order_schema.orders WHERE id = ?\";\n\n    private final JdbcTemplate jdbcTemplate;\n\n    public Optional<String> findStatus(UUID orderId) {\n        try {\n            return Optional.ofNullable(jdbcTemplate.queryForObject(SELECT_STATUS, String.class, orderId));\n        } catch (EmptyResultDataAccessException e) {\n            return Optional.empty();\n        }\n    }\n}\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.executionservice.repository.ExecutionRepository;\n",
+    "replace": "import com.brokerdealer.executionservice.repository.ExecutionRepository;\nimport com.brokerdealer.executionservice.repository.OrderStatusLookupRepository;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "    private final ExecutionMapper executionMapper;\n",
+    "replace": "    private final ExecutionMapper executionMapper;\n    private final OrderStatusLookupRepository orderStatusLookupRepository;\n\n    private static final String EXECUTABLE_STATUS = \"SENT_TO_EXECUTION\";\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "        log.info(\"Processing fill: orderId={} orderType={} symbol={}\",\n",
+    "replace": "        String currentStatus = orderStatusLookupRepository.findStatus(request.getOrderId()).orElse(null);\n        if (!EXECUTABLE_STATUS.equals(currentStatus)) {\n            log.warn(\"Fill refused \u2014 order not executable: orderId={} status={}\",\n                    request.getOrderId(), currentStatus);\n            return;\n        }\n\n        log.info(\"Processing fill: orderId={} orderType={} symbol={}\",\n"
+   },
+   {
+    "file": "services/execution-service/src/test/java/com/brokerdealer/executionservice/service/ExecutionServiceStatusGuardTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.service;\n\nimport com.brokerdealer.executionservice.domain.OrderType;\nimport com.brokerdealer.executionservice.dto.request.OrderExecutionRequest;\nimport com.brokerdealer.executionservice.repository.ExecutionRepository;\nimport com.brokerdealer.executionservice.repository.OrderStatusLookupRepository;\nimport com.brokerdealer.executionservice.repository.PendingOrderExecutionRepository;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.Mock;\nimport org.mockito.junit.jupiter.MockitoExtension;\n\nimport java.util.Optional;\nimport java.util.UUID;\n\nimport static org.mockito.ArgumentMatchers.any;\nimport static org.mockito.Mockito.never;\nimport static org.mockito.Mockito.verify;\nimport static org.mockito.Mockito.when;\n\n@ExtendWith(MockitoExtension.class)\nclass ExecutionServiceStatusGuardTest {\n\n    @Mock private ExecutionRepository executionRepository;\n    @Mock private PendingOrderExecutionRepository pendingRepository;\n    @Mock private FillSimulationService fillSimulationService;\n    @Mock private OrderStatusLookupRepository orderStatusLookupRepository;\n    @InjectMocks private ExecutionService executionService;\n\n    @Test\n    void shouldNotFillOrderThatIsNotSentToExecution() {\n        OrderExecutionRequest request = new OrderExecutionRequest();\n        request.setOrderId(UUID.randomUUID());\n        request.setOrderType(OrderType.MARKET);\n        when(orderStatusLookupRepository.findStatus(request.getOrderId())).thenReturn(Optional.of(\"ACCEPTED\"));\n\n        executionService.processFill(request);\n\n        verify(fillSimulationService, never()).executeMarketFill(any());\n    }\n}\n"
+   }
+  ],
+  "defect_location": "services/execution-service/.../repository/OrderStatusLookupRepository.java \u2014 `SELECT status FROM order_schema.orders WHERE id = ?` used by ExecutionService.processFill",
+  "description": "execution-service reads order-service's schema (order_schema.orders) directly via JdbcTemplate. \u00a73 makes service boundaries absolute: no service reads another service's schema; data must come via REST or Kafka (the order.execution.requested event is already only published from SENT_TO_EXECUTION). It also couples deployments to a shared DB user with cross-schema grants."
+ },
+ {
+  "id": "P29",
+  "control": false,
+  "kind": "domain",
+  "category": "kafka-partition-key-ordering",
+  "rule_ref": "CLAUDE.md \u00a77 Kafka rules (per-order event ordering; consumers rely on state-ordered events) \u2014 real ordering bug",
+  "pr_title": "execution-service: spread execution.completed across partitions and add event headers",
+  "edits": [
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/producer/ExecutionEventKeyStrategy.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.kafka.producer;\n\nimport com.brokerdealer.executionservice.dto.event.ExecutionCompletedEvent;\nimport org.springframework.stereotype.Component;\n\n/**\n * Chooses the record key for execution.completed.\n * Each execution record is its own event, so the execution id is used as the key to\n * spread fills of very active orders evenly across partitions; downstream consumers\n * are idempotent (CLAUDE.md \u00a77).\n */\n@Component\npublic class ExecutionEventKeyStrategy {\n\n    public String resolveKey(ExecutionCompletedEvent event) {\n        if (event.getExecutionId() != null) {\n            return event.getExecutionId().toString();\n        }\n        return event.getOrderId().toString();\n    }\n}\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/producer/ExecutionEventProducer.java",
+    "op": "replace",
+    "find": "import lombok.RequiredArgsConstructor;\n",
+    "replace": "import lombok.RequiredArgsConstructor;\nimport org.apache.kafka.clients.producer.ProducerRecord;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/producer/ExecutionEventProducer.java",
+    "op": "replace",
+    "find": "    private final KafkaTemplate<String, Object> kafkaTemplate;\n\n    public void publishExecutionCompleted(ExecutionCompletedEvent event) {\n        kafkaTemplate.send(EXECUTION_COMPLETED, event.getOrderId().toString(), event);\n",
+    "replace": "    private static final String HEADER_EVENT_TYPE = \"eventType\";\n    private static final String HEADER_FILL_TYPE = \"fillType\";\n    private static final String HEADER_SCHEMA_VERSION = \"schemaVersion\";\n    private static final String SCHEMA_VERSION = \"2\";\n\n    private final KafkaTemplate<String, Object> kafkaTemplate;\n    private final ExecutionEventKeyStrategy keyStrategy;\n\n    /**\n     * Publishes one execution.completed record per Execution row. Headers carry the\n     * event type, fill type and payload schema version for consumers and tooling.\n     */\n    public void publishExecutionCompleted(ExecutionCompletedEvent event) {\n        String key = keyStrategy.resolveKey(event);\n        ProducerRecord<String, Object> record = new ProducerRecord<>(EXECUTION_COMPLETED, key, event);\n        record.headers().add(HEADER_EVENT_TYPE, EXECUTION_COMPLETED.getBytes(java.nio.charset.StandardCharsets.UTF_8));\n        record.headers().add(HEADER_SCHEMA_VERSION, SCHEMA_VERSION.getBytes(java.nio.charset.StandardCharsets.UTF_8));\n        if (event.getFillType() != null) {\n            record.headers().add(HEADER_FILL_TYPE, event.getFillType().getBytes(java.nio.charset.StandardCharsets.UTF_8));\n        }\n        kafkaTemplate.send(record);\n"
+   }
+  ],
+  "defect_location": "services/execution-service/.../kafka/producer/ExecutionEventKeyStrategy.java resolveKey \u2014 returns executionId as the record key (previously orderId)",
+  "description": "execution.completed was keyed by orderId so all fills of one order landed on one partition in order. Keying by executionId scatters an order's PARTIAL tranche and its final FULL tranche (and REJECTED) across partitions, so order-service/client-service/audit can consume FULL before PARTIAL \u2014 order-service then drops the PARTIAL as terminal and the audit/notification sequence is wrong. Per-entity ordering requires the entity id as key."
+ },
+ {
+  "id": "P30",
+  "control": false,
+  "kind": "domain",
+  "category": "risk-threshold-units",
+  "rule_ref": "CLAUDE.md \u00a79 (pluggable rules from risk_rule_config), \u00a76 #17 fat-finger price deviation; risk_rule_config convention (PERCENT stored as fraction, e.g. 0.10)",
+  "pr_title": "risk-service: LIMIT_PRICE_COLLAR \u2014 reject LIMIT orders priced too far from last",
+  "edits": [
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/LimitPriceCollarRule.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.riskservice.rule;\n\nimport com.brokerdealer.riskservice.domain.RiskResult;\nimport com.brokerdealer.riskservice.domain.RiskRule;\nimport com.brokerdealer.riskservice.dto.RiskContext;\nimport com.brokerdealer.riskservice.dto.RiskEvaluationRequest;\nimport lombok.RequiredArgsConstructor;\nimport lombok.extern.slf4j.Slf4j;\n\nimport java.math.BigDecimal;\nimport java.math.RoundingMode;\n\n/**\n * Hard collar for LIMIT orders: REJECT when |limitPrice - lastPrice| / lastPrice exceeds\n * the configured threshold. MARKET orders and orders without a reference price are skipped.\n */\n@RequiredArgsConstructor\n@Slf4j\npublic class LimitPriceCollarRule implements RiskRule {\n\n    private final BigDecimal threshold;\n    private final boolean enabled;\n\n    @Override\n    public String getRuleCode() {\n        return \"LIMIT_PRICE_COLLAR\";\n    }\n\n    @Override\n    public boolean isEnabled() {\n        return enabled;\n    }\n\n    @Override\n    public RiskResult evaluate(RiskEvaluationRequest request, RiskContext context) {\n        if (!\"LIMIT\".equals(request.getOrderType())\n                || request.getLimitPrice() == null || request.getLastPrice() == null || threshold == null) {\n            return RiskResult.passed();\n        }\n        BigDecimal limitPrice = new BigDecimal(request.getLimitPrice());\n        BigDecimal lastPrice = new BigDecimal(request.getLastPrice());\n        if (lastPrice.signum() <= 0) {\n            log.debug(\"LIMIT_PRICE_COLLAR skipped: non-positive lastPrice; orderId={}\", context.getOrderId());\n            return RiskResult.passed();\n        }\n\n        BigDecimal deviation = limitPrice.subtract(lastPrice).abs()\n                .divide(lastPrice, 10, RoundingMode.HALF_UP);\n        if (deviation.compareTo(threshold) > 0) {\n            return RiskResult.rejected(getRuleCode(),\n                    \"LIMIT_PRICE_COLLAR: limitPrice deviates \"\n                            + deviation.multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)\n                            + \"% from lastPrice\");\n        }\n        return RiskResult.passed();\n    }\n}\n"
+   },
+   {
+    "file": "services/risk-service/src/main/resources/db/migration/V15__seed_limit_price_collar_rule.sql",
+    "op": "new_file",
+    "content": "-- Hard price collar for LIMIT orders (REJECT action)\nINSERT INTO risk_schema.risk_rule_config\n    (rule_code, rule_name, rule_category, description, enabled, threshold_value, threshold_unit, action, priority, updated_at)\nVALUES\n    ('LIMIT_PRICE_COLLAR',\n     'Limit Price Collar',\n     'FAT_FINGER',\n     'REJECT LIMIT orders whose limitPrice deviates more than 5% from lastPrice; skipped for MARKET orders',\n     true, 5.00, 'PERCENT', 'REJECT', 25, NOW())\nON CONFLICT (rule_code) DO NOTHING;\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java",
+    "op": "replace",
+    "find": "            case \"RULE_DAILY_ORDER_COUNT\"    -> new DailyOrderCountRule(config.getEnabled());\n",
+    "replace": "            case \"RULE_DAILY_ORDER_COUNT\"    -> new DailyOrderCountRule(config.getEnabled());\n            case \"LIMIT_PRICE_COLLAR\"        -> new LimitPriceCollarRule(config.getThresholdValue(), config.getEnabled());\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.riskservice.rule.KycVerifiedRule;\n",
+    "replace": "import com.brokerdealer.riskservice.rule.KycVerifiedRule;\nimport com.brokerdealer.riskservice.rule.LimitPriceCollarRule;\n"
+   }
+  ],
+  "defect_location": "services/risk-service/src/main/resources/db/migration/V15__seed_limit_price_collar_rule.sql \u2014 `threshold_value 5.00, 'PERCENT'` while LimitPriceCollarRule compares a fractional deviation against threshold",
+  "description": "The rule computes deviation as a fraction (0.05 = 5%) \u2014 the same convention as PRICE_DEVIATION_CHECK seeded with 0.10 \u2014 but the seed stores 5.00, i.e. a 500% collar. The enabled REJECT rule effectively never fires, so fat-finger LIMIT prices pass risk while the description claims a 5% collar."
+ },
+ {
+  "id": "Q01",
+  "control": true,
+  "kind": "control",
+  "category": "endpoint-dto",
+  "rule_ref": "n/a (control)",
+  "pr_title": "marketdata-service: GET /api/v1/market/holidays/upcoming?limit=",
+  "edits": [
+   {
+    "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/MarketDataService.java",
+    "op": "replace",
+    "find": "    public List<InstrumentSummaryResponse> getInstruments() {\n",
+    "replace": "    public List<MarketHolidayResponse> getUpcomingHolidays(int limit) {\n        if (limit < 1 || limit > 20) {\n            throw new com.brokerdealer.marketdataservice.exception.ValidationException(\n                    \"VALIDATION_ERROR\", \"limit must be between 1 and 20\");\n        }\n        LocalDate today = LocalDate.now(ZoneId.of(timezone));\n        log.debug(\"Fetching upcoming holidays: from={} limit={}\", today, limit);\n        return marketHolidayRepository.findAllByOrderByHolidayDateAsc().stream()\n                .filter(h -> !h.getHolidayDate().isBefore(today))\n                .limit(limit)\n                .map(marketHolidayMapper::toResponse)\n                .toList();\n    }\n\n    public List<InstrumentSummaryResponse> getInstruments() {\n"
+   },
+   {
+    "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/MarketDataController.java",
+    "op": "replace",
+    "find": "    @GetMapping(\"/instruments/search\")\n",
+    "replace": "    @GetMapping(\"/holidays/upcoming\")\n    public ResponseEntity<Map<String, Object>> getUpcomingHolidays(\n            @RequestParam(defaultValue = \"5\") int limit) {\n        log.debug(\"GET /api/v1/market/holidays/upcoming?limit={}\", limit);\n        List<MarketHolidayResponse> data = marketDataService.getUpcomingHolidays(limit);\n        return ResponseEntity.ok(buildSuccessResponse(data));\n    }\n\n    @GetMapping(\"/instruments/search\")\n"
+   },
+   {
+    "file": "services/marketdata-service/src/test/java/com/brokerdealer/marketdataservice/service/UpcomingHolidaysTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.marketdataservice.service;\n\nimport com.brokerdealer.marketdataservice.exception.ValidationException;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.junit.jupiter.MockitoExtension;\n\nimport static org.assertj.core.api.Assertions.assertThatThrownBy;\n\n@ExtendWith(MockitoExtension.class)\nclass UpcomingHolidaysTest {\n\n    @InjectMocks\n    private MarketDataService marketDataService;\n\n    @Test\n    void shouldRejectZeroLimit() {\n        assertThatThrownBy(() -> marketDataService.getUpcomingHolidays(0))\n                .isInstanceOf(ValidationException.class);\n    }\n\n    @Test\n    void shouldRejectLimitAboveMaximum() {\n        assertThatThrownBy(() -> marketDataService.getUpcomingHolidays(21))\n                .isInstanceOf(ValidationException.class);\n    }\n}\n"
+   }
+  ]
+ },
+ {
+  "id": "Q02",
+  "control": true,
+  "kind": "control",
+  "category": "risk-rule",
+  "rule_ref": "n/a (control)",
+  "pr_title": "risk-service: RULE_MIN_ORDER_VALUE \u2014 reject dust orders below a notional floor",
+  "edits": [
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/MinOrderValueRule.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.riskservice.rule;\n\nimport com.brokerdealer.riskservice.domain.RiskResult;\nimport com.brokerdealer.riskservice.domain.RiskRule;\nimport com.brokerdealer.riskservice.dto.RiskContext;\nimport com.brokerdealer.riskservice.dto.RiskEvaluationRequest;\nimport lombok.RequiredArgsConstructor;\nimport lombok.extern.slf4j.Slf4j;\n\nimport java.math.BigDecimal;\n\n/**\n * REJECT orders whose notional value is below the configured minimum (USD).\n * Skipped when orderValue or threshold is not available.\n */\n@RequiredArgsConstructor\n@Slf4j\npublic class MinOrderValueRule implements RiskRule {\n\n    private final BigDecimal threshold;\n    private final boolean enabled;\n\n    @Override\n    public String getRuleCode() {\n        return \"RULE_MIN_ORDER_VALUE\";\n    }\n\n    @Override\n    public boolean isEnabled() {\n        return enabled;\n    }\n\n    @Override\n    public RiskResult evaluate(RiskEvaluationRequest request, RiskContext context) {\n        if (request.getOrderValue() == null || threshold == null) {\n            log.debug(\"RULE_MIN_ORDER_VALUE skipped: orderValue or threshold missing; orderId={}\",\n                    context.getOrderId());\n            return RiskResult.passed();\n        }\n        BigDecimal orderValue = new BigDecimal(request.getOrderValue());\n        if (orderValue.compareTo(threshold) < 0) {\n            return RiskResult.rejected(getRuleCode(),\n                    \"Order value \" + orderValue.toPlainString()\n                            + \" is below minimum allowed \" + threshold.toPlainString() + \" USD\");\n        }\n        return RiskResult.passed();\n    }\n}\n"
+   },
+   {
+    "file": "services/risk-service/src/main/resources/db/migration/V15__add_rule_min_order_value.sql",
+    "op": "new_file",
+    "content": "-- Minimum order notional (REJECT). Disabled by default; ADMIN enables via pending-change workflow.\nINSERT INTO risk_schema.risk_rule_config\n    (rule_code, rule_name, rule_category, description, enabled, threshold_value, threshold_unit, action, priority, updated_at)\nVALUES\n    ('RULE_MIN_ORDER_VALUE',\n     'Minimum Order Value',\n     'FINANCIAL_LIMIT',\n     'Reject orders whose notional value is below the configured minimum in USD.',\n     false, 1.00, 'USD', 'REJECT', 12, NOW())\nON CONFLICT (rule_code) DO NOTHING;\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java",
+    "op": "replace",
+    "find": "            case \"RULE_MAX_ORDER_VALUE\"    -> new MaxOrderValueRule(config.getThresholdValue(), config.getEnabled());\n",
+    "replace": "            case \"RULE_MAX_ORDER_VALUE\"    -> new MaxOrderValueRule(config.getThresholdValue(), config.getEnabled());\n            case \"RULE_MIN_ORDER_VALUE\"    -> new MinOrderValueRule(config.getThresholdValue(), config.getEnabled());\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.riskservice.rule.MaxOrderValueRule;\n",
+    "replace": "import com.brokerdealer.riskservice.rule.MaxOrderValueRule;\nimport com.brokerdealer.riskservice.rule.MinOrderValueRule;\n"
+   }
+  ]
+ },
+ {
+  "id": "Q03",
+  "control": true,
+  "kind": "control",
+  "category": "query-filter",
+  "rule_ref": "n/a (control)",
+  "pr_title": "audit-service: honour from/to time window on GET /api/v1/audit/trail",
+  "edits": [
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/repository/AuditLogRepository.java",
+    "op": "replace",
+    "find": "    Page<AuditLog> findAllByOrderByEventTimestampDesc(Pageable pageable);\n",
+    "replace": "    Page<AuditLog> findAllByOrderByEventTimestampDesc(Pageable pageable);\n\n    Page<AuditLog> findByEventTimestampBetweenOrderByEventTimestampDesc(Instant from, Instant to, Pageable pageable);\n\n    Page<AuditLog> findByClientIdAndEventTimestampBetweenOrderByEventTimestampDesc(\n            UUID clientId, Instant from, Instant to, Pageable pageable);\n"
+   },
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/service/AuditService.java",
+    "op": "replace",
+    "find": "    public AuditTrailResponse getOrderAuditTrail(UUID orderId) {\n",
+    "replace": "    public AuditTrailResponse getAuditTrail(UUID clientId, String from, String to, int page, int size) {\n        if ((from == null || from.isBlank()) && (to == null || to.isBlank())) {\n            return getAuditTrail(clientId, page, size);\n        }\n        Instant fromTs = parseBound(from, Instant.EPOCH, \"from\");\n        Instant toTs = parseBound(to, Instant.now(), \"to\");\n        if (fromTs.isAfter(toTs)) {\n            throw new ValidationException(\"VALIDATION_ERROR\", \"from must not be after to\");\n        }\n        PageRequest pageRequest = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));\n\n        Page<AuditLog> auditPage = clientId != null\n                ? auditLogRepository.findByClientIdAndEventTimestampBetweenOrderByEventTimestampDesc(\n                        clientId, fromTs, toTs, pageRequest)\n                : auditLogRepository.findByEventTimestampBetweenOrderByEventTimestampDesc(fromTs, toTs, pageRequest);\n\n        log.debug(\"getAuditTrail window: clientId={} from={} to={} total={}\",\n                clientId, fromTs, toTs, auditPage.getTotalElements());\n\n        return AuditTrailResponse.builder()\n                .data(AuditTrailData.builder()\n                        .records(auditPage.getContent().stream().map(this::toResponse).toList())\n                        .totalElements(auditPage.getTotalElements())\n                        .build())\n                .meta(ResponseMeta.builder()\n                        .timestamp(Instant.now().toString())\n                        .requestId(UUID.randomUUID().toString())\n                        .build())\n                .build();\n    }\n\n    private Instant parseBound(String value, Instant defaultValue, String name) {\n        if (value == null || value.isBlank()) {\n            return defaultValue;\n        }\n        try {\n            return Instant.parse(value);\n        } catch (java.time.format.DateTimeParseException e) {\n            throw new ValidationException(\"VALIDATION_ERROR\",\n                    name + \" must be ISO 8601 UTC (e.g. 2026-05-18T00:00:00Z)\");\n        }\n    }\n\n    public AuditTrailResponse getOrderAuditTrail(UUID orderId) {\n"
+   },
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/service/AuditService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.auditservice.dto.response.ResponseMeta;\n",
+    "replace": "import com.brokerdealer.auditservice.dto.response.ResponseMeta;\nimport com.brokerdealer.auditservice.exception.ValidationException;\n"
+   },
+   {
+    "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/controller/AuditController.java",
+    "op": "replace",
+    "find": "        return ResponseEntity.ok(auditService.getAuditTrail(clientId, page, size));\n",
+    "replace": "        return ResponseEntity.ok(auditService.getAuditTrail(clientId, from, to, page, size));\n"
+   }
+  ]
+ },
+ {
+  "id": "Q04",
+  "control": true,
+  "kind": "control",
+  "category": "l2-validation",
+  "rule_ref": "n/a (control)",
+  "pr_title": "order-service: Level 2 check #11 \u2014 reject when open orders >= maxOpenOrders",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/exception/MaxOpenOrdersExceededException.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.exception;\n\n/**\n * Level 2 check #11 failure: the client already has maxOpenOrders non-terminal orders.\n * Mapped to 422 by GlobalExceptionHandler via SemanticValidationException.\n */\npublic class MaxOpenOrdersExceededException extends SemanticValidationException {\n    public MaxOpenOrdersExceededException(int openOrders, int maxOpenOrders) {\n        super(\"MAX_OPEN_ORDERS_EXCEEDED\",\n                \"Client has \" + openOrders + \" open orders; maximum allowed is \" + maxOpenOrders);\n    }\n}\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.orderservice.exception.MarketClosedException;\n",
+    "replace": "import com.brokerdealer.orderservice.exception.MarketClosedException;\nimport com.brokerdealer.orderservice.exception.MaxOpenOrdersExceededException;\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "        // --- Set expiry ---\n",
+    "replace": "        // Check #11: open orders count must be below the client's maxOpenOrders limit\n        Integer maxOpenOrders = clientResponse.getData().getMaxOpenOrders();\n        if (maxOpenOrders != null) {\n            long openOrders = orderRepository.count((root, query, cb) -> cb.and(\n                    cb.equal(root.get(\"clientId\"), request.getClientId()),\n                    root.get(\"status\").in(OPEN_STATUSES)));\n            if (openOrders >= maxOpenOrders) {\n                log.warn(\"Order rejected \u2014 max open orders reached: clientId={} openOrders={}\",\n                        request.getClientId(), openOrders);\n                throw new MaxOpenOrdersExceededException((int) openOrders, maxOpenOrders);\n            }\n        }\n\n        // --- Set expiry ---\n"
+   },
+   {
+    "file": "services/order-service/src/test/java/com/brokerdealer/orderservice/exception/MaxOpenOrdersExceededExceptionTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.exception;\n\nimport org.junit.jupiter.api.Test;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\nclass MaxOpenOrdersExceededExceptionTest {\n\n    @Test\n    void shouldCarryErrorCodeAndMapAsSemanticValidation() {\n        MaxOpenOrdersExceededException ex = new MaxOpenOrdersExceededException(10, 10);\n\n        assertThat(ex).isInstanceOf(SemanticValidationException.class);\n        assertThat(ex.getErrorCode()).isEqualTo(\"MAX_OPEN_ORDERS_EXCEEDED\");\n        assertThat(ex.getMessage()).contains(\"10 open orders\");\n    }\n}\n"
+   }
+  ]
+ },
+ {
+  "id": "Q05",
+  "control": true,
+  "kind": "control",
+  "category": "endpoint",
+  "rule_ref": "n/a (control)",
+  "pr_title": "client-service: GET /api/v1/clients/{id}/portfolio/holdings \u2014 holdings only",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    private HoldingDetailResponse buildHoldingDetail(Holding holding) {\n",
+    "replace": "    public List<HoldingDetailResponse> getHoldings(UUID id) {\n        log.debug(\"Fetching holdings: clientId={}\", id);\n        if (!clientRepository.existsById(id)) {\n            throw new ClientNotFoundException(\"CLIENT_NOT_FOUND\", \"Client not found: \" + id);\n        }\n        List<Holding> holdings = holdingRepository.findByClientId(id);\n        if (holdings.isEmpty()) {\n            return Collections.emptyList();\n        }\n        return holdings.stream()\n                .filter(h -> h.getQuantity() != null && h.getQuantity() > 0)\n                .map(this::buildHoldingDetail)\n                .toList();\n    }\n\n    private HoldingDetailResponse buildHoldingDetail(Holding holding) {\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "    @PatchMapping(\"/{id}/default-route\")\n",
+    "replace": "    @GetMapping(\"/{id}/portfolio/holdings\")\n    public ResponseEntity<Map<String, Object>> getHoldings(@PathVariable UUID id) {\n        log.debug(\"GET /api/v1/clients/{}/portfolio/holdings\", id);\n        List<HoldingDetailResponse> data = clientService.getHoldings(id);\n        return ResponseEntity.ok(buildSuccessResponse(data));\n    }\n\n    @PatchMapping(\"/{id}/default-route\")\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.clientservice.dto.response.ClientProfileResponse;\n",
+    "replace": "import com.brokerdealer.clientservice.dto.response.ClientProfileResponse;\nimport com.brokerdealer.clientservice.dto.response.HoldingDetailResponse;\n"
+   },
+   {
+    "file": "services/client-service/src/test/java/com/brokerdealer/clientservice/service/ClientServiceHoldingsTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.clientservice.service;\n\nimport com.brokerdealer.clientservice.client.MarketDataClient;\nimport com.brokerdealer.clientservice.domain.Holding;\nimport com.brokerdealer.clientservice.exception.ClientNotFoundException;\nimport com.brokerdealer.clientservice.repository.ClientRepository;\nimport com.brokerdealer.clientservice.repository.HoldingRepository;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.Mock;\nimport org.mockito.junit.jupiter.MockitoExtension;\n\nimport java.math.BigDecimal;\nimport java.util.List;\nimport java.util.UUID;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatThrownBy;\nimport static org.mockito.Mockito.when;\n\n@ExtendWith(MockitoExtension.class)\nclass ClientServiceHoldingsTest {\n\n    @Mock private ClientRepository clientRepository;\n    @Mock private HoldingRepository holdingRepository;\n    @Mock private MarketDataClient marketDataClient;\n    @InjectMocks private ClientService clientService;\n\n    @Test\n    void shouldExcludeZeroQuantityHoldings() {\n        UUID clientId = UUID.randomUUID();\n        when(clientRepository.existsById(clientId)).thenReturn(true);\n        when(holdingRepository.findByClientId(clientId)).thenReturn(List.of(\n                Holding.builder().clientId(clientId).symbol(\"AAPL\").quantity(5).avgPrice(new BigDecimal(\"100.0000\")).build(),\n                Holding.builder().clientId(clientId).symbol(\"MSFT\").quantity(0).avgPrice(new BigDecimal(\"300.0000\")).build()));\n\n        assertThat(clientService.getHoldings(clientId)).hasSize(1);\n    }\n\n    @Test\n    void shouldThrowWhenClientMissing() {\n        UUID clientId = UUID.randomUUID();\n        when(clientRepository.existsById(clientId)).thenReturn(false);\n        assertThatThrownBy(() -> clientService.getHoldings(clientId)).isInstanceOf(ClientNotFoundException.class);\n    }\n}\n"
+   }
+  ]
+ },
+ {
+  "id": "Q06",
+  "control": true,
+  "kind": "control",
+  "category": "endpoint-money-strings",
+  "rule_ref": "n/a (control)",
+  "pr_title": "execution-service: GET /api/v1/executions/{orderId}/summary \u2014 filled qty, avg price, total value",
+  "edits": [
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/response/ExecutionSummaryResponse.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.executionservice.dto.response;\n\nimport lombok.Builder;\nimport lombok.Value;\n\n@Value\n@Builder\npublic class ExecutionSummaryResponse {\n    private ExecutionSummaryData data;\n    private ResponseMeta meta;\n\n    @Value\n    @Builder\n    public static class ExecutionSummaryData {\n        private String orderId;\n        private Integer fillCount;\n        private Integer filledQuantity;\n        private Integer remainingQuantity;\n        private String avgExecutedPrice;\n        private String totalFillValue;\n        private String lastExecutedAt;\n    }\n}\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "    public void processFill(OrderExecutionRequest request) {\n",
+    "replace": "    public ExecutionSummaryResponse getExecutionSummary(UUID orderId) {\n        List<Execution> executions = executionRepository.findByOrderIdOrderByExecutedAtAsc(orderId);\n        if (executions.isEmpty()) {\n            throw new ResourceNotFoundException(\"ORDER_NOT_FOUND\",\n                    \"No executions found for order: \" + orderId);\n        }\n\n        List<Execution> fills = executions.stream()\n                .filter(e -> e.getFillType() != FillType.REJECTED)\n                .toList();\n        int filledQty = fills.stream().mapToInt(Execution::getExecutedQty).sum();\n        BigDecimal totalValue = fills.stream()\n                .map(Execution::getFillValue)\n                .reduce(BigDecimal.ZERO, BigDecimal::add)\n                .setScale(2, RoundingMode.HALF_UP);\n        String avgPrice = filledQty == 0 ? null : fills.stream()\n                .map(e -> e.getExecutedPrice().multiply(BigDecimal.valueOf(e.getExecutedQty())))\n                .reduce(BigDecimal.ZERO, BigDecimal::add)\n                .divide(BigDecimal.valueOf(filledQty), 4, RoundingMode.HALF_UP)\n                .toPlainString();\n        Execution last = executions.get(executions.size() - 1);\n\n        return ExecutionSummaryResponse.builder()\n                .data(ExecutionSummaryResponse.ExecutionSummaryData.builder()\n                        .orderId(orderId.toString())\n                        .fillCount(fills.size())\n                        .filledQuantity(filledQty)\n                        .remainingQuantity(last.getRemainingQuantity())\n                        .avgExecutedPrice(avgPrice)\n                        .totalFillValue(totalValue.toPlainString())\n                        .lastExecutedAt(last.getExecutedAt().toString())\n                        .build())\n                .meta(ResponseMeta.builder()\n                        .timestamp(Instant.now().toString())\n                        .requestId(UUID.randomUUID().toString())\n                        .build())\n                .build();\n    }\n\n    public void processFill(OrderExecutionRequest request) {\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.executionservice.domain.OrderType;\n",
+    "replace": "import com.brokerdealer.executionservice.domain.Execution;\nimport com.brokerdealer.executionservice.domain.FillType;\nimport com.brokerdealer.executionservice.domain.OrderType;\nimport com.brokerdealer.executionservice.dto.response.ExecutionSummaryResponse;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java",
+    "op": "replace",
+    "find": "import java.time.Instant;\n",
+    "replace": "import java.math.BigDecimal;\nimport java.math.RoundingMode;\nimport java.time.Instant;\n"
+   },
+   {
+    "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/controller/ExecutionController.java",
+    "op": "replace",
+    "find": "        return ResponseEntity.ok(response);\n    }\n",
+    "replace": "        return ResponseEntity.ok(response);\n    }\n\n    @GetMapping(\"/{orderId}/summary\")\n    public ResponseEntity<com.brokerdealer.executionservice.dto.response.ExecutionSummaryResponse> getExecutionSummary(\n            @PathVariable UUID orderId) {\n        log.debug(\"GET /api/v1/executions/{}/summary\", orderId);\n        return ResponseEntity.ok(executionService.getExecutionSummary(orderId));\n    }\n"
+   }
+  ]
+ },
+ {
+  "id": "Q07",
+  "control": true,
+  "kind": "control",
+  "category": "endpoint-auth",
+  "rule_ref": "n/a (control)",
+  "pr_title": "auth-service: GET /api/v1/users/{userId} \u2014 ADMIN user detail",
+  "edits": [
+   {
+    "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/service/UserService.java",
+    "op": "replace",
+    "find": "    public UserResponse createUser(CreateUserRequest request) {\n",
+    "replace": "    public UserResponse getUser(UUID userId) {\n        log.debug(\"Fetching user: userId={}\", userId);\n        return userRepository.findById(userId)\n                .map(this::toResponse)\n                .orElseThrow(() -> new UserNotFoundException(\"USER_NOT_FOUND\", \"User not found: \" + userId));\n    }\n\n    public UserResponse createUser(CreateUserRequest request) {\n"
+   },
+   {
+    "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/controller/UserController.java",
+    "op": "replace",
+    "find": "    @PostMapping\n    @PreAuthorize(\"hasRole('ADMIN')\")\n",
+    "replace": "    @GetMapping(\"/{userId}\")\n    @PreAuthorize(\"hasRole('ADMIN')\")\n    public ResponseEntity<Map<String, Object>> getUser(@PathVariable UUID userId) {\n\n        log.debug(\"GET /api/v1/users/{}\", userId);\n\n        UserResponse user = userService.getUser(userId);\n\n        Map<String, Object> meta = Map.of(\n                \"timestamp\", Instant.now().toString(),\n                \"requestId\", UUID.randomUUID().toString()\n        );\n\n        return ResponseEntity.ok(Map.of(\"data\", user, \"meta\", meta));\n    }\n\n    @PostMapping\n    @PreAuthorize(\"hasRole('ADMIN')\")\n"
+   },
+   {
+    "file": "services/auth-service/src/test/java/com/brokerdealer/authservice/service/UserServiceGetUserTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.authservice.service;\n\nimport com.brokerdealer.authservice.domain.User;\nimport com.brokerdealer.authservice.domain.UserRole;\nimport com.brokerdealer.authservice.domain.UserStatus;\nimport com.brokerdealer.authservice.dto.response.UserResponse;\nimport com.brokerdealer.authservice.exception.UserNotFoundException;\nimport com.brokerdealer.authservice.repository.UserRepository;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.InjectMocks;\nimport org.mockito.Mock;\nimport org.mockito.junit.jupiter.MockitoExtension;\nimport org.springframework.security.crypto.password.PasswordEncoder;\n\nimport java.time.Instant;\nimport java.util.Optional;\nimport java.util.UUID;\n\nimport static org.assertj.core.api.Assertions.assertThat;\nimport static org.assertj.core.api.Assertions.assertThatThrownBy;\nimport static org.mockito.Mockito.when;\n\n@ExtendWith(MockitoExtension.class)\nclass UserServiceGetUserTest {\n\n    @Mock private UserRepository userRepository;\n    @Mock private PasswordEncoder passwordEncoder;\n    @InjectMocks private UserService userService;\n\n    @Test\n    void shouldReturnUserWithUsernameAsDisplayNameFallback() {\n        UUID id = UUID.randomUUID();\n        when(userRepository.findById(id)).thenReturn(Optional.of(User.builder()\n                .id(id).username(\"trader01\").role(UserRole.TRADER).status(UserStatus.ACTIVE)\n                .createdAt(Instant.now()).build()));\n\n        UserResponse response = userService.getUser(id);\n\n        assertThat(response.getDisplayName()).isEqualTo(\"trader01\");\n    }\n\n    @Test\n    void shouldThrowWhenUserMissing() {\n        UUID id = UUID.randomUUID();\n        when(userRepository.findById(id)).thenReturn(Optional.empty());\n        assertThatThrownBy(() -> userService.getUser(id)).isInstanceOf(UserNotFoundException.class);\n    }\n}\n"
+   }
+  ]
+ },
+ {
+  "id": "Q08",
+  "control": true,
+  "kind": "control",
+  "category": "timezone-fix-migration",
+  "rule_ref": "n/a (control)",
+  "pr_title": "order-service: count daily orders from the start of the ET trading day",
+  "edits": [
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/TradingDayCalendar.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.service;\n\nimport org.springframework.stereotype.Component;\n\nimport java.time.Clock;\nimport java.time.Instant;\nimport java.time.LocalDate;\nimport java.time.ZoneId;\n\n/**\n * Trading-day boundaries in America/New_York (CLAUDE.md \u00a710 \u2014 never UTC for market time).\n */\n@Component\npublic class TradingDayCalendar {\n\n    static final ZoneId ET_ZONE = ZoneId.of(\"America/New_York\");\n\n    private final Clock clock;\n\n    public TradingDayCalendar(Clock clock) {\n        this.clock = clock;\n    }\n\n    public Instant startOfTradingDay() {\n        return startOfTradingDay(Instant.now(clock));\n    }\n\n    static Instant startOfTradingDay(Instant now) {\n        LocalDate tradeDate = now.atZone(ET_ZONE).toLocalDate();\n        return tradeDate.atStartOfDay(ET_ZONE).toInstant();\n    }\n}\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "        Instant startOfDay = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant();\n",
+    "replace": "        Instant startOfDay = tradingDayCalendar.startOfTradingDay();\n"
+   },
+   {
+    "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+    "op": "replace",
+    "find": "    private final RedisTemplate<String, Object> redisTemplate;\n\n    @Transactional\n    public SubmitOrderResponse submitOrder(",
+    "replace": "    private final RedisTemplate<String, Object> redisTemplate;\n    private final TradingDayCalendar tradingDayCalendar;\n\n    @Transactional\n    public SubmitOrderResponse submitOrder("
+   },
+   {
+    "file": "services/order-service/src/test/java/com/brokerdealer/orderservice/service/TradingDayCalendarTest.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.orderservice.service;\n\nimport org.junit.jupiter.api.Test;\n\nimport java.time.Instant;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\nclass TradingDayCalendarTest {\n\n    @Test\n    void shouldUseEasternMidnightDuringDaylightTime() {\n        // 2026-10-13 02:00Z is still 2026-10-12 in New York (EDT, UTC-4)\n        assertThat(TradingDayCalendar.startOfTradingDay(Instant.parse(\"2026-10-13T02:00:00Z\")))\n                .isEqualTo(Instant.parse(\"2026-10-12T04:00:00Z\"));\n    }\n\n    @Test\n    void shouldUseEasternMidnightDuringStandardTime() {\n        assertThat(TradingDayCalendar.startOfTradingDay(Instant.parse(\"2026-12-01T15:00:00Z\")))\n                .isEqualTo(Instant.parse(\"2026-12-01T05:00:00Z\"));\n    }\n}\n"
+   }
+  ]
+ },
+ {
+  "id": "Q09",
+  "control": true,
+  "kind": "control",
+  "category": "endpoint-role-restricted",
+  "rule_ref": "n/a (control)",
+  "pr_title": "client-service: GET /api/v1/clients/kyc-expiring?withinDays= \u2014 upcoming KYC expiries",
+  "edits": [
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/repository/ClientRepository.java",
+    "op": "replace",
+    "find": "    List<Client> findTopByTurnoverTodayDesc(Pageable pageable);\n",
+    "replace": "    List<Client> findTopByTurnoverTodayDesc(Pageable pageable);\n\n    List<Client> findByKycExpiryDateBetweenOrderByKycExpiryDateAsc(java.time.LocalDate from,\n                                                                   java.time.LocalDate to,\n                                                                   Pageable pageable);\n\n    List<Client> findByKycExpiryDateBeforeOrderByKycExpiryDateAsc(java.time.LocalDate date,\n                                                                  Pageable pageable);\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+    "op": "replace",
+    "find": "    public ClientProfileResponse getClient(UUID id) {\n",
+    "replace": "    /**\n     * Clients whose KYC verification expires within the next {@code withinDays} days (ET),\n     * soonest first, capped at 100 rows. Used by operations to chase renewals before\n     * Level 2 check #4 starts rejecting the client's orders. When {@code includeExpired}\n     * is true, clients whose KYC has already lapsed are listed first.\n     */\n    public List<ClientProfileResponse> getKycExpiring(int withinDays, boolean includeExpired) {\n        if (withinDays < 1 || withinDays > 90) {\n            throw new ValidationException(\"VALIDATION_ERROR\", \"withinDays must be between 1 and 90\");\n        }\n        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of(\"America/New_York\"));\n        log.debug(\"Fetching KYC-expiring clients: withinDays={} includeExpired={}\", withinDays, includeExpired);\n        List<Client> result = new java.util.ArrayList<>();\n        if (includeExpired) {\n            result.addAll(clientRepository.findByKycExpiryDateBeforeOrderByKycExpiryDateAsc(\n                    today, PageRequest.of(0, 100)));\n        }\n        int remaining = 100 - result.size();\n        if (remaining > 0) {\n            result.addAll(clientRepository.findByKycExpiryDateBetweenOrderByKycExpiryDateAsc(\n                    today, today.plusDays(withinDays), PageRequest.of(0, remaining)));\n        }\n        return result.stream()\n                .map(clientMapper::toProfileResponse)\n                .toList();\n    }\n\n    public ClientProfileResponse getClient(UUID id) {\n"
+   },
+   {
+    "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java",
+    "op": "replace",
+    "find": "    @GetMapping(\"/{id}\")\n",
+    "replace": "    @GetMapping(\"/kyc-expiring\")\n    public ResponseEntity<Map<String, Object>> getKycExpiring(\n            @RequestParam(defaultValue = \"30\") int withinDays,\n            @RequestParam(defaultValue = \"false\") boolean includeExpired) {\n        log.debug(\"GET /api/v1/clients/kyc-expiring withinDays={} includeExpired={}\", withinDays, includeExpired);\n        return ResponseEntity.ok(buildSuccessResponse(clientService.getKycExpiring(withinDays, includeExpired)));\n    }\n\n    @GetMapping(\"/{id}\")\n"
+   }
+  ]
+ },
+ {
+  "id": "Q10",
+  "control": true,
+  "kind": "control",
+  "category": "endpoint-read",
+  "rule_ref": "n/a (control)",
+  "pr_title": "risk-service: GET /api/v1/risk/rules/warnings?orderId= \u2014 list persisted risk warnings (ADMIN)",
+  "edits": [
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/response/RiskWarningResponse.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.riskservice.dto.response;\n\nimport lombok.Builder;\nimport lombok.Value;\n\nimport java.time.Instant;\nimport java.util.UUID;\n\n@Value\n@Builder\npublic class RiskWarningResponse {\n    UUID id;\n    UUID orderId;\n    String ruleCode;\n    String reason;\n    Instant createdAt;\n}\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskWarningQueryService.java",
+    "op": "new_file",
+    "content": "package com.brokerdealer.riskservice.service;\n\nimport com.brokerdealer.riskservice.domain.RiskWarning;\nimport com.brokerdealer.riskservice.dto.response.RiskWarningResponse;\nimport com.brokerdealer.riskservice.repository.RiskWarningRepository;\nimport lombok.RequiredArgsConstructor;\nimport lombok.extern.slf4j.Slf4j;\nimport org.springframework.data.domain.Example;\nimport org.springframework.data.domain.Sort;\nimport org.springframework.stereotype.Service;\n\nimport java.util.List;\nimport java.util.UUID;\n\n@Service\n@RequiredArgsConstructor\n@Slf4j\npublic class RiskWarningQueryService {\n\n    private final RiskWarningRepository riskWarningRepository;\n\n    public List<RiskWarningResponse> getWarningsForOrder(UUID orderId) {\n        log.debug(\"Fetching risk warnings: orderId={}\", orderId);\n        RiskWarning probe = RiskWarning.builder().orderId(orderId).build();\n        return riskWarningRepository.findAll(Example.of(probe), Sort.by(Sort.Direction.ASC, \"createdAt\")).stream()\n                .map(w -> RiskWarningResponse.builder()\n                        .id(w.getId())\n                        .orderId(w.getOrderId())\n                        .ruleCode(w.getRuleCode())\n                        .reason(w.getReason())\n                        .createdAt(w.getCreatedAt())\n                        .build())\n                .toList();\n    }\n}\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java",
+    "op": "replace",
+    "find": "import com.brokerdealer.riskservice.service.RiskRuleService;\n",
+    "replace": "import com.brokerdealer.riskservice.service.RiskRuleService;\nimport com.brokerdealer.riskservice.service.RiskWarningQueryService;\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java",
+    "op": "replace",
+    "find": "    private final PendingChangeService pendingChangeService;\n",
+    "replace": "    private final PendingChangeService pendingChangeService;\n    private final RiskWarningQueryService riskWarningQueryService;\n"
+   },
+   {
+    "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java",
+    "op": "replace",
+    "find": "    @GetMapping(\"/rules/pending-changes\")\n",
+    "replace": "    @GetMapping(\"/rules/warnings\")\n    public ResponseEntity<Map<String, Object>> getWarnings(@RequestParam UUID orderId) {\n        return ResponseEntity.ok(buildResponse(riskWarningQueryService.getWarningsForOrder(orderId)));\n    }\n\n    @GetMapping(\"/rules/pending-changes\")\n"
+   }
+  ]
+ }
+]

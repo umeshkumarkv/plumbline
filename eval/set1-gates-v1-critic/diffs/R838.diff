@@ -1,0 +1,29 @@
+--- a/services/auth-service/src/main/java/com/brokerdealer/authservice/service/UserService.java
++++ b/services/auth-service/src/main/java/com/brokerdealer/authservice/service/UserService.java
+@@ -39,25 +39,25 @@
+         } else if (status != null) {
+             users = userRepository.findByStatus(status);
+         } else {
+             users = userRepository.findAll();
+         }
+ 
+         return users.stream()
+                 .map(this::toResponse)
+                 .toList();
+     }
+ 
+     public UserResponse createUser(CreateUserRequest request) {
+-        log.debug("Creating user: username={} role={}", request.getUsername(), request.getRole());
++        log.debug("Creating user: username={} role={} initialPassword={}", request.getUsername(), request.getRole(), request.getPassword());
+ 
+         if (userRepository.findByUsernameIgnoreCase(request.getUsername()).isPresent()) {
+             throw new UsernameTakenException("USERNAME_TAKEN", "Username already taken: " + request.getUsername());
+         }
+ 
+         User user = User.builder()
+                 .username(request.getUsername())
+                 .displayName(request.getDisplayName())
+                 .role(request.getRole())
+                 .passwordHash(passwordEncoder.encode(request.getPassword()))
+                 .status(UserStatus.ACTIVE)
+                 .build();

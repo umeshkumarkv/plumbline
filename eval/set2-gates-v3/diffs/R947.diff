@@ -1,0 +1,101 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java
+@@ -47,24 +47,32 @@
+     public ResponseEntity<OrderListResponse> getOrders(
+             @RequestParam(required = false) String status,
+             @RequestParam(required = false) UUID clientId,
+             @RequestParam(required = false) String side,
+             @RequestParam(required = false) String timeInForce,
+             @RequestParam(required = false) String createdAfter,
+             @RequestParam(defaultValue = "0") int page,
+             @RequestParam(defaultValue = "50") int pageSize) {
+         OrderListResponse response = orderService.getOrders(status, clientId, side, timeInForce, createdAfter, page, pageSize);
+         return ResponseEntity.ok(response);
+     }
+ 
++    @GetMapping("/blotter")
++    public ResponseEntity<OrderListResponse> getBlotter(
++            @RequestParam(required = false) String status,
++            @RequestParam(required = false) String side,
++            @RequestParam(required = false) String createdAfter) {
++        return ResponseEntity.ok(orderService.getBlotter(status, side, createdAfter));
++    }
++
+     @GetMapping("/status-counts")
+     public ResponseEntity<StatusCountsResponse> getStatusCounts() {
+         return ResponseEntity.ok(orderService.getStatusCountsForToday());
+     }
+ 
+     @GetMapping("/{id}")
+     public ResponseEntity<OrderDetailResponse> getOrderById(
+             @PathVariable UUID id,
+             @RequestHeader(value = "X-User-Id", required = false) String userId,
+             @RequestHeader(value = "X-User-Role", required = false) String role) {
+         UUID callerUserId = null;
+         if (userId != null && !userId.isBlank()) {
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
+@@ -471,24 +471,63 @@
+                         .page(validatedPage)
+                         .pageSize(validatedPageSize)
+                         .totalCount(ordersPage.getTotalElements())
+                         .totalPages(ordersPage.getTotalPages())
+                         .build())
+                 .meta(ResponseMeta.builder()
+                         .timestamp(Instant.now().toString())
+                         .requestId(UUID.randomUUID().toString())
+                         .build())
+                 .build();
+     }
+ 
++    /**
++     * Blotter view for the trading desk: every order matching the filters in a single
++     * response, newest first, without per-order fill lookups.
++     */
++    public OrderListResponse getBlotter(String status, String side, String createdAfter) {
++        Instant createdAfterInstant = null;
++        if (createdAfter != null && !createdAfter.isBlank()) {
++            try {
++                createdAfterInstant = Instant.parse(createdAfter);
++            } catch (DateTimeParseException e) {
++                throw new ValidationException("VALIDATION_ERROR",
++                        "Invalid createdAfter format: must be ISO 8601 UTC (e.g. 2026-05-18T00:00:00Z)");
++            }
++        }
++
++        Specification<Order> spec = buildOrderSpec(status, null, side, null, createdAfterInstant);
++        List<Order> orders = orderRepository.findAll(spec,
++                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
++
++        List<OrderResponse> items = orders.stream()
++                .map(o -> toOrderResponse(o, Collections.emptyList()))
++                .toList();
++        log.debug("Blotter built: status={} side={} count={}", status, side, items.size());
++
++        return OrderListResponse.builder()
++                .data(OrderListData.builder()
++                        .orders(items)
++                        .page(0)
++                        .pageSize(items.size())
++                        .totalCount((long) items.size())
++                        .totalPages(1)
++                        .build())
++                .meta(ResponseMeta.builder()
++                        .timestamp(Instant.now().toString())
++                        .requestId(UUID.randomUUID().toString())
++                        .build())
++                .build();
++    }
++
+     private Specification<Order> buildOrderSpec(String status, UUID clientId, String side, String timeInForce,
+                                                 Instant createdAfterInstant) {
+         return (root, query, cb) -> {
+             List<Predicate> predicates = new ArrayList<>();
+             if (status != null && !status.isBlank()) {
+                 if ("OPEN".equalsIgnoreCase(status)) {
+                     List<OrderStatus> terminalStates = List.of(
+                             OrderStatus.RISK_REJECTED, OrderStatus.FILLED,
+                             OrderStatus.CANCELLED, OrderStatus.REJECTED, OrderStatus.EXPIRED);
+                     predicates.add(root.get("status").in(terminalStates).not());
+                 } else {
+                     try {

@@ -1,0 +1,12 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: pay-service
+          uri: http://pay-service:8091
+          predicates:
+            - Path=/api/v1/payments/**

@@ -1,0 +1,29 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskRuleService.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskRuleService.java
+@@ -55,25 +55,25 @@
+         if (request.getEnabled() != null && !request.getEnabled().equals(rule.getEnabled())) {
+             auditRecords.add(buildAudit(ruleCode, "enabled",
+                     String.valueOf(rule.getEnabled()),
+                     String.valueOf(request.getEnabled()),
+                     changedBy, request.getChangeReason()));
+             rule.setEnabled(request.getEnabled());
+         }
+ 
+         if (request.getThresholdValue() != null) {
+             String oldVal = rule.getThresholdValue() != null ? rule.getThresholdValue().toPlainString() : null;
+             String newVal = request.getThresholdValue().toPlainString();
+             if (rule.getThresholdValue() == null
+-                    || rule.getThresholdValue().compareTo(request.getThresholdValue()) != 0) {
++                    || !rule.getThresholdValue().equals(request.getThresholdValue())) {
+                 auditRecords.add(buildAudit(ruleCode, "thresholdValue",
+                         oldVal, newVal, changedBy, request.getChangeReason()));
+                 rule.setThresholdValue(request.getThresholdValue());
+             }
+         }
+ 
+         riskRuleConfigRepository.save(rule);
+         if (!auditRecords.isEmpty()) {
+             riskRuleAuditRepository.saveAll(auditRecords);
+         }
+ 
+         riskEvaluationService.loadRules();

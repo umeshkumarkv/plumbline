@@ -1,0 +1,54 @@
+{
+ "F01": {"affected": ["client-service","audit-service","notification-service"], "evidence": {
+   "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java:213 — new BigDecimal((String) payload.get(\"executedPrice\")) -> ClassCastException on number",
+   "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:112 — (String) event.get(\"executedPrice\") -> ClassCastException",
+   "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/dto/event/ExecutionCompletedEvent.java:21 — String executedPrice read in ExecutionConsumer message (Jackson coerces, tolerant)"}, "breaking": true},
+ "F02": {"affected": ["notification-service"], "evidence": {
+   "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/ExecutionConsumer.java:44 — getRemainingQuantity() for partial-fill message; field becomes null"}, "breaking": true},
+ "F03": {"affected": ["audit-service"], "evidence": {
+   "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:46,152 — Instant.parse(timestamp) fails, falls back to Instant.now(); breaks eventTimestamp and dedup key"}, "breaking": true},
+ "F04": {"affected": [], "evidence": {}, "breaking": false},
+ "F05": {"affected": ["audit-service"], "evidence": {
+   "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:61-67 — reads metadata.rejectionReason / metadata.violatedRuleCode for RISK_REJECTED; now empty"}, "breaking": true},
+ "F06": {"affected": ["order-service","notification-service"], "evidence": {
+   "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/kafka/RiskEvaluationResultEvent.java:16 + kafka/consumer/RiskResultConsumer.java:34 — reads violatedRuleCode, becomes null",
+   "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/dto/event/RiskEvaluationResultEvent.java:19 — reads ruleCode (RiskResultConsumer.java:38,46); now populated, behaviour changes"}, "breaking": true},
+ "F07": {"affected": ["order-service"], "evidence": {
+   "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/client/ClientServiceClient.java:31 GET /clients/{id}/portfolio; dto/client/ClientResponse.java:20 LocalDate kycExpiryDate (ISO) -> deserialization failure; used OrderService.java:130"}, "breaking": true},
+ "F08": {"affected": ["frontend","order-service"], "evidence": {
+   "frontend": "frontend/src/api/orderApi.ts:32 GET /executions/{orderId}; OrderBlotterPage.tsx:697 fmtDateTime(f.executedAt) expects ISO",
+   "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/client/ExecutionServiceClient.java:32; ExecutionItem.executedAt passed to FillResponse at OrderService.java:542"}, "breaking": true},
+ "F09": {"affected": ["frontend"], "evidence": {
+   "frontend": "frontend/src/pages/DashboardPage.tsx:143-147 — getOrders without pageSize relies on default (GTD expiring-soon list from page orders)"}, "breaking": false},
+ "F10": {"affected": [], "evidence": {}, "breaking": false},
+ "F11": {"affected": ["frontend"], "evidence": {
+   "frontend": "frontend/src/api/riskApi.ts:10 — PATCH /risk/rules/{ruleCode} body lacks ticketReference -> 400"}, "breaking": true},
+ "F12": {"affected": ["frontend","order-service"], "evidence": {
+   "frontend": "frontend/src/types/market.types.ts:31 (YYYY-MM-DD); OrderEntryPage.tsx:275,414 and NavBar.tsx:74 compare/parse holidayDate as ISO",
+   "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/client/MarketDataServiceClient.java:61; OrderService.java:390 holidays.contains(expiryDate.toString())"}, "breaking": true},
+ "F13": {"affected": ["frontend"], "evidence": {
+   "frontend": "frontend/src/api/auditApi.ts:14,19; types/audit.types.ts optional previousState/actorId/metadata; OrderBlotterPage.tsx:726-740 truthy checks -> tolerant"}, "breaking": false},
+ "F14": {"affected": ["auth-service","marketdata-service","order-service","risk-service"], "evidence": {
+   "auth-service": "services/auth-service/src/main/java/com/brokerdealer/authservice/controller/UserController.java:79 getHeader(\"X-User-Id\")",
+   "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java:32,40,49 @RequestHeader X-User-Id",
+   "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/controller/OrderController.java:33,67 @RequestHeader X-User-Id",
+   "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java:39,67,76 @RequestHeader X-User-Id"}, "breaking": true},
+ "F15": {"affected": ["api-gateway"], "evidence": {
+   "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java:89 claims.get(\"username\") -> null X-Username"}, "breaking": true},
+ "F16": {"affected": ["api-gateway","order-service"], "evidence": {
+   "api-gateway": "services/api-gateway/src/main/resources/application.yml:48 uri http://audit-service:8087",
+   "order-service": "services/order-service/src/main/resources/application.yml:73 app.health.services.audit-service :8087 (HealthAggregatorService)"}, "breaking": true},
+ "F17": {"affected": ["api-gateway"], "evidence": {
+   "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java:38,82 checks auth:blacklist: prefix -> revoked tokens accepted"}, "breaking": true},
+ "F18": {"affected": ["frontend"], "evidence": {
+   "frontend": "frontend/nginx.conf:16 http://api-gateway:9090; frontend/vite.config.ts:11 http://localhost:9090"}, "breaking": true},
+ "F19": {"affected": ["order-service"], "evidence": {
+   "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/request/SubmitOrderRequest.java:35 @JsonProperty(\"tif\") @NotBlank -> 400"}, "breaking": true},
+ "F20": {"affected": ["marketdata-service"], "evidence": {
+   "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java:38 only @PostMapping(\"/{symbol}\"); POST /watchlists unmapped"}, "breaking": true},
+ "F21": {"affected": [], "evidence": {}, "breaking": false},
+ "F22": {"affected": [], "evidence": {}, "breaking": false},
+ "F23": {"affected": [], "evidence": {}, "breaking": false},
+ "F24": {"affected": [], "evidence": {}, "breaking": false},
+ "F25": {"affected": [], "evidence": {}, "breaking": false}
+}

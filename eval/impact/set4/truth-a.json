@@ -1,0 +1,209 @@
+{
+  "Q01": {
+    "affected": [
+      "notification-service"
+    ],
+    "evidence": {
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/ExecutionConsumer.java:45 \u2014 partial-fill message reads event.getRemainingQuantity() (ExecutionCompletedEvent.remainingQuantity); renamed key leaves it null"
+    },
+    "breaking": true
+  },
+  "Q02": {
+    "affected": [
+      "audit-service"
+    ],
+    "evidence": {
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:56 \u2014 derives ActorType from triggeredBy.startsWith(\"USER:\"); TRADER: prefix would be audited as SYSTEM"
+    },
+    "breaking": true
+  },
+  "Q03": {
+    "affected": [
+      "notification-service"
+    ],
+    "evidence": {
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/RiskResultConsumer.java:51 \u2014 push target is event.getUserId(), falls back to clientId; trader SSE push would be misrouted"
+    },
+    "breaking": true
+  },
+  "Q04": {
+    "affected": [
+      "risk-service"
+    ],
+    "evidence": {
+      "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/SelfTradeRule.java:26 \u2014 reads request.getHasCrossingOpenOrder() (RiskEvaluationRequest.hasCrossingOpenOrder bound from JSON key); self-trade check silently disabled"
+    },
+    "breaking": true
+  },
+  "Q05": {
+    "affected": [
+      "audit-service",
+      "client-service"
+    ],
+    "evidence": {
+      "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:113 \u2014 reads fillValue string into audit metadata",
+      "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java:214 \u2014 new BigDecimal(payload.get(\"fillValue\")) to adjust cash balance"
+    },
+    "breaking": false
+  },
+  "Q06": {
+    "affected": [
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java:218 \u2014 reads clientResponse.getData().getMaxOpenOrders() from GET /api/v1/clients/{id}/portfolio (dto/client/ClientResponse.java) for maxDailyOrders"
+    },
+    "breaking": true
+  },
+  "Q07": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/pages/OrderBlotterPage.tsx:695 \u2014 renders f.executionVenue from getExecutions() (GET /executions/{orderId})"
+    },
+    "breaking": true
+  },
+  "Q08": {
+    "affected": [
+      "frontend",
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java:110 \u2014 rejects orders unless GET /api/v1/market/hours data.marketOpen is TRUE",
+      "frontend": "frontend/src/components/NavBar.tsx:56 \u2014 setMarketOpen(h.marketOpen) from getMarketHours()"
+    },
+    "breaking": true
+  },
+  "Q09": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "Q10": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/pages/DashboardPage.tsx:144 \u2014 getOrders({ status, createdAfter: todayStart }) sends ?createdAfter= to GET /orders"
+    },
+    "breaking": true
+  },
+  "Q11": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/api/riskApi.ts:31 \u2014 PATCH /risk/rules/pending-changes/{id}/reject with body { rejectionReason }"
+    },
+    "breaking": true
+  },
+  "Q12": {
+    "affected": [
+      "frontend"
+    ],
+    "evidence": {
+      "frontend": "frontend/src/pages/PortfolioPage.tsx:40 \u2014 isToday(r.eventTimestamp) / OrderBlotterPage.tsx:732 fmtDateTime(rec.eventTimestamp) expect ISO string"
+    },
+    "breaking": true
+  },
+  "Q13": {
+    "affected": [
+      "api-gateway",
+      "notification-service"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java:90 \u2014 claims.get(\"role\") populates X-User-Role",
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/config/JwtAuthenticationFilter.java:49 \u2014 claims.get(\"role\") decides TRADER vs broadcast SSE registration"
+    },
+    "breaking": true
+  },
+  "Q14": {
+    "affected": [
+      "api-gateway",
+      "order-service"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/resources/application.yml:40 \u2014 route risk-service uri http://risk-service:8085",
+      "order-service": "services/order-service/src/main/resources/application.yml:71 \u2014 app.health.services.risk-service default http://risk-service:8085 (HealthAggregatorService /actuator/health)"
+    },
+    "breaking": true
+  },
+  "Q15": {
+    "affected": [
+      "api-gateway"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java:38,82 \u2014 checks redis hasKey(\"auth:blacklist:\" + token); logged-out tokens would be accepted"
+    },
+    "breaking": true
+  },
+  "Q16": {
+    "affected": [
+      "risk-service"
+    ],
+    "evidence": {
+      "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java:40 \u2014 @RequestHeader(\"X-Username\", default SYSTEM) records maker username on pending changes"
+    },
+    "breaking": true
+  },
+  "Q17": {
+    "affected": [
+      "order-service"
+    ],
+    "evidence": {
+      "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/request/SubmitOrderRequest.java:35 \u2014 @JsonProperty(\"tif\") on timeInForce for POST /api/v1/orders"
+    },
+    "breaking": true
+  },
+  "Q18": {
+    "affected": [
+      "api-gateway",
+      "notification-service"
+    ],
+    "evidence": {
+      "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/SseProxyFilter.java:46 \u2014 SSE_PATH hard-coded to /api/v1/notifications/stream for unbuffered proxying",
+      "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/controller/SseController.java:30 \u2014 @GetMapping(\"/stream\") is the only SSE endpoint"
+    },
+    "breaking": true
+  },
+  "Q19": {
+    "affected": [
+      "marketdata-service"
+    ],
+    "evidence": {
+      "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java:38 \u2014 only @PostMapping(\"/{symbol}\") exists"
+    },
+    "breaking": true
+  },
+  "Q20": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "Q21": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "Q22": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "Q23": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "Q24": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  },
+  "Q25": {
+    "affected": [],
+    "evidence": {},
+    "breaking": false
+  }
+}

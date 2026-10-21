@@ -1,0 +1,74 @@
+{
+"H01": {"affected": ["client-service","audit-service"], "evidence": {
+  "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java:214 — new BigDecimal((String) payload.get(\"fillValue\")) on execution.completed; null -> NPE",
+  "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:113 — event.get(\"fillValue\") from execution.completed; falls back to \"0\""}, "breaking": true},
+"H02": {"affected": ["audit-service"], "evidence": {
+  "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:68 — eventMetadata.getOrDefault(\"rejectionReason\",\"\") on RISK_REJECTED order.state.changed; reason silently lost"}, "breaking": true},
+"H03": {"affected": ["order-service","notification-service"], "evidence": {
+  "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/kafka/consumer/RiskResultConsumer.java:31 — \"PASSED\".equals(result) drives transitionOnRiskPassed; APPROVED hits unknown branch",
+  "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/RiskResultConsumer.java:33 — \"PASSED\" suppresses push; APPROVED would push 'Order Rejected'"}, "breaking": true},
+"H04": {"affected": ["execution-service","frontend"], "evidence": {
+  "execution-service": "services/execution-service/.../dto/event/ExecutionCompletedEvent.java — producer of execution.completed emits executedPrice, not fillPrice; audit now depends on a key the producer doesn't publish",
+  "frontend": "frontend/src/pages/PortfolioPage.tsx:50 — reads audit metadata executedPrice (from /audit/trail), which becomes \"0\""}, "breaking": true},
+"H05": {"affected": ["risk-service"], "evidence": {
+  "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/RiskEvaluationResult.java:13-17 — producer of risk.evaluation.result; audit now reads orderId/clientId/result/violatedRuleCode from it"}, "breaking": false},
+"H06": {"affected": ["notification-service"], "evidence": {
+  "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/RiskResultConsumer.java:50 — event.getUserId() (RiskEvaluationResultEvent.userId) used as push target; becomes null, falls back to clientId"}, "breaking": true},
+"H07": {"affected": ["order-service","notification-service","client-service","audit-service","frontend"], "evidence": {
+  "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/kafka/consumer/RiskResultConsumer.java:49 — \"FULL\".equals(fillType) on execution.completed; also ExecutionItem.fillType via GET /api/v1/executions passed to FillResponse (OrderService.java:541)",
+  "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/ExecutionConsumer.java:37 — \"FULL\".equals(fillType) picks 'Order Filled' vs 'Partial Fill'",
+  "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java:210 — reads fillType from execution.completed (branches on REJECTED only)",
+  "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:102 — reads fillType, stores as newState/metadata",
+  "frontend": "frontend/src/types/order.types.ts:50 FillType='PARTIAL'|'FULL'; frontend/src/pages/OrderBlotterPage.tsx:689 f.fillType==='FULL' on GET /executions/{orderId}"}, "breaking": true},
+"H08": {"affected": ["order-service","notification-service","client-service","audit-service"], "evidence": {
+  "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/kafka/consumer/RiskResultConsumer.java:41 — @KafkaListener topics=\"execution.completed\"",
+  "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/kafka/consumer/ExecutionConsumer.java:22 — topics=\"execution.completed\"",
+  "client-service": "services/client-service/src/main/java/com/brokerdealer/clientservice/kafka/consumer/OrderEventConsumer.java:25 — topics=\"execution.completed\"",
+  "audit-service": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java:92 — topics=\"execution.completed\""}, "breaking": true},
+"H09": {"affected": ["order-service","frontend"], "evidence": {
+  "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/client/ClientResponse.java:30 HoldingData.quantity; OrderService.java:215 mapToInt(getQuantity) from GET /clients/{id}/portfolio — null unboxing NPE",
+  "frontend": "frontend/src/types/client.types.ts:16 Holding.quantity; PortfolioPage.tsx:168,242; OrderEntryPage.tsx:391 holding.quantity"}, "breaking": true},
+"H10": {"affected": ["frontend"], "evidence": {
+  "frontend": "frontend/src/pages/PortfolioPage.tsx:168,244 — h.currentPrice from /clients/{id}/portfolio (order-service HoldingData doesn't declare currentPrice)"}, "breaking": true},
+"H11": {"affected": ["api-gateway","frontend"], "evidence": {
+  "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/SseProxyFilter.java:46,78 — intercepts and proxies upstream to /api/v1/notifications/stream",
+  "frontend": "frontend/src/hooks/useNotifications.ts:5 — SSE_URL='/api/v1/notifications/stream'"}, "breaking": true},
+"H12": {"affected": ["frontend"], "evidence": {
+  "frontend": "frontend/src/api/riskApi.ts:26 — http.patch(`/risk/rules/pending-changes/${changeId}/approve`)"}, "breaking": true},
+"H13": {"affected": ["frontend"], "evidence": {
+  "frontend": "frontend/src/api/marketApi.ts:50 — GET /market/instruments/search params {query}; used by OrderEntryPage.tsx:345"}, "breaking": true},
+"H14": {"affected": ["frontend"], "evidence": {
+  "frontend": "frontend/src/api/orderApi.ts:43 — POST /orders body sends tif"}, "breaking": true},
+"H15": {"affected": ["order-service","frontend"], "evidence": {
+  "order-service": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/execution/ExecutionItem.java:13 executedQty; OrderService.java:521,539 sums/forwards f.getExecutedQty()",
+  "frontend": "frontend/src/types/order.types.ts:57 Execution.executedQty; OrderBlotterPage.tsx:683 f.executedQty.toLocaleString()"}, "breaking": true},
+"H16": {"affected": ["marketdata-service"], "evidence": {
+  "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/MarketDataController.java:106 — GET /api/v1/market/instrument/{symbol} now called by execution-service (reads data.lastPrice/tradable/halted); old /market/{symbol} did not exist"}, "breaking": false},
+"H17": {"affected": ["risk-service"], "evidence": {
+  "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java:40 — @RequestHeader(\"X-Username\", default SYSTEM); maker recorded as SYSTEM"}, "breaking": true},
+"H18": {"affected": ["api-gateway","notification-service"], "evidence": {
+  "api-gateway": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java:90 — claims.get(\"role\")",
+  "notification-service": "services/notification-service/src/main/java/com/brokerdealer/notificationservice/config/JwtAuthenticationFilter.java:49 — claims.get(\"role\")"}, "breaking": true},
+"H19": {"affected": ["api-gateway","order-service","client-service","execution-service","frontend"], "evidence": {
+  "api-gateway": "services/api-gateway/src/main/resources/application.yml:32,36 — uri http://marketdata-service:8084",
+  "order-service": "services/order-service/src/main/resources/application.yml:61,70 — MARKETDATA_SERVICE_URL default :8084",
+  "client-service": "services/client-service/src/main/resources/application.yml:58 — marketdata url default :8084",
+  "execution-service": "services/execution-service/src/main/resources/application.yml:72; MarketDataClient.java:20 — base-url :8084",
+  "frontend": "frontend/nginx.conf:27 ws upstream marketdata-service:8084; frontend/vite.config.ts:12 ws://localhost:8084"}, "breaking": true},
+"H20": {"affected": [], "evidence": {}, "breaking": false},
+"H21": {"affected": ["frontend","marketdata-service"], "evidence": {
+  "frontend": "frontend/src/api/watchlistApi.ts:9,14,19 — calls /watchlists and /watchlists/{symbol}; no longer routed",
+  "marketdata-service": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java:23 — serves /api/v1/watchlists, target of the changed route"}, "breaking": true},
+"H22": {"affected": ["frontend"], "evidence": {
+  "frontend": "frontend/nginx.conf:16 api_upstream api-gateway:9090; frontend/vite.config.ts:11 '/api': localhost:9090"}, "breaking": true},
+"H23": {"affected": ["execution-service"], "evidence": {
+  "execution-service": "services/execution-service/src/main/java/com/brokerdealer/executionservice/controller/ExecutionController.java:20 — only GET /api/v1/executions/{orderId}; /executions/order/{id} not served"}, "breaking": true},
+"H24": {"affected": ["risk-service"], "evidence": {
+  "risk-service": "services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/request/RejectPendingChangeRequest.java:8 — binds rejectionReason; PendingChangeService.java:124 rejects blank"}, "breaking": true},
+"H25": {"affected": [], "evidence": {}, "breaking": false},
+"H26": {"affected": [], "evidence": {}, "breaking": false},
+"H27": {"affected": [], "evidence": {}, "breaking": false},
+"H28": {"affected": [], "evidence": {}, "breaking": false},
+"H29": {"affected": [], "evidence": {}, "breaking": false},
+"H30": {"affected": [], "evidence": {}, "breaking": false}
+}

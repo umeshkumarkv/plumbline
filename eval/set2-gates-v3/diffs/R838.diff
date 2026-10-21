@@ -1,0 +1,106 @@
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java
+@@ -1,16 +1,17 @@
+ package com.brokerdealer.executionservice.kafka.consumer;
+ 
+ import com.brokerdealer.executionservice.dto.request.OrderExecutionRequest;
+ import com.brokerdealer.executionservice.service.ExecutionService;
++import io.micrometer.core.instrument.MeterRegistry;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.kafka.annotation.KafkaListener;
+ import org.springframework.stereotype.Component;
+ 
+ @Component
+ @RequiredArgsConstructor
+ @Slf4j
+ public class OrderExecutionConsumer {
+ 
+     private final ExecutionService executionService;
+ 
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java
+@@ -4,25 +4,30 @@
+ import com.brokerdealer.executionservice.service.ExecutionService;
+ import io.micrometer.core.instrument.MeterRegistry;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.kafka.annotation.KafkaListener;
+ import org.springframework.stereotype.Component;
+ 
+ @Component
+ @RequiredArgsConstructor
+ @Slf4j
+ public class OrderExecutionConsumer {
+ 
++    private static final String METRIC_RECEIVED = "execution.requests.received";
++    private static final String METRIC_SKIPPED = "execution.requests.skipped";
++    private static final String METRIC_FAILED = "execution.requests.failed";
++
+     private final ExecutionService executionService;
++    private final MeterRegistry meterRegistry;
+ 
+     @KafkaListener(
+             topics = "order.execution.requested",
+             groupId = "execution-service-order.execution.requested-group",
+             containerFactory = "kafkaListenerContainerFactory"
+     )
+     public void consumeOrderExecutionRequested(OrderExecutionRequest event) {
+         if (event == null || event.getOrderId() == null) {
+             log.warn("Received null or invalid order.execution.requested message — ignoring");
+             return;
+         }
+         log.info("Received order.execution.requested: orderId={} orderType={}",
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/consumer/OrderExecutionConsumer.java
+@@ -23,15 +23,49 @@
+     @KafkaListener(
+             topics = "order.execution.requested",
+             groupId = "execution-service-order.execution.requested-group",
+             containerFactory = "kafkaListenerContainerFactory"
+     )
+     public void consumeOrderExecutionRequested(OrderExecutionRequest event) {
+         if (event == null || event.getOrderId() == null) {
+             log.warn("Received null or invalid order.execution.requested message — ignoring");
+             return;
+         }
+         log.info("Received order.execution.requested: orderId={} orderType={}",
+                 event.getOrderId(), event.getOrderType());
+-        executionService.processFill(event);
++        meterRegistry.counter(METRIC_RECEIVED).increment();
++
++        if (isMalformed(event)) {
++            log.warn("Skipping malformed execution request: orderId={}", event.getOrderId());
++            meterRegistry.counter(METRIC_SKIPPED, "reason", "malformed").increment();
++            return;
++        }
++        if (event.getOrderType() == null) {
++            log.warn("Skipping execution request without orderType: orderId={}", event.getOrderId());
++            meterRegistry.counter(METRIC_SKIPPED, "reason", "missing_order_type").increment();
++            return;
++        }
++
++        try {
++            executionService.processFill(event);
++        } catch (Exception e) {
++            meterRegistry.counter(METRIC_FAILED, "orderType", event.getOrderType().name()).increment();
++            log.error("Failed to process execution request: orderId={}, error={}",
++                    event.getOrderId(), e.getMessage(), e);
++        }
++    }
++
++    /**
++     * A request is malformed when it cannot be filled at all: missing symbol/side or a
++     * non-positive quantity. LIMIT requests additionally need a limit price.
++     */
++    private boolean isMalformed(OrderExecutionRequest event) {
++        if (event.getQuantity() == null || event.getQuantity() <= 0) {
++            return true;
++        }
++        if (event.getSymbol() == null || event.getSide() == null) {
++            return true;
++        }
++        return event.getOrderType() == com.brokerdealer.executionservice.domain.OrderType.LIMIT
++                && event.getLimitPrice() == null;
+     }
+ }

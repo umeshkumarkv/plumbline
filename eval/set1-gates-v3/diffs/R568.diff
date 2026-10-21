@@ -1,0 +1,29 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
+@@ -157,25 +157,25 @@
+                 expiryApplied = ExpiryApplied.DEFAULT;
+             }
+         }
+ 
+         // --- Compute orderValue for risk evaluation and cash reservation ---
+         BigDecimal limitPrice = null;
+         if (request.getLimitPrice() != null && !request.getLimitPrice().isBlank()) {
+             limitPrice = new BigDecimal(request.getLimitPrice());
+         }
+ 
+         BigDecimal orderValue;
+         if (OrderType.valueOf(request.getOrderType()) == OrderType.LIMIT) {
+-            orderValue = new BigDecimal(request.getLimitPrice())
++            orderValue = new BigDecimal(Double.parseDouble(request.getLimitPrice()))
+                     .multiply(BigDecimal.valueOf(request.getQuantity()))
+                     .setScale(2, RoundingMode.HALF_UP);
+         } else {
+             // MARKET — use lastPrice already fetched from instrumentResponse
+             orderValue = new BigDecimal(instrumentResponse.getData().getLastPrice())
+                     .multiply(BigDecimal.valueOf(request.getQuantity()))
+                     .setScale(2, RoundingMode.HALF_UP);
+         }
+ 
+         // --- Compute portfolio snapshot fields for risk.evaluation.requested (SCRUM-119) ---
+         OrderSide requestedSide = OrderSide.valueOf(request.getSide());
+         OrderSide oppositeSide = requestedSide == OrderSide.BUY ? OrderSide.SELL : OrderSide.BUY;

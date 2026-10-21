@@ -1,0 +1,143 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/response/RiskWarningResponse.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/response/RiskWarningResponse.java
+@@ -0,0 +1,17 @@
++package com.brokerdealer.riskservice.dto.response;
++
++import lombok.Builder;
++import lombok.Value;
++
++import java.time.Instant;
++import java.util.UUID;
++
++@Value
++@Builder
++public class RiskWarningResponse {
++    UUID id;
++    UUID orderId;
++    String ruleCode;
++    String reason;
++    Instant createdAt;
++}
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskWarningQueryService.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskWarningQueryService.java
+@@ -0,0 +1,35 @@
++package com.brokerdealer.riskservice.service;
++
++import com.brokerdealer.riskservice.domain.RiskWarning;
++import com.brokerdealer.riskservice.dto.response.RiskWarningResponse;
++import com.brokerdealer.riskservice.repository.RiskWarningRepository;
++import lombok.RequiredArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
++import org.springframework.data.domain.Example;
++import org.springframework.data.domain.Sort;
++import org.springframework.stereotype.Service;
++
++import java.util.List;
++import java.util.UUID;
++
++@Service
++@RequiredArgsConstructor
++@Slf4j
++public class RiskWarningQueryService {
++
++    private final RiskWarningRepository riskWarningRepository;
++
++    public List<RiskWarningResponse> getWarningsForOrder(UUID orderId) {
++        log.debug("Fetching risk warnings: orderId={}", orderId);
++        RiskWarning probe = RiskWarning.builder().orderId(orderId).build();
++        return riskWarningRepository.findAll(Example.of(probe), Sort.by(Sort.Direction.ASC, "createdAt")).stream()
++                .map(w -> RiskWarningResponse.builder()
++                        .id(w.getId())
++                        .orderId(w.getOrderId())
++                        .ruleCode(w.getRuleCode())
++                        .reason(w.getReason())
++                        .createdAt(w.getCreatedAt())
++                        .build())
++                .toList();
++    }
++}
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java
+@@ -1,21 +1,22 @@
+ package com.brokerdealer.riskservice.controller;
+ 
+ import com.brokerdealer.riskservice.dto.request.RejectPendingChangeRequest;
+ import com.brokerdealer.riskservice.dto.request.UpdateRiskRuleRequest;
+ import com.brokerdealer.riskservice.dto.response.PendingChangeResponse;
+ import com.brokerdealer.riskservice.dto.response.RiskRuleAuditResponse;
+ import com.brokerdealer.riskservice.dto.response.RiskRuleResponse;
+ import com.brokerdealer.riskservice.service.PendingChangeService;
+ import com.brokerdealer.riskservice.service.RiskRuleService;
++import com.brokerdealer.riskservice.service.RiskWarningQueryService;
+ import lombok.RequiredArgsConstructor;
+ import org.springframework.http.HttpStatus;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.*;
+ 
+ import java.time.Instant;
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+ 
+ @RestController
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java
+@@ -17,24 +17,25 @@
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+ 
+ @RestController
+ @RequestMapping("/api/v1/risk")
+ @RequiredArgsConstructor
+ public class RiskRuleController {
+ 
+     private final RiskRuleService riskRuleService;
+     private final PendingChangeService pendingChangeService;
++    private final RiskWarningQueryService riskWarningQueryService;
+ 
+     @GetMapping("/rules")
+     public ResponseEntity<Map<String, Object>> getRiskRules() {
+         List<RiskRuleResponse> rules = riskRuleService.getAllRules();
+         return ResponseEntity.ok(buildResponse(rules));
+     }
+ 
+     @PatchMapping("/rules/{ruleCode}")
+     public ResponseEntity<Map<String, Object>> submitPendingChange(
+             @PathVariable String ruleCode,
+             @RequestBody UpdateRiskRuleRequest request,
+             @RequestHeader(value = "X-User-Id", defaultValue = "SYSTEM") String userId,
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/controller/RiskRuleController.java
+@@ -41,24 +41,29 @@
+             @RequestHeader(value = "X-User-Id", defaultValue = "SYSTEM") String userId,
+             @RequestHeader(value = "X-Username", defaultValue = "SYSTEM") String username) {
+         PendingChangeResponse response = pendingChangeService.submitPendingChange(ruleCode, request, userId, username);
+         return ResponseEntity.status(HttpStatus.ACCEPTED).body(buildResponse(response));
+     }
+ 
+     @GetMapping("/rules/audit")
+     public ResponseEntity<Map<String, Object>> getAuditLog() {
+         List<RiskRuleAuditResponse> auditLog = riskRuleService.getAuditLog();
+         return ResponseEntity.ok(buildResponse(auditLog));
+     }
+ 
++    @GetMapping("/rules/warnings")
++    public ResponseEntity<Map<String, Object>> getWarnings(@RequestParam UUID orderId) {
++        return ResponseEntity.ok(buildResponse(riskWarningQueryService.getWarningsForOrder(orderId)));
++    }
++
+     @GetMapping("/rules/pending-changes")
+     public ResponseEntity<Map<String, Object>> listPendingChanges(
+             @RequestParam(required = false) String status) {
+         List<PendingChangeResponse> changes = pendingChangeService.listPendingChanges(status);
+         return ResponseEntity.ok(buildResponse(changes));
+     }
+ 
+     @GetMapping("/rules/pending-changes/{changeId}")
+     public ResponseEntity<Map<String, Object>> getPendingChange(@PathVariable UUID changeId) {
+         PendingChangeResponse change = pendingChangeService.getPendingChange(changeId);
+         return ResponseEntity.ok(buildResponse(change));
+     }

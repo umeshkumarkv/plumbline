@@ -1,0 +1,16 @@
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/dto/request/UpdateDefaultRouteRequest.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/dto/request/UpdateDefaultRouteRequest.java
+@@ -1,11 +1,13 @@
+ package com.brokerdealer.clientservice.dto.request;
+ 
+ import jakarta.validation.constraints.NotBlank;
++import jakarta.validation.constraints.Pattern;
+ import lombok.Data;
+ 
+ @Data
+ public class UpdateDefaultRouteRequest {
+ 
+     @NotBlank
++    @Pattern(regexp = "^(NASDAQ|NYSE|ARCA|BATS)$", message = "defaultRoute must be one of NASDAQ, NYSE, ARCA, BATS")
+     private String defaultRoute;
+ }

@@ -1,0 +1,154 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
+@@ -59,24 +59,28 @@
+ import java.time.ZoneOffset;
+ import java.time.ZonedDateTime;
+ import java.time.temporal.ChronoUnit;
+ import java.time.Duration;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.EnumSet;
+ import java.util.LinkedHashMap;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+ import java.util.UUID;
++import java.util.concurrent.CompletableFuture;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++import java.util.concurrent.TimeUnit;
+ 
+ @Service
+ @RequiredArgsConstructor
+ @Slf4j
+ public class OrderService {
+ 
+     private static final int GTD_DEFAULT_EXPIRY_DAYS = 180;
+     private static final ZoneId ET_ZONE = ZoneId.of("America/New_York");
+     private static final LocalTime MARKET_CLOSE_TIME = LocalTime.of(16, 0);
+     private static final List<OrderStatus> OPEN_STATUSES = List.of(
+             OrderStatus.NEW, OrderStatus.VALIDATED, OrderStatus.RISK_CHECK_PASSED,
+             OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION, OrderStatus.PARTIALLY_FILLED);
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
+@@ -83,24 +83,31 @@
+     private static final LocalTime MARKET_CLOSE_TIME = LocalTime.of(16, 0);
+     private static final List<OrderStatus> OPEN_STATUSES = List.of(
+             OrderStatus.NEW, OrderStatus.VALIDATED, OrderStatus.RISK_CHECK_PASSED,
+             OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION, OrderStatus.PARTIALLY_FILLED);
+ 
+     private static final int MAX_PAGE_SIZE = 200;
+     private static final String ORDER_CACHE_KEY_PREFIX = "order:state:";
+     private static final Set<OrderStatus> FILL_FETCH_STATUSES =
+             EnumSet.of(OrderStatus.FILLED, OrderStatus.PARTIALLY_FILLED);
+     private static final String STATUS_COUNTS_CACHE_KEY = "dashboard:status-counts:today";
+     private static final Duration STATUS_COUNTS_TTL = Duration.ofSeconds(15);
+ 
++    /**
++     * Fill lookups for a page of orders are independent REST calls to execution-service;
++     * issuing them concurrently keeps the blotter page latency close to a single call.
++     */
++    private static final long FILL_FETCH_TIMEOUT_MS = 3000;
++    private static final ExecutorService FILL_FETCH_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
++
+     private final OrderRepository orderRepository;
+     private final ClientServiceClient clientServiceClient;
+     private final MarketDataServiceClient marketDataServiceClient;
+     private final OrderEventProducer orderEventProducer;
+     private final ExecutionServiceClient executionServiceClient;
+     private final RedisTemplate<String, Object> redisTemplate;
+ 
+     @Transactional
+     public SubmitOrderResponse submitOrder(SubmitOrderRequest request, UUID userId) {
+         log.debug("Submitting order: clientId={} symbol={} side={} type={}",
+                 request.getClientId(), request.getSymbol(), request.getSide(), request.getOrderType());
+ 
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
+@@ -458,31 +458,37 @@
+             } catch (DateTimeParseException e) {
+                 throw new ValidationException("VALIDATION_ERROR",
+                         "Invalid createdAfter format: must be ISO 8601 UTC (e.g. 2026-05-18T00:00:00Z)");
+             }
+         }
+ 
+         int validatedPageSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
+         int validatedPage = Math.max(page, 0);
+ 
+         Specification<Order> spec = buildOrderSpec(status, clientId, side, timeInForce, createdAfterInstant);
+         Page<Order> ordersPage = orderRepository.findAll(spec, PageRequest.of(validatedPage, validatedPageSize));
+ 
+-        List<OrderResponse> items = ordersPage.getContent().stream()
+-                .map(o -> {
+-                    List<ExecutionItem> fills = FILL_FETCH_STATUSES.contains(o.getStatus())
+-                            ? executionServiceClient.getFills(o.getId())
+-                            : Collections.emptyList();
+-                    return toOrderResponse(o, fills);
+-                })
++        List<CompletableFuture<OrderResponse>> pending = ordersPage.getContent().stream()
++                .map(o -> CompletableFuture
++                        .supplyAsync(() -> fetchFillsIfNeeded(o), FILL_FETCH_EXECUTOR)
++                        .orTimeout(FILL_FETCH_TIMEOUT_MS, TimeUnit.MILLISECONDS)
++                        .exceptionally(ex -> {
++                            log.warn("Fill fetch failed: orderId={} error={}", o.getId(), ex.getMessage());
++                            return Collections.emptyList();
++                        })
++                        .thenApply(fills -> toOrderResponse(o, fills)))
++                .toList();
++
++        List<OrderResponse> items = pending.stream()
++                .map(CompletableFuture::join)
+                 .toList();
+ 
+         return OrderListResponse.builder()
+                 .data(OrderListData.builder()
+                         .orders(items)
+                         .page(validatedPage)
+                         .pageSize(validatedPageSize)
+                         .totalCount(ordersPage.getTotalElements())
+                         .totalPages(ordersPage.getTotalPages())
+                         .build())
+                 .meta(ResponseMeta.builder()
+                         .timestamp(Instant.now().toString())
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
+@@ -488,24 +488,39 @@
+                         .page(validatedPage)
+                         .pageSize(validatedPageSize)
+                         .totalCount(ordersPage.getTotalElements())
+                         .totalPages(ordersPage.getTotalPages())
+                         .build())
+                 .meta(ResponseMeta.builder()
+                         .timestamp(Instant.now().toString())
+                         .requestId(UUID.randomUUID().toString())
+                         .build())
+                 .build();
+     }
+ 
++    /**
++     * Only FILLED / PARTIALLY_FILLED orders can have executions; skip the remote call otherwise.
++     */
++    private List<ExecutionItem> fetchFillsIfNeeded(Order order) {
++        if (!FILL_FETCH_STATUSES.contains(order.getStatus())) {
++            return Collections.emptyList();
++        }
++        return executionServiceClient.getFills(order.getId());
++    }
++
++    @jakarta.annotation.PreDestroy
++    void shutdownFillFetchExecutor() {
++        FILL_FETCH_EXECUTOR.shutdown();
++    }
++
+     private Specification<Order> buildOrderSpec(String status, UUID clientId, String side, String timeInForce,
+                                                 Instant createdAfterInstant) {
+         return (root, query, cb) -> {
+             List<Predicate> predicates = new ArrayList<>();
+             if (status != null && !status.isBlank()) {
+                 if ("OPEN".equalsIgnoreCase(status)) {
+                     List<OrderStatus> terminalStates = List.of(
+                             OrderStatus.RISK_REJECTED, OrderStatus.FILLED,
+                             OrderStatus.CANCELLED, OrderStatus.REJECTED, OrderStatus.EXPIRED);
+                     predicates.add(root.get("status").in(terminalStates).not());
+                 } else {
+                     try {

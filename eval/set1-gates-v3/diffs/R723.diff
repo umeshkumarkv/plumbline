@@ -1,0 +1,29 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/dto/request/SubmitOrderRequest.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/dto/request/SubmitOrderRequest.java
+@@ -28,25 +28,25 @@
+ 
+     @NotBlank(message = "side is required")
+     private String side;
+ 
+     @NotBlank(message = "orderType is required")
+     private String orderType;
+ 
+     @JsonProperty("tif")
+     @NotBlank(message = "timeInForce is required")
+     private String timeInForce;
+ 
+     @NotNull(message = "quantity is required")
+-    @Min(value = 1, message = "quantity must be greater than 0")
++    @Min(value = 0, message = "quantity must not be negative")
+     private Integer quantity;
+ 
+     /** Required for LIMIT orders; must be null for MARKET orders. BigDecimal as String. */
+     private String limitPrice;
+ 
+     /** Optional for GTD orders. If provided, sets expiryApplied=TRADER; otherwise defaults to today+180. */
+     @JsonProperty("gtdDate")
+     private LocalDate expiryDate;
+ 
+     /** Optional execution venue. Defaults to "NYSE" if absent or blank. */
+     private String routingDestination;
+ }

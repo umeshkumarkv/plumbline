@@ -1,0 +1,33 @@
+# Copy to .github/workflows/impact-cache.yml. Builds the per-service dependency-map cache from MERGED code only
+# (push to a protected branch) and saves it. PR workflows (guardrails.yml, critic.yml) only restore it, so a pull
+# request can never write a cache entry another PR will read. Entries are keyed by git tree hash and extracted from
+# stored git blobs, so a cache built here describes exactly the committed code.
+name: impact-cache
+on:
+  push:
+    branches: [develop, main]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/plumbline-impact
+          key: plumbline-impact-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: plumbline-impact-${{ github.ref_name }}-
+      - name: Build the dependency map of this commit (only services missing from the cache are extracted)
+        run: |
+          pip install "pyyaml==6.0.2"
+          python3 .agentic-sdlc/impact/depmap.py . --ref HEAD --cache ~/.cache/plumbline-impact -o depmap.json
+      - uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/plumbline-impact
+          key: plumbline-impact-${{ github.ref_name }}-${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with: {name: depmap, path: depmap.json}

@@ -1,0 +1,29 @@
+--- a/services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java
++++ b/services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java
+@@ -93,25 +93,25 @@
+ 
+             MutableHttpServletRequest mutableRequest = new MutableHttpServletRequest(request);
+             mutableRequest.putHeader(HEADER_USER_ID, userId);
+             mutableRequest.putHeader(HEADER_USERNAME, username);
+             mutableRequest.putHeader(HEADER_USER_ROLE, role);
+ 
+             filterChain.doFilter(mutableRequest, response);
+ 
+         } catch (ExpiredJwtException e) {
+             log.warn("Expired JWT token for path: {}", path);
+             writeErrorResponse(response, "TOKEN_EXPIRED", "Token has expired");
+         } catch (JwtException e) {
+-            log.warn("Invalid JWT token for path: {}", path);
++            log.warn("Invalid JWT token: path={} reason={}", path, e.getClass().getSimpleName());
+             writeErrorResponse(response, "UNAUTHORIZED", "Token is missing or invalid");
+         }
+     }
+ 
+     private void writeErrorResponse(HttpServletResponse response, String code, String message)
+             throws IOException {
+         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+         response.setContentType("application/json");
+         String body = String.format(
+                 "{\"error\":{\"code\":\"%s\",\"message\":\"%s\",\"details\":[]}," +
+                 "\"meta\":{\"timestamp\":\"%s\",\"requestId\":\"%s\"}}",
+                 code, message, Instant.now(), UUID.randomUUID());

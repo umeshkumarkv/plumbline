@@ -1,0 +1,34 @@
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/service/ExecutionService.java
+@@ -40,31 +40,23 @@
+         }
+ 
+         return ExecutionListResponse.builder()
+                 .data(executions)
+                 .meta(ResponseMeta.builder()
+                         .timestamp(Instant.now().toString())
+                         .requestId(UUID.randomUUID().toString())
+                         .build())
+                 .build();
+     }
+ 
+     public void processFill(OrderExecutionRequest request) {
+-        if (executionRepository.existsByOrderId(request.getOrderId())) {
+-            log.warn("Idempotency: execution already exists for orderId={}", request.getOrderId());
+-            return;
+-        }
+-        if (pendingRepository.existsByOrderId(request.getOrderId())) {
+-            log.warn("Idempotency: pending execution already exists for orderId={}", request.getOrderId());
+-            return;
+-        }
+ 
+         log.info("Processing fill: orderId={} orderType={} symbol={}",
+                 request.getOrderId(), request.getOrderType(), request.getSymbol());
+ 
+         if (request.getOrderType() == OrderType.MARKET) {
+             fillSimulationService.executeMarketFill(request);
+         } else {
+             fillSimulationService.initiateLimitFill(request);
+         }
+     }
+ }

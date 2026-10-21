@@ -1,0 +1,32 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/filter/RoleAuthorizationFilter.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/filter/RoleAuthorizationFilter.java
+@@ -58,27 +58,27 @@
+                     "Role " + role + " is not permitted to " + method + " " + path);
+             return;
+         }
+ 
+         chain.doFilter(request, response);
+     }
+ 
+     private boolean isExcluded(String path, String method) {
+         return path.startsWith("/actuator") || "OPTIONS".equalsIgnoreCase(method);
+     }
+ 
+     private boolean isAllowed(String role, String method, String path) {
+-        // All risk rule endpoints require ADMIN
++        // Risk rule endpoints — ADMIN and OPERATIONS desk
+         if (path.startsWith("/api/v1/risk/rules")) {
+-            return "ADMIN".equals(role);
++            return "ADMIN".equals(role) || "OPERATIONS".equals(role);
+         }
+         return false;
+     }
+ 
+     private void writeError(HttpServletResponse response, HttpStatus status,
+                             String code, String message) throws IOException {
+         response.setStatus(status.value());
+         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+         Map<String, Object> body = Map.of(
+                 "error", Map.of("code", code, "message", message, "details", List.of()),
+                 "meta", Map.of("timestamp", Instant.now().toString(), "requestId", UUID.randomUUID().toString())
+         );

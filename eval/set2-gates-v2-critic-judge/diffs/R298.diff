@@ -1,0 +1,102 @@
+--- a/services/execution-service/src/main/resources/application.yml
++++ b/services/execution-service/src/main/resources/application.yml
+@@ -61,17 +61,19 @@
+         sliding-window-size: 10
+         failure-rate-threshold: 50
+         wait-duration-in-open-state: 10s
+         permitted-number-of-calls-in-half-open-state: 3
+   timelimiter:
+     instances:
+       default:
+         timeout-duration: 2s
+ 
+ app:
+   marketdata:
+     base-url: ${MARKETDATA_SERVICE_URL:http://localhost:8084}
++    token-header: X-Service-Token
++    service-token: ${MARKETDATA_SERVICE_TOKEN:mdsvc-4f9c2e7a1b8d4630a5e2c91f07d3b6aa}
+ 
+ logging:
+   level:
+     com.brokerdealer: INFO
+     org.springframework.kafka: WARN
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/config/ServiceTokenInterceptor.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/config/ServiceTokenInterceptor.java
+@@ -0,0 +1,48 @@
++package com.brokerdealer.executionservice.config;
++
++import lombok.extern.slf4j.Slf4j;
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.http.HttpRequest;
++import org.springframework.http.client.ClientHttpRequestExecution;
++import org.springframework.http.client.ClientHttpRequestInterceptor;
++import org.springframework.http.client.ClientHttpResponse;
++import org.springframework.stereotype.Component;
++
++import java.io.IOException;
++
++/**
++ * Adds the service-to-service token and SYSTEM role headers to outbound calls
++ * made to marketdata-service by the LIMIT order price monitor (SCRUM-48).
++ * Requests to any other host are passed through unchanged.
++ */
++@Component
++@Slf4j
++public class ServiceTokenInterceptor implements ClientHttpRequestInterceptor {
++
++    private static final String ROLE_HEADER = "X-User-Role";
++    private static final String SYSTEM_ROLE = "SYSTEM";
++
++    private final String serviceToken;
++    private final String tokenHeader;
++    private final String marketDataBaseUrl;
++
++    public ServiceTokenInterceptor(@Value("${app.marketdata.service-token}") String serviceToken,
++                                   @Value("${app.marketdata.token-header:X-Service-Token}") String tokenHeader,
++                                   @Value("${app.marketdata.base-url:http://localhost:8084}") String marketDataBaseUrl) {
++        this.serviceToken = serviceToken;
++        this.tokenHeader = tokenHeader;
++        this.marketDataBaseUrl = marketDataBaseUrl;
++    }
++
++    @Override
++    public ClientHttpResponse intercept(HttpRequest request, byte[] body,
++                                        ClientHttpRequestExecution execution) throws IOException {
++        if (request.getURI().toString().startsWith(marketDataBaseUrl)) {
++            request.getHeaders().set(tokenHeader, serviceToken);
++            request.getHeaders().set(ROLE_HEADER, SYSTEM_ROLE);
++            log.debug("Service token attached: host={} path={}",
++                    request.getURI().getHost(), request.getURI().getPath());
++        }
++        return execution.execute(request, body);
++    }
++}
+--- a/services/execution-service/src/main/java/com/brokerdealer/executionservice/config/RestTemplateConfig.java
++++ b/services/execution-service/src/main/java/com/brokerdealer/executionservice/config/RestTemplateConfig.java
+@@ -1,18 +1,24 @@
+ package com.brokerdealer.executionservice.config;
+ 
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ import org.springframework.http.client.SimpleClientHttpRequestFactory;
+ import org.springframework.web.client.RestTemplate;
+ 
+ @Configuration
+ public class RestTemplateConfig {
+ 
++    /**
++     * No connection pool — SimpleClientHttpRequestFactory per CLAUDE.md §11.
++     * The service token interceptor is applied to marketdata-service calls only.
++     */
+     @Bean
+-    public RestTemplate restTemplate() {
++    public RestTemplate restTemplate(ServiceTokenInterceptor serviceTokenInterceptor) {
+         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+         factory.setConnectTimeout(3000);
+         factory.setReadTimeout(3000);
+-        return new RestTemplate(factory);
++        RestTemplate restTemplate = new RestTemplate(factory);
++        restTemplate.getInterceptors().add(serviceTokenInterceptor);
++        return restTemplate;
+     }
+ }

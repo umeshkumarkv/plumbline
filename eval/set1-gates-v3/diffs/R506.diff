@@ -1,0 +1,26 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/SelfTradeRule.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/SelfTradeRule.java
+@@ -14,22 +14,22 @@
+     @Override
+     public String getRuleCode() {
+         return "RULE_SELF_TRADE";
+     }
+ 
+     @Override
+     public boolean isEnabled() {
+         return enabled;
+     }
+ 
+     @Override
+     public RiskResult evaluate(RiskEvaluationRequest request, RiskContext context) {
+-        if (Boolean.TRUE.equals(request.getHasCrossingOpenOrder())) {
++        if ("LIMIT".equals(request.getOrderType()) && Boolean.TRUE.equals(request.getHasCrossingOpenOrder())) {
+             return RiskResult.rejected(getRuleCode(),
+                     "SELF_TRADE_DETECTED: Order would cross with an existing open order on the opposite side"
+                             + " [clientId=" + request.getClientId()
+                             + " symbol=" + request.getSymbol()
+                             + " side=" + request.getSide() + "]");
+         }
+         return RiskResult.passed();
+     }
+ }

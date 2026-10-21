@@ -1,0 +1,35 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java
+@@ -60,25 +60,31 @@
+     public RiskResult evaluate(RiskEvaluationRequest request) {
+         log.debug("Evaluating order: orderId={} qty={}", request.getOrderId(), request.getQuantity());
+         RiskContext context = RiskContext.builder()
+                 .orderId(request.getOrderId())
+                 .clientId(request.getClientId())
+                 .build();
+         List<RiskWarning> warnings = new ArrayList<>();
+ 
+         for (RiskRule rule : rules) {
+             if (!rule.isEnabled()) {
+                 continue;
+             }
+-            RiskResult result = rule.evaluate(request, context);
++            RiskResult result;
++            try {
++                result = rule.evaluate(request, context);
++            } catch (Exception e) {
++                log.warn("Risk rule evaluation error, skipping: orderId={} rule={}", request.getOrderId(), rule.getRuleCode());
++                continue;
++            }
+             if ("REJECTED".equals(result.getResult())) {
+                 log.info("Order risk rejected: orderId={} rule={}", request.getOrderId(), result.getFailedRule());
+                 return result;
+             }
+             if ("WARNED".equals(result.getResult())) {
+                 log.warn("Risk warning: orderId={} rule={}", request.getOrderId(), result.getFailedRule());
+                 warnings.add(RiskWarning.builder()
+                         .orderId(request.getOrderId())
+                         .ruleCode(result.getFailedRule())
+                         .reason(result.getReason())
+                         .createdAt(Instant.now())
+                         .build());

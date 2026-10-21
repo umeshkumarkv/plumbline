@@ -1,0 +1,156 @@
+{
+ "agent": "onboard",
+ "artifact": "/tmp/claude-0/omsgit/services/execution-service/CLAUDE.md",
+ "verdict": "FAIL",
+ "counts": {
+  "PASS": 14,
+  "FAIL": 3,
+  "WARN": 0,
+  "SKIP": 0
+ },
+ "checks": [
+  {
+   "id": "OB-1",
+   "title": "All 11 service CLAUDE.md sections present",
+   "result": "PASS",
+   "detail": "11/11",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-2",
+   "title": "Port matches server.port",
+   "result": "PASS",
+   "detail": "doc 8086, code 8086",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-3",
+   "title": "Schema matches the service's schema",
+   "result": "PASS",
+   "detail": "code execution_schema",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-4",
+   "title": "Every endpoint in the code is documented",
+   "result": "PASS",
+   "detail": "1 in code, 0 undocumented",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-5",
+   "title": "No documented endpoint that the code does not have",
+   "result": "PASS",
+   "detail": "0 invented",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-6",
+   "title": "Kafka topics produced: code == doc",
+   "result": "PASS",
+   "detail": "code ['execution.completed']",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-7",
+   "title": "Kafka topics consumed: code == doc",
+   "result": "PASS",
+   "detail": "code ['order.execution.requested']",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-8",
+   "title": "Every downstream service called (REST) is documented",
+   "result": "PASS",
+   "detail": "code calls ['marketdata-service']",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-8c",
+   "title": "Documented downstream calls exist (served by the target and made by this service)",
+   "result": "FAIL",
+   "detail": "1 documented calls checked",
+   "evidence": [
+    "marketdata-service GET /api/v1/market/{symbol}: not served by marketdata-service"
+   ],
+   "source": "computed"
+  },
+  {
+   "id": "OB-8b",
+   "title": "Other services referenced in config (host:port, e.g. health checks) are mentioned",
+   "result": "PASS",
+   "detail": "config refs []",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-9",
+   "title": "Every @Entity is documented (in the entities section)",
+   "result": "FAIL",
+   "detail": "entities ['Execution', 'PendingOrderExecution']",
+   "evidence": [
+    "PendingOrderExecution"
+   ],
+   "source": "computed"
+  },
+  {
+   "id": "OB-9b",
+   "title": "No documented entity that the code does not have",
+   "result": "PASS",
+   "detail": "0 invented",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-10",
+   "title": "Every table created by migrations is documented (schema/entities sections)",
+   "result": "FAIL",
+   "detail": "2 tables",
+   "evidence": [
+    "executions",
+    "pending_order_executions"
+   ],
+   "source": "computed"
+  },
+  {
+   "id": "OB-10b",
+   "title": "No documented table that no migration creates",
+   "result": "PASS",
+   "detail": "0 invented",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-11",
+   "title": "Redis key prefixes used in code are documented",
+   "result": "PASS",
+   "detail": "code prefixes []",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-11b",
+   "title": "No documented Redis key that the code does not use",
+   "result": "PASS",
+   "detail": "0 invented",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-12",
+   "title": "TODO/FIXME/HACK markers acknowledged in a tech-debt section",
+   "result": "PASS",
+   "detail": "0 markers in code; tech-debt section absent",
+   "evidence": [],
+   "source": "computed"
+  }
+ ]
+}

@@ -1,0 +1,45 @@
+# Copy into the OMS repo as .github/CODEOWNERS and enable "Require review from Code Owners" in branch protection.
+# Every path protected by gates/checks/protected_paths.py is listed here, so a `plumbline-policy-change` PR always
+# needs a named human owner. Keep this file in sync with PROTECTED in protected_paths.py when either changes.
+# Also restrict who can apply the `plumbline-policy-change` label: agent/bot tokens must not have triage rights. Replace the team handles with your own.
+
+# CI, ownership, agent prompts and critic definitions
+/.github/workflows/            @platform-governance
+/.github/CODEOWNERS            @platform-governance
+/.github/prompts/              @platform-governance
+/.github/agents/               @platform-governance
+/CODEOWNERS                    @platform-governance
+/.claude/                      @platform-governance
+/.agentic-sdlc/                  @platform-governance
+/.plumbline/                        @platform-governance
+/.github/copilot-instructions.md @platform-governance
+/.github/instructions/         @platform-governance
+**/AGENTS.md                   @platform-governance
+**/.semgrepignore*             @platform-governance
+**/.gitattributes              @platform-governance
+/.semgrep.yml                  @platform-governance
+/.semgrep/                     @platform-governance
+**/.mvn/                       @platform-governance
+**/maven.config                @platform-governance
+**/jvm.config                  @platform-governance
+**/settings.xml                @platform-governance
+**/checkstyle*.xml             @platform-governance
+**/pmd*.xml                    @platform-governance
+**/spotbugs*.xml               @platform-governance
+**/*suppressions*.xml          @platform-governance
+**/lombok.config               @platform-governance
+/security/tool-versions.env    @security-team
+
+# Rulebooks
+**/CLAUDE*.md                  @principal-architect
+/services/*/CLAUDE*.md         @principal-architect @oms-tech-leads
+/frontend/CLAUDE*.md           @principal-architect @frontend-lead
+
+# Build/test configuration (coverage + test plugins live here)
+**/pom.xml                     @platform-governance
+
+# Regulated code paths
+/services/order-service/src/main/java/**/service/OrderStateMachineService.java  @oms-architects
+/services/risk-service/                                                           @risk-owners @oms-architects
+/services/client-service/**/service/*Cash*                                        @client-owners @oms-architects
+/services/*/src/main/resources/db/migration/                                      @dba-team

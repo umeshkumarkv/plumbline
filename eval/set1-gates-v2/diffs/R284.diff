@@ -1,0 +1,29 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/MarketCloseScheduler.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/MarketCloseScheduler.java
+@@ -66,25 +66,25 @@
+         List<Order> dayOrders = orderRepository.findByTimeInForceAndStatusIn(
+                 TimeInForce.DAY, EXPIRY_ELIGIBLE_STATUSES);
+         dayOrders.forEach(o -> expireOrder(o, TRIGGERED_BY_SCHEDULER, "DAY order expired at market close"));
+ 
+         List<Order> gtdOrders = orderRepository.findByTimeInForceAndExpiryDateAndStatusIn(
+                 TimeInForce.GTD, today, EXPIRY_ELIGIBLE_STATUSES);
+         gtdOrders.forEach(o -> expireOrder(o, TRIGGERED_BY_SCHEDULER, "GTD order reached gtdDate at market close"));
+ 
+         log.info("market close processed — {} DAY orders expired, {} GTD orders expired",
+                 dayOrders.size(), gtdOrders.size());
+     }
+ 
+-    @Scheduled(cron = "0 30 9 * * MON-FRI", zone = "America/New_York")
++    @Scheduled(cron = "0 30 9 * * MON-FRI", zone = "UTC")
+     @Transactional
+     public void runMarketOpenRecovery() {
+         LocalDate today = LocalDate.now(clock);
+ 
+         List<Order> staleGtdOrders = orderRepository.findByTimeInForceAndExpiryDateBeforeAndStatusIn(
+                 TimeInForce.GTD, today, NON_TERMINAL_STATUSES);
+ 
+         if (staleGtdOrders.isEmpty()) {
+             log.info("SYSTEM:RECOVERY — no stale GTD orders found");
+             return;
+         }
+ 

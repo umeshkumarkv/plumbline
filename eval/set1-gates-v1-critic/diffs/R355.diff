@@ -1,0 +1,35 @@
+--- a/services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java
++++ b/services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/WatchlistController.java
+@@ -27,30 +27,30 @@
+ 
+     private final WatchlistService watchlistService;
+ 
+     @GetMapping
+     public ResponseEntity<Map<String, Object>> getWatchlist(
+             @RequestHeader(value = "X-User-Id", required = false) String userId) {
+         log.debug("GET /api/v1/watchlist: userId={}", userId);
+         List<WatchlistEntryResponse> data = watchlistService.getWatchlist(userId);
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
+     @PostMapping("/{symbol}")
+-    public ResponseEntity<Map<String, Object>> addSymbol(
++    public ResponseEntity<WatchlistEntryResponse> addSymbol(
+             @RequestHeader(value = "X-User-Id", required = false) String userId,
+             @PathVariable String symbol) {
+         log.debug("POST /api/v1/watchlist/{}: userId={}", symbol, userId);
+         WatchlistEntryResponse data = watchlistService.addToWatchlist(userId, symbol);
+-        return ResponseEntity.status(HttpStatus.CREATED).body(buildSuccessResponse(data));
++        return ResponseEntity.status(HttpStatus.CREATED).body(data);
+     }
+ 
+     @DeleteMapping("/{symbol}")
+     public ResponseEntity<Void> removeSymbol(
+             @RequestHeader(value = "X-User-Id", required = false) String userId,
+             @PathVariable String symbol) {
+         log.debug("DELETE /api/v1/watchlist/{}: userId={}", symbol, userId);
+         watchlistService.removeFromWatchlist(userId, symbol);
+         return ResponseEntity.noContent().build();
+     }
+ 
+     private Map<String, Object> buildSuccessResponse(Object data) {

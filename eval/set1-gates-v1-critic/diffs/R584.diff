@@ -1,0 +1,28 @@
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/domain/Client.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/domain/Client.java
+@@ -15,25 +15,24 @@
+ @Entity
+ @Table(name = "clients", schema = "client_schema")
+ public class Client {
+ 
+     @Id
+     @GeneratedValue(strategy = GenerationType.UUID)
+     @Column(name = "id", updatable = false, nullable = false)
+     private UUID id;
+ 
+     @Column(name = "name", nullable = false, length = 200)
+     private String name;
+ 
+-    @Enumerated(EnumType.STRING)
+     @Column(name = "account_type", nullable = false, length = 20)
+     private AccountType accountType;
+ 
+     @Enumerated(EnumType.STRING)
+     @Column(name = "status", nullable = false, length = 20)
+     private ClientStatus status;
+ 
+     @Column(name = "trading_enabled", nullable = false)
+     private Boolean tradingEnabled;
+ 
+     @Enumerated(EnumType.STRING)
+     @Column(name = "kyc_status", nullable = false, length = 20)

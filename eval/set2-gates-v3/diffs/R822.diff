@@ -1,0 +1,193 @@
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/PortfolioSummaryResponse.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/PortfolioSummaryResponse.java
+@@ -0,0 +1,16 @@
++package com.brokerdealer.clientservice.dto.response;
++
++import lombok.Builder;
++import lombok.Value;
++
++import java.util.UUID;
++
++@Value
++@Builder
++public class PortfolioSummaryResponse {
++    UUID clientId;
++    Integer positionCount;
++    String totalCostBasis;
++    String totalMarketValue;
++    Integer unpricedPositions;
++}
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/service/PortfolioSummaryService.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/service/PortfolioSummaryService.java
+@@ -0,0 +1,62 @@
++package com.brokerdealer.clientservice.service;
++
++import com.brokerdealer.clientservice.client.MarketDataClient;
++import com.brokerdealer.clientservice.domain.Holding;
++import com.brokerdealer.clientservice.dto.response.PortfolioSummaryResponse;
++import com.brokerdealer.clientservice.exception.ClientNotFoundException;
++import com.brokerdealer.clientservice.repository.ClientRepository;
++import com.brokerdealer.clientservice.repository.HoldingRepository;
++import lombok.RequiredArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.stereotype.Service;
++
++import java.math.BigDecimal;
++import java.math.RoundingMode;
++import java.util.List;
++import java.util.UUID;
++
++@Service
++@RequiredArgsConstructor
++@Slf4j
++public class PortfolioSummaryService {
++
++    private final ClientRepository clientRepository;
++    private final HoldingRepository holdingRepository;
++
++    @Autowired
++    private MarketDataClient marketDataClient;
++
++    public PortfolioSummaryResponse getSummary(UUID clientId) {
++        log.debug("Building portfolio summary: clientId={}", clientId);
++        if (!clientRepository.existsById(clientId)) {
++            throw new ClientNotFoundException("CLIENT_NOT_FOUND", "Client not found: " + clientId);
++        }
++
++        List<Holding> holdings = holdingRepository.findByClientId(clientId).stream()
++                .filter(h -> h.getQuantity() != null && h.getQuantity() > 0)
++                .toList();
++
++        BigDecimal costBasis = BigDecimal.ZERO;
++        BigDecimal marketValue = BigDecimal.ZERO;
++        int unpriced = 0;
++        for (Holding holding : holdings) {
++            BigDecimal qty = BigDecimal.valueOf(holding.getQuantity());
++            costBasis = costBasis.add(holding.getAvgPrice().multiply(qty));
++            BigDecimal lastPrice = marketDataClient.getLastPrice(holding.getSymbol());
++            if (lastPrice == null) {
++                unpriced++;
++                continue;
++            }
++            marketValue = marketValue.add(lastPrice.multiply(qty));
++        }
++
++        return PortfolioSummaryResponse.builder()
++                .clientId(clientId)
++                .positionCount(holdings.size())
++                .totalCostBasis(costBasis.setScale(2, RoundingMode.HALF_UP).toPlainString())
++                .totalMarketValue(marketValue.setScale(2, RoundingMode.HALF_UP).toPlainString())
++                .unpricedPositions(unpriced)
++                .build();
++    }
++}
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
+@@ -1,18 +1,19 @@
+ package com.brokerdealer.clientservice.controller;
+ 
+ import com.brokerdealer.clientservice.dto.request.UpdateDefaultRouteRequest;
+ import com.brokerdealer.clientservice.dto.response.ActiveClientResponse;
+ import com.brokerdealer.clientservice.dto.response.ClientProfileResponse;
+ import com.brokerdealer.clientservice.dto.response.PortfolioResponse;
++import com.brokerdealer.clientservice.dto.response.PortfolioSummaryResponse;
+ import com.brokerdealer.clientservice.dto.response.UpdateDefaultRouteResponse;
+ import com.brokerdealer.clientservice.service.ClientService;
+ import jakarta.validation.Valid;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.*;
+ 
+ import java.time.Instant;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
+@@ -1,21 +1,22 @@
+ package com.brokerdealer.clientservice.controller;
+ 
+ import com.brokerdealer.clientservice.dto.request.UpdateDefaultRouteRequest;
+ import com.brokerdealer.clientservice.dto.response.ActiveClientResponse;
+ import com.brokerdealer.clientservice.dto.response.ClientProfileResponse;
+ import com.brokerdealer.clientservice.dto.response.PortfolioResponse;
+ import com.brokerdealer.clientservice.dto.response.PortfolioSummaryResponse;
+ import com.brokerdealer.clientservice.dto.response.UpdateDefaultRouteResponse;
+ import com.brokerdealer.clientservice.service.ClientService;
++import com.brokerdealer.clientservice.service.PortfolioSummaryService;
+ import jakarta.validation.Valid;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.*;
+ 
+ import java.time.Instant;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+ 
+ @RestController
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
+@@ -17,24 +17,25 @@
+ import java.time.Instant;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
+ 
+ @RestController
+ @RequestMapping("/api/v1/clients")
+ @RequiredArgsConstructor
+ @Slf4j
+ public class ClientController {
+ 
+     private final ClientService clientService;
++    private final PortfolioSummaryService portfolioSummaryService;
+ 
+     @GetMapping
+     public ResponseEntity<Map<String, Object>> getAllClients() {
+         log.debug("GET /api/v1/clients");
+         List<ClientProfileResponse> data = clientService.getAllClients();
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
+     @GetMapping("/active")
+     public ResponseEntity<Map<String, Object>> getActiveClients(
+             @RequestParam(defaultValue = "10") int limit) {
+         log.debug("GET /api/v1/clients/active limit={}", limit);
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
+@@ -48,24 +48,31 @@
+         log.debug("GET /api/v1/clients/{}", id);
+         ClientProfileResponse data = clientService.getClient(id);
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
+     @GetMapping("/{id}/portfolio")
+     public ResponseEntity<Map<String, Object>> getPortfolio(@PathVariable UUID id) {
+         log.debug("GET /api/v1/clients/{}/portfolio", id);
+         PortfolioResponse data = clientService.getPortfolio(id);
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
++    @GetMapping("/{id}/portfolio/summary")
++    public ResponseEntity<Map<String, Object>> getPortfolioSummary(@PathVariable UUID id) {
++        log.debug("GET /api/v1/clients/{}/portfolio/summary", id);
++        PortfolioSummaryResponse data = portfolioSummaryService.getSummary(id);
++        return ResponseEntity.ok(buildSuccessResponse(data));
++    }
++
+     @PatchMapping("/{id}/default-route")
+     public ResponseEntity<Map<String, Object>> updateDefaultRoute(
+             @PathVariable UUID id,
+             @Valid @RequestBody UpdateDefaultRouteRequest request) {
+         log.debug("PATCH /api/v1/clients/{}/default-route", id);
+         UpdateDefaultRouteResponse data = clientService.updateDefaultRoute(id, request);
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
+     private Map<String, Object> buildSuccessResponse(Object data) {
+         return Map.of(
+                 "data", data,

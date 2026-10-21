@@ -1,0 +1,176 @@
+{
+ "agent": "onboard",
+ "artifact": "/tmp/claude-0/omsgit/services/marketdata-service/CLAUDE.md",
+ "verdict": "FAIL",
+ "counts": {
+  "PASS": 12,
+  "FAIL": 5,
+  "WARN": 0,
+  "SKIP": 0
+ },
+ "checks": [
+  {
+   "id": "OB-1",
+   "title": "All 11 service CLAUDE.md sections present",
+   "result": "PASS",
+   "detail": "11/11",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-2",
+   "title": "Port matches server.port",
+   "result": "PASS",
+   "detail": "doc 8084, code 8084",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-3",
+   "title": "Schema matches the service's schema",
+   "result": "PASS",
+   "detail": "code market_schema",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-4",
+   "title": "Every endpoint in the code is documented",
+   "result": "FAIL",
+   "detail": "15 in code, 11 undocumented",
+   "evidence": [
+    "DELETE /api/v1/watchlists/{x}",
+    "GET /api/v1/market/config",
+    "GET /api/v1/market/holidays",
+    "GET /api/v1/market/instrument/{x}",
+    "GET /api/v1/market/instruments/search",
+    "GET /api/v1/market/search",
+    "GET /api/v1/market/ticks/history",
+    "GET /api/v1/watchlists",
+    "POST /api/v1/admin/reset",
+    "POST /api/v1/admin/scenario",
+    "POST /api/v1/watchlists/{x}"
+   ],
+   "source": "computed"
+  },
+  {
+   "id": "OB-5",
+   "title": "No documented endpoint that the code does not have",
+   "result": "FAIL",
+   "detail": "1 invented",
+   "evidence": [
+    "GET /api/v1/market/{x}"
+   ],
+   "source": "computed"
+  },
+  {
+   "id": "OB-6",
+   "title": "Kafka topics produced: code == doc",
+   "result": "PASS",
+   "detail": "code []",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-7",
+   "title": "Kafka topics consumed: code == doc",
+   "result": "PASS",
+   "detail": "code []",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-8",
+   "title": "Every downstream service called (REST) is documented",
+   "result": "PASS",
+   "detail": "code calls []",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-8c",
+   "title": "Documented downstream calls exist (served by the target and made by this service)",
+   "result": "PASS",
+   "detail": "0 documented calls checked",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-8b",
+   "title": "Other services referenced in config (host:port, e.g. health checks) are mentioned",
+   "result": "PASS",
+   "detail": "config refs []",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-9",
+   "title": "Every @Entity is documented (in the entities section)",
+   "result": "FAIL",
+   "detail": "entities ['Instrument', 'MarketHoliday', 'MarketIndex', 'Tick', 'UserWatchlist']",
+   "evidence": [
+    "MarketHoliday",
+    "Tick",
+    "UserWatchlist"
+   ],
+   "source": "computed"
+  },
+  {
+   "id": "OB-9b",
+   "title": "No documented entity that the code does not have",
+   "result": "PASS",
+   "detail": "0 invented",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-10",
+   "title": "Every table created by migrations is documented (schema/entities sections)",
+   "result": "FAIL",
+   "detail": "5 tables",
+   "evidence": [
+    "instruments",
+    "market_holidays",
+    "market_indices",
+    "ticks",
+    "user_watchlist"
+   ],
+   "source": "computed"
+  },
+  {
+   "id": "OB-10b",
+   "title": "No documented table that no migration creates",
+   "result": "PASS",
+   "detail": "0 invented",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-11",
+   "title": "Redis key prefixes used in code are documented",
+   "result": "FAIL",
+   "detail": "code prefixes ['market:indices', 'market:instrument', 'market:movers', 'market:price', 'market:search']",
+   "evidence": [
+    "market:instrument",
+    "market:search"
+   ],
+   "source": "computed"
+  },
+  {
+   "id": "OB-11b",
+   "title": "No documented Redis key that the code does not use",
+   "result": "PASS",
+   "detail": "0 invented",
+   "evidence": [],
+   "source": "computed"
+  },
+  {
+   "id": "OB-12",
+   "title": "TODO/FIXME/HACK markers acknowledged in a tech-debt section",
+   "result": "PASS",
+   "detail": "0 markers in code; tech-debt section absent",
+   "evidence": [],
+   "source": "computed"
+  }
+ ]
+}

@@ -1,0 +1,147 @@
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java
+@@ -140,24 +140,39 @@
+                 .status(client.getStatus())
+                 .tradingEnabled(client.getTradingEnabled())
+                 .kycStatus(client.getKycStatus())
+                 .kycExpiryDate(client.getKycExpiryDate())
+                 .marginCallActive(client.getMarginCallActive())
+                 .maxOpenOrders(client.getMaxOpenOrders())
+                 .defaultRoute(client.getDefaultRoute())
+                 .cashBalance(client.getCashBalance().setScale(2, RoundingMode.HALF_UP).toPlainString())
+                 .holdings(holdingDetails)
+                 .build();
+     }
+ 
++    public List<HoldingDetailResponse> getHoldings(UUID id) {
++        log.debug("Fetching holdings: clientId={}", id);
++        if (!clientRepository.existsById(id)) {
++            throw new ClientNotFoundException("CLIENT_NOT_FOUND", "Client not found: " + id);
++        }
++        List<Holding> holdings = holdingRepository.findByClientId(id);
++        if (holdings.isEmpty()) {
++            return Collections.emptyList();
++        }
++        return holdings.stream()
++                .filter(h -> h.getQuantity() != null && h.getQuantity() > 0)
++                .map(this::buildHoldingDetail)
++                .toList();
++    }
++
+     private HoldingDetailResponse buildHoldingDetail(Holding holding) {
+         BigDecimal currentPrice = marketDataClient.getLastPrice(holding.getSymbol());
+ 
+         String marketValue = null;
+         String unrealisedPnL = null;
+ 
+         if (currentPrice != null) {
+             marketValue = BigDecimal.valueOf(holding.getQuantity())
+                     .multiply(currentPrice)
+                     .setScale(2, RoundingMode.HALF_UP)
+                     .toPlainString();
+             unrealisedPnL = BigDecimal.valueOf(holding.getQuantity())
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
+@@ -45,24 +45,31 @@
+         log.debug("GET /api/v1/clients/{}", id);
+         ClientProfileResponse data = clientService.getClient(id);
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
+     @GetMapping("/{id}/portfolio")
+     public ResponseEntity<Map<String, Object>> getPortfolio(@PathVariable UUID id) {
+         log.debug("GET /api/v1/clients/{}/portfolio", id);
+         PortfolioResponse data = clientService.getPortfolio(id);
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
++    @GetMapping("/{id}/portfolio/holdings")
++    public ResponseEntity<Map<String, Object>> getHoldings(@PathVariable UUID id) {
++        log.debug("GET /api/v1/clients/{}/portfolio/holdings", id);
++        List<HoldingDetailResponse> data = clientService.getHoldings(id);
++        return ResponseEntity.ok(buildSuccessResponse(data));
++    }
++
+     @PatchMapping("/{id}/default-route")
+     public ResponseEntity<Map<String, Object>> updateDefaultRoute(
+             @PathVariable UUID id,
+             @Valid @RequestBody UpdateDefaultRouteRequest request) {
+         log.debug("PATCH /api/v1/clients/{}/default-route", id);
+         UpdateDefaultRouteResponse data = clientService.updateDefaultRoute(id, request);
+         return ResponseEntity.ok(buildSuccessResponse(data));
+     }
+ 
+     private Map<String, Object> buildSuccessResponse(Object data) {
+         return Map.of(
+                 "data", data,
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/controller/ClientController.java
+@@ -1,17 +1,18 @@
+ package com.brokerdealer.clientservice.controller;
+ 
+ import com.brokerdealer.clientservice.dto.request.UpdateDefaultRouteRequest;
+ import com.brokerdealer.clientservice.dto.response.ActiveClientResponse;
+ import com.brokerdealer.clientservice.dto.response.ClientProfileResponse;
++import com.brokerdealer.clientservice.dto.response.HoldingDetailResponse;
+ import com.brokerdealer.clientservice.dto.response.PortfolioResponse;
+ import com.brokerdealer.clientservice.dto.response.UpdateDefaultRouteResponse;
+ import com.brokerdealer.clientservice.service.ClientService;
+ import jakarta.validation.Valid;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.*;
+ 
+ import java.time.Instant;
+ import java.util.List;
+ import java.util.Map;
+--- a/services/client-service/src/test/java/com/brokerdealer/clientservice/service/ClientServiceHoldingsTest.java
++++ b/services/client-service/src/test/java/com/brokerdealer/clientservice/service/ClientServiceHoldingsTest.java
+@@ -0,0 +1,47 @@
++package com.brokerdealer.clientservice.service;
++
++import com.brokerdealer.clientservice.client.MarketDataClient;
++import com.brokerdealer.clientservice.domain.Holding;
++import com.brokerdealer.clientservice.exception.ClientNotFoundException;
++import com.brokerdealer.clientservice.repository.ClientRepository;
++import com.brokerdealer.clientservice.repository.HoldingRepository;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.extension.ExtendWith;
++import org.mockito.InjectMocks;
++import org.mockito.Mock;
++import org.mockito.junit.jupiter.MockitoExtension;
++
++import java.math.BigDecimal;
++import java.util.List;
++import java.util.UUID;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
++import static org.mockito.Mockito.when;
++
++@ExtendWith(MockitoExtension.class)
++class ClientServiceHoldingsTest {
++
++    @Mock private ClientRepository clientRepository;
++    @Mock private HoldingRepository holdingRepository;
++    @Mock private MarketDataClient marketDataClient;
++    @InjectMocks private ClientService clientService;
++
++    @Test
++    void shouldExcludeZeroQuantityHoldings() {
++        UUID clientId = UUID.randomUUID();
++        when(clientRepository.existsById(clientId)).thenReturn(true);
++        when(holdingRepository.findByClientId(clientId)).thenReturn(List.of(
++                Holding.builder().clientId(clientId).symbol("AAPL").quantity(5).avgPrice(new BigDecimal("100.0000")).build(),
++                Holding.builder().clientId(clientId).symbol("MSFT").quantity(0).avgPrice(new BigDecimal("300.0000")).build()));
++
++        assertThat(clientService.getHoldings(clientId)).hasSize(1);
++    }
++
++    @Test
++    void shouldThrowWhenClientMissing() {
++        UUID clientId = UUID.randomUUID();
++        when(clientRepository.existsById(clientId)).thenReturn(false);
++        assertThatThrownBy(() -> clientService.getHoldings(clientId)).isInstanceOf(ClientNotFoundException.class);
++    }
++}

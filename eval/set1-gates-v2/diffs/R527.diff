@@ -1,0 +1,29 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java
+@@ -231,25 +231,25 @@
+                 throw new InsufficientHoldingsException();
+             }
+         }
+ 
+         // --- L2 check #13: BUY — availableCash = settled cashBalance - in-flight BUY commitments ---
+         // Combines both views: client-service (settled) + own DB (in-flight open BUY orders).
+         // Replaces the PATCH /reserved-cash call. Client-service no longer owns in-flight state.
+         BigDecimal availableCash = cashBalance;
+         if (requestedSide == OrderSide.BUY) {
+             BigDecimal committedBuyValue = orderRepository.sumOpenBuyOrderValues(
+                     request.getClientId(), OPEN_STATUSES);
+             if (committedBuyValue == null) committedBuyValue = BigDecimal.ZERO;
+-            availableCash = cashBalance.subtract(committedBuyValue).setScale(2, RoundingMode.HALF_UP);
++            availableCash = cashBalance.add(committedBuyValue).setScale(2, RoundingMode.HALF_UP);
+             if (availableCash.compareTo(orderValue) < 0) {
+                 throw new InsufficientBuyingPowerException();
+             }
+         }
+ 
+         // --- Create and persist order in NEW state ---
+         BigDecimal lastPrice = new BigDecimal(instrumentResponse.getData().getLastPrice());
+ 
+         Order order = Order.builder()
+                 .clientOrderId(request.getClientOrderId())
+                 .clientId(request.getClientId())
+                 .symbol(request.getSymbol())

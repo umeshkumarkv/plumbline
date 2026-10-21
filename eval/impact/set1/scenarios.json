@@ -1,0 +1,452 @@
+[
+  {
+    "id": "S01",
+    "title": "Rename fillValue -> fillAmount in execution.completed payload",
+    "unit": "execution-service",
+    "kind": "kafka-payload",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/event/ExecutionCompletedEvent.java",
+        "find": "    private String fillValue;",
+        "replace": "    private String fillAmount;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": ".fillValue(execution.getFillValue().toPlainString())",
+        "replace": ".fillAmount(execution.getFillValue().toPlainString())"
+      }
+    ]
+  },
+  {
+    "id": "S02",
+    "title": "Rename executionVenue -> venue in execution.completed payload",
+    "unit": "execution-service",
+    "kind": "kafka-payload",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/event/ExecutionCompletedEvent.java",
+        "find": "    private String executionVenue;",
+        "replace": "    private String venue;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": ".executionVenue(execution.getExecutionVenue())",
+        "replace": ".venue(execution.getExecutionVenue())"
+      }
+    ]
+  },
+  {
+    "id": "S03",
+    "title": "Change executedQty type Integer -> String in execution.completed payload",
+    "unit": "execution-service",
+    "kind": "kafka-payload",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/event/ExecutionCompletedEvent.java",
+        "find": "    private Integer executedQty;",
+        "replace": "    private String executedQty;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": ".executedQty(execution.getExecutedQty())",
+        "replace": ".executedQty(String.valueOf(execution.getExecutedQty()))"
+      }
+    ]
+  },
+  {
+    "id": "S04",
+    "title": "Stop publishing execution.completed (outbox migration WIP)",
+    "unit": "execution-service",
+    "kind": "kafka-topic",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/kafka/producer/ExecutionEventProducer.java",
+        "find": "        kafkaTemplate.send(EXECUTION_COMPLETED, event.getOrderId().toString(), event);\n",
+        "replace": "        // TODO(outbox): publishing moved to transactional outbox relay \u2014 disabled here\n        // kafkaTemplate.send(EXECUTION_COMPLETED, event.getOrderId().toString(), event);\n"
+      }
+    ]
+  },
+  {
+    "id": "S05",
+    "title": "Rename order.state.changed topic via producer constant",
+    "unit": "order-service",
+    "kind": "kafka-topic",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/kafka/producer/OrderEventProducer.java",
+        "find": "private static final String ORDER_STATE_CHANGED = \"order.state.changed\";",
+        "replace": "private static final String ORDER_STATE_CHANGED = \"order.lifecycle.changed\";"
+      }
+    ]
+  },
+  {
+    "id": "S06",
+    "title": "Rename buyingPower -> availableBuyingPower in risk.evaluation.requested payload",
+    "unit": "order-service",
+    "kind": "kafka-payload",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/kafka/RiskEvaluationRequestedEvent.java",
+        "find": "private String buyingPower;",
+        "replace": "private String availableBuyingPower;"
+      },
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java",
+        "find": ".buyingPower(availableCash.toPlainString())",
+        "replace": ".availableBuyingPower(availableCash.toPlainString())"
+      }
+    ]
+  },
+  {
+    "id": "S07",
+    "title": "Rename violatedRuleCode -> ruleCode in risk.evaluation.result payload",
+    "unit": "risk-service",
+    "kind": "kafka-payload",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/dto/RiskEvaluationResult.java",
+        "find": "    String violatedRuleCode;",
+        "replace": "    String ruleCode;"
+      },
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/kafka/consumer/RiskEvaluationConsumer.java",
+        "find": ".violatedRuleCode(result.getFailedRule())",
+        "replace": ".ruleCode(result.getFailedRule())"
+      }
+    ]
+  },
+  {
+    "id": "S08",
+    "title": "Rename nested metadata key violatedRuleCode -> ruleCode on RISK_REJECTED order.state.changed events",
+    "unit": "order-service",
+    "kind": "kafka-payload",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java",
+        "find": "\"violatedRuleCode\", violatedRuleCode != null ? violatedRuleCode : \"\"",
+        "replace": "\"ruleCode\",         violatedRuleCode != null ? violatedRuleCode : \"\""
+      }
+    ]
+  },
+  {
+    "id": "S09",
+    "title": "Audit consumer reads initiatedBy instead of triggeredBy from order.state.changed",
+    "unit": "audit-service",
+    "kind": "kafka-payload",
+    "edits": [
+      {
+        "file": "services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java",
+        "find": "String triggeredBy = (String) event.get(\"triggeredBy\");",
+        "replace": "String triggeredBy = (String) event.get(\"initiatedBy\");"
+      }
+    ]
+  },
+  {
+    "id": "S10",
+    "title": "Rename portfolio cashBalance -> cashAvailable in GET /clients/{id}/portfolio",
+    "unit": "client-service",
+    "kind": "rest-response",
+    "edits": [
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/PortfolioResponse.java",
+        "find": "    String cashBalance;",
+        "replace": "    String cashAvailable;"
+      },
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+        "find": ".cashBalance(client.getCashBalance().setScale(2, RoundingMode.HALF_UP).toPlainString())",
+        "replace": ".cashAvailable(client.getCashBalance().setScale(2, RoundingMode.HALF_UP).toPlainString())"
+      }
+    ]
+  },
+  {
+    "id": "S11",
+    "title": "Rename nested holding quantity -> qty in portfolio response (HoldingDetailResponse)",
+    "unit": "client-service",
+    "kind": "rest-response",
+    "edits": [
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/dto/response/HoldingDetailResponse.java",
+        "find": "    Integer quantity;",
+        "replace": "    Integer qty;"
+      },
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+        "find": ".quantity(holding.getQuantity())",
+        "replace": ".qty(holding.getQuantity())"
+      }
+    ]
+  },
+  {
+    "id": "S12",
+    "title": "Change instrument endpoint path /instrument/{symbol} -> /instruments/{symbol}",
+    "unit": "marketdata-service",
+    "kind": "rest-path",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/controller/MarketDataController.java",
+        "find": "@GetMapping(\"/instrument/{symbol}\")",
+        "replace": "@GetMapping(\"/instruments/{symbol}\")"
+      }
+    ]
+  },
+  {
+    "id": "S13",
+    "title": "Rename companyName -> issuerName in InstrumentSearchResponse (shared by /search and /instruments/search)",
+    "unit": "marketdata-service",
+    "kind": "rest-response",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/dto/response/InstrumentSearchResponse.java",
+        "find": "    String companyName;",
+        "replace": "    String issuerName;"
+      },
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/mapper/InstrumentSearchMapper.java",
+        "find": "    InstrumentSearchResponse toSearchResponse(Instrument instrument);",
+        "replace": "    @Mapping(target = \"issuerName\", source = \"companyName\")\n    InstrumentSearchResponse toSearchResponse(Instrument instrument);"
+      }
+    ]
+  },
+  {
+    "id": "S14",
+    "title": "Rename executedPrice -> fillPrice in GET /executions/{orderId} response",
+    "unit": "execution-service",
+    "kind": "rest-response",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/dto/response/ExecutionResponse.java",
+        "find": "    private String executedPrice;",
+        "replace": "    private String fillPrice;"
+      },
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/mapper/ExecutionMapper.java",
+        "find": "@Mapping(target = \"executedPrice\", expression",
+        "replace": "@Mapping(target = \"fillPrice\", expression"
+      }
+    ]
+  },
+  {
+    "id": "S15",
+    "title": "Drop @JsonProperty(\"tif\") so order submit expects timeInForce",
+    "unit": "order-service",
+    "kind": "rest-request",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/dto/request/SubmitOrderRequest.java",
+        "find": "    @JsonProperty(\"tif\")\n",
+        "replace": ""
+      }
+    ]
+  },
+  {
+    "id": "S16",
+    "title": "order-service client-service call switched from /portfolio to profile endpoint",
+    "unit": "order-service",
+    "kind": "rest-path",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/client/ClientServiceClient.java",
+        "find": "String url = clientServiceUrl + \"/api/v1/clients/\" + clientId + \"/portfolio\";",
+        "replace": "String url = clientServiceUrl + \"/api/v1/clients/\" + clientId;"
+      }
+    ]
+  },
+  {
+    "id": "S17",
+    "title": "Rename holdings.avg_price column -> average_price (migration + entity)",
+    "unit": "client-service",
+    "kind": "db-schema",
+    "edits": [
+      {
+        "file": "services/client-service/src/main/resources/db/migration/V7__remove_reserved_cash.sql",
+        "find": "ALTER TABLE client_schema.clients DROP COLUMN reserved_cash;",
+        "replace": "ALTER TABLE client_schema.clients DROP COLUMN reserved_cash;\n\nALTER TABLE client_schema.holdings RENAME COLUMN avg_price TO average_price;"
+      },
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/domain/Holding.java",
+        "find": "@Column(name = \"avg_price\"",
+        "replace": "@Column(name = \"average_price\""
+      }
+    ]
+  },
+  {
+    "id": "S18",
+    "title": "Change audit-service server port 8087 -> 8097",
+    "unit": "audit-service",
+    "kind": "config",
+    "edits": [
+      {
+        "file": "services/audit-service/src/main/resources/application.yml",
+        "find": "server:\n  port: 8087",
+        "replace": "server:\n  port: 8097"
+      }
+    ]
+  },
+  {
+    "id": "S19",
+    "title": "Change marketdata-service server port 8084 -> 8094",
+    "unit": "marketdata-service",
+    "kind": "config",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/resources/application.yml",
+        "find": "server:\n  port: 8084",
+        "replace": "server:\n  port: 8094"
+      }
+    ]
+  },
+  {
+    "id": "S20",
+    "title": "Gateway: market route prefix /api/v1/market/** -> /api/v1/marketdata/**",
+    "unit": "api-gateway",
+    "kind": "gateway",
+    "edits": [
+      {
+        "file": "services/api-gateway/src/main/resources/application.yml",
+        "find": "            - Path=/api/v1/market/**",
+        "replace": "            - Path=/api/v1/marketdata/**"
+      }
+    ]
+  },
+  {
+    "id": "S21",
+    "title": "Gateway: forward user id as X-Auth-User-Id instead of X-User-Id",
+    "unit": "api-gateway",
+    "kind": "gateway",
+    "edits": [
+      {
+        "file": "services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java",
+        "find": "static final String HEADER_USER_ID = \"X-User-Id\";",
+        "replace": "static final String HEADER_USER_ID = \"X-Auth-User-Id\";"
+      }
+    ]
+  },
+  {
+    "id": "S22",
+    "title": "Frontend: fetch fills from /executions/order/{orderId}",
+    "unit": "frontend",
+    "kind": "frontend",
+    "edits": [
+      {
+        "file": "frontend/src/api/orderApi.ts",
+        "find": "const res = await http.get(`/executions/${orderId}`)",
+        "replace": "const res = await http.get(`/executions/order/${orderId}`)"
+      }
+    ]
+  },
+  {
+    "id": "S23",
+    "title": "Frontend: Portfolio fill activity reads meta.filledQty from audit metadata",
+    "unit": "frontend",
+    "kind": "frontend",
+    "edits": [
+      {
+        "file": "frontend/src/pages/PortfolioPage.tsx",
+        "find": "filledQty: Number(meta.executedQty ?? 0),",
+        "replace": "filledQty: Number(meta.filledQty ?? 0),"
+      }
+    ]
+  },
+  {
+    "id": "S24",
+    "title": "Reword order.state.changed publish log line",
+    "unit": "order-service",
+    "kind": "internal",
+    "edits": [
+      {
+        "file": "services/order-service/src/main/java/com/brokerdealer/orderservice/kafka/producer/OrderEventProducer.java",
+        "find": "log.debug(\"Published order.state.changed: orderId={} {} -> {}\",",
+        "replace": "log.info(\"Order state event emitted: orderId={} {} -> {}\","
+      }
+    ]
+  },
+  {
+    "id": "S25",
+    "title": "Extract isBuyOrder helper in SufficientCashRule",
+    "unit": "risk-service",
+    "kind": "internal",
+    "edits": [
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/SufficientCashRule.java",
+        "find": "if (!\"BUY\".equals(request.getSide())) {",
+        "replace": "if (!isBuyOrder(request)) {"
+      },
+      {
+        "file": "services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/SufficientCashRule.java",
+        "find": "        return RiskResult.passed();\n    }\n}",
+        "replace": "        return RiskResult.passed();\n    }\n\n    private static boolean isBuyOrder(RiskEvaluationRequest request) {\n        return \"BUY\".equals(request.getSide());\n    }\n}"
+      }
+    ]
+  },
+  {
+    "id": "S26",
+    "title": "Rename local spread variable in PriceTickService",
+    "unit": "marketdata-service",
+    "kind": "internal",
+    "edits": [
+      {
+        "file": "services/marketdata-service/src/main/java/com/brokerdealer/marketdataservice/service/PriceTickService.java",
+        "find": "        BigDecimal spread = instrument.getAskPrice().subtract(instrument.getBidPrice());\n        BigDecimal halfSpread = spread.divide(TWO, 4, RoundingMode.HALF_UP);",
+        "replace": "        BigDecimal currentSpread = instrument.getAskPrice().subtract(instrument.getBidPrice());\n        BigDecimal halfSpread = currentSpread.divide(TWO, 4, RoundingMode.HALF_UP);"
+      }
+    ]
+  },
+  {
+    "id": "S27",
+    "title": "Narrow simulated PARTIAL-fill quantity band 10-99 -> 10-49",
+    "unit": "execution-service",
+    "kind": "internal",
+    "edits": [
+      {
+        "file": "services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java",
+        "find": "if (qty >= 10 && qty <= 99) return FillType.PARTIAL;",
+        "replace": "if (qty >= 10 && qty <= 49) return FillType.PARTIAL;"
+      }
+    ]
+  },
+  {
+    "id": "S28",
+    "title": "Tweak Portfolio page padding",
+    "unit": "frontend",
+    "kind": "internal",
+    "edits": [
+      {
+        "file": "frontend/src/pages/PortfolioPage.tsx",
+        "find": "page: { fontFamily: 'system-ui, sans-serif', padding: '24px' }",
+        "replace": "page: { fontFamily: 'system-ui, sans-serif', padding: '20px' }"
+      }
+    ]
+  },
+  {
+    "id": "S29",
+    "title": "Reword successful-login log message",
+    "unit": "auth-service",
+    "kind": "internal",
+    "edits": [
+      {
+        "file": "services/auth-service/src/main/java/com/brokerdealer/authservice/service/AuthService.java",
+        "find": "log.info(\"Login attempt: username={} role={} result=success\", user.getUsername(), user.getRole());",
+        "replace": "log.info(\"Login succeeded: username={} role={}\", user.getUsername(), user.getRole());"
+      }
+    ]
+  },
+  {
+    "id": "S30",
+    "title": "Extract weightedAverage private helper in ClientService.upsertHolding",
+    "unit": "client-service",
+    "kind": "internal",
+    "edits": [
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+        "find": "            BigDecimal newAvg = h.getAvgPrice().multiply(BigDecimal.valueOf(h.getQuantity()))\n                    .add(executedPrice.multiply(BigDecimal.valueOf(executedQty)))\n                    .divide(BigDecimal.valueOf(newQty), 4, RoundingMode.HALF_UP);",
+        "replace": "            BigDecimal newAvg = weightedAverage(h.getAvgPrice(), h.getQuantity(), executedPrice, executedQty);"
+      },
+      {
+        "file": "services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java",
+        "find": "    private void reduceHolding(UUID clientId, String symbol, int executedQty) {",
+        "replace": "    private static BigDecimal weightedAverage(BigDecimal oldAvg, int oldQty, BigDecimal fillPrice, int fillQty) {\n        return oldAvg.multiply(BigDecimal.valueOf(oldQty))\n                .add(fillPrice.multiply(BigDecimal.valueOf(fillQty)))\n                .divide(BigDecimal.valueOf(oldQty + fillQty), 4, RoundingMode.HALF_UP);\n    }\n\n    private void reduceHolding(UUID clientId, String symbol, int executedQty) {"
+      }
+    ]
+  }
+]

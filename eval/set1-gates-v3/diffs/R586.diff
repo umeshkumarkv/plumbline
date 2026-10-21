@@ -1,0 +1,30 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/MaxOrderQtyRule.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/MaxOrderQtyRule.java
+@@ -15,23 +15,27 @@
+     private final boolean enabled;
+ 
+     @Override
+     public String getRuleCode() {
+         return "RULE_MAX_ORDER_QTY";
+     }
+ 
+     @Override
+     public boolean isEnabled() {
+         return enabled;
+     }
+ 
++    /**
++     * Rejects the order when its share quantity exceeds the configured threshold.
++     * The threshold is read from risk_rule_config at load time.
++     */
+     @Override
+     public RiskResult evaluate(RiskEvaluationRequest request, RiskContext context) {
+         BigDecimal qty = BigDecimal.valueOf(request.getQuantity());
+         if (qty.compareTo(threshold) > 0) {
+             return RiskResult.rejected(getRuleCode(),
+                     "Order quantity " + request.getQuantity() + " exceeds maximum allowed "
+                             + threshold.toBigInteger() + " shares");
+         }
+         return RiskResult.passed();
+     }
+ }

@@ -1,0 +1,628 @@
+{
+ "summary": {
+  "scenarios": 25,
+  "tp": 22,
+  "fp": 5,
+  "fn": 1,
+  "disputed_hit": 0,
+  "disputed_miss": 0,
+  "recall": 0.957,
+  "precision": 0.815,
+  "controls": {
+   "n": 7,
+   "clean": 6
+  },
+  "judge_agreement_units": 23,
+  "judge_disputed_units": 0
+ },
+ "rows": [
+  {
+   "id": "Q01",
+   "kind": "kafka",
+   "title": "execution.completed: shorten remainingQuantity key to remainingQty",
+   "unit": "execution-service",
+   "predicted": [
+    "notification-service"
+   ],
+   "agreed": [
+    "notification-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "notification-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "notification-service": [
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: remainingQty, remainingQuantity)",
+     "consumes `execution.completed`; execution-service changed the payload contract (keys: remainingQty, remainingQuantity)"
+    ]
+   }
+  },
+  {
+   "id": "Q02",
+   "kind": "kafka",
+   "title": "order.state.changed: tag trader-initiated transitions as TRADER:<id> instead of USER:<id>",
+   "unit": "order-service",
+   "predicted": [
+    "audit-service"
+   ],
+   "agreed": [
+    "audit-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "audit-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "audit-service": [
+     "reads key(s) USER:, triggeredBy that order-service changed in services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderService.java"
+    ]
+   }
+  },
+  {
+   "id": "Q03",
+   "kind": "kafka",
+   "title": "risk.evaluation.result: stop echoing userId (PII minimisation)",
+   "unit": "risk-service",
+   "predicted": [
+    "notification-service",
+    "order-service"
+   ],
+   "agreed": [
+    "notification-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "notification-service"
+   ],
+   "fp": [
+    "order-service"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "order-service": [
+     "produces `risk.evaluation.requested`; consumer risk-service changed what it reads (keys: getUserId, userId)",
+     "produces `risk.evaluation.requested`; consumer risk-service changed what it reads (keys: getUserId, userId)"
+    ],
+    "notification-service": [
+     "consumes `risk.evaluation.result`; risk-service changed the payload contract (keys: userId)",
+     "consumes `risk.evaluation.result`; risk-service changed the payload contract (keys: userId)"
+    ]
+   }
+  },
+  {
+   "id": "Q04",
+   "kind": "kafka",
+   "title": "risk.evaluation.requested: rename hasCrossingOpenOrder to selfCrossDetected",
+   "unit": "order-service",
+   "predicted": [
+    "risk-service"
+   ],
+   "agreed": [
+    "risk-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "risk-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "risk-service": [
+     "consumes `risk.evaluation.requested`; order-service changed the payload contract (keys: hasCrossingOpenOrder, selfCrossDetected)",
+     "consumes `risk.evaluation.requested`; order-service changed the payload contract (keys: hasCrossingOpenOrder, selfCrossDetected)"
+    ]
+   }
+  },
+  {
+   "id": "Q05",
+   "kind": "kafka",
+   "title": "execution.completed: normalise fillValue (strip trailing zeros)",
+   "unit": "execution-service",
+   "predicted": [
+    "audit-service",
+    "client-service",
+    "frontend"
+   ],
+   "agreed": [
+    "audit-service",
+    "client-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "audit-service",
+    "client-service"
+   ],
+   "fp": [
+    "frontend"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "audit-service": [
+     "reads key(s) fillValue that execution-service changed in services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java"
+    ],
+    "client-service": [
+     "reads key(s) fillValue that execution-service changed in services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java"
+    ],
+    "frontend": [
+     "reads key(s) fillValue that execution-service changed in services/execution-service/src/main/java/com/brokerdealer/executionservice/service/FillSimulationService.java"
+    ]
+   }
+  },
+  {
+   "id": "Q06",
+   "kind": "rest",
+   "title": "Portfolio API: rename maxOpenOrders to maxDailyOrders",
+   "unit": "client-service",
+   "predicted": [
+    "order-service"
+   ],
+   "agreed": [
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "order-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "order-service": [
+     "calls client-service `/api/v1/clients/{*}/portfolio` (services/order-service/src/main/java/com/brokerdealer/orderservice/client/ClientServiceClient.java:31); endpoint contract changed (keys: maxDailyOrders, maxOpenOrders)",
+     "calls client-service `/api/v1/clients/{*}/portfolio` (services/order-service/src/main/java/com/brokerdealer/orderservice/client/ClientServiceClient.java:31); endpoint contract changed (keys: maxDailyOrders, maxOpenOrders)"
+    ]
+   }
+  },
+  {
+   "id": "Q07",
+   "kind": "rest",
+   "title": "Executions API: rename executionVenue to venue",
+   "unit": "execution-service",
+   "predicted": [
+    "frontend"
+   ],
+   "agreed": [
+    "frontend"
+   ],
+   "disputed": [],
+   "tp": [
+    "frontend"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "frontend": [
+     "calls execution-service `/api/v1/executions/{*}` (frontend/src/api/orderApi.ts:32); endpoint contract changed (keys: executionVenue, venue)",
+     "calls execution-service `/api/v1/executions/{*}` (frontend/src/api/orderApi.ts:32); endpoint contract changed (keys: executionVenue, venue)"
+    ]
+   }
+  },
+  {
+   "id": "Q08",
+   "kind": "rest",
+   "title": "Market hours API: rename marketOpen to open",
+   "unit": "marketdata-service",
+   "predicted": [
+    "frontend",
+    "order-service"
+   ],
+   "agreed": [
+    "frontend",
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "frontend",
+    "order-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "order-service": [
+     "calls marketdata-service `/api/v1/market/hours` (services/order-service/src/main/java/com/brokerdealer/orderservice/client/MarketDataServiceClient.java:48); endpoint contract changed (keys: marketOpen, open)",
+     "calls marketdata-service `/api/v1/market/hours` (services/order-service/src/main/java/com/brokerdealer/orderservice/client/MarketDataServiceClient.java:48); endpoint contract changed (keys: marketOpen, open)"
+    ],
+    "frontend": [
+     "calls marketdata-service `/api/v1/market/hours` (frontend/src/api/marketApi.ts:5); endpoint contract changed (keys: marketOpen, open)",
+     "calls marketdata-service `/api/v1/market/hours` (frontend/src/api/marketApi.ts:5); endpoint contract changed (keys: marketOpen, open)"
+    ]
+   }
+  },
+  {
+   "id": "Q09",
+   "kind": "rest",
+   "title": "Holidays API: rename holidayName to name",
+   "unit": "marketdata-service",
+   "predicted": [
+    "frontend"
+   ],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [
+    "frontend"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "frontend": [
+     "calls marketdata-service `/api/v1/market/holidays` (frontend/src/api/marketApi.ts:20); endpoint contract changed (keys: holidayName)",
+     "calls marketdata-service `/api/v1/market/holidays` (frontend/src/api/marketApi.ts:20); endpoint contract changed (keys: holidayName)"
+    ]
+   }
+  },
+  {
+   "id": "Q10",
+   "kind": "rest",
+   "title": "Orders list API: rename createdAfter query param to createdFrom",
+   "unit": "order-service",
+   "predicted": [
+    "frontend"
+   ],
+   "agreed": [
+    "frontend"
+   ],
+   "disputed": [],
+   "tp": [
+    "frontend"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "frontend": [
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:22); endpoint contract changed (keys: createdAfter, createdFrom)",
+     "calls order-service `/api/v1/orders` (frontend/src/api/orderApi.ts:22); endpoint contract changed (keys: createdAfter, createdFrom)"
+    ]
+   }
+  },
+  {
+   "id": "Q11",
+   "kind": "rest",
+   "title": "Risk maker-checker: reject body field rejectionReason -> reason",
+   "unit": "risk-service",
+   "predicted": [
+    "frontend"
+   ],
+   "agreed": [
+    "frontend"
+   ],
+   "disputed": [],
+   "tp": [
+    "frontend"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "frontend": [
+     "calls risk-service `/api/v1/risk/rules/pending-changes/{*}/reject` (frontend/src/api/riskApi.ts:31); the request body it sends changed (keys: reason, rejectionReason)",
+     "calls risk-service `/api/v1/risk/rules/pending-changes/{*}/reject` (frontend/src/api/riskApi.ts:31); the request body it sends changed (keys: reason, rejectionReason)"
+    ]
+   }
+  },
+  {
+   "id": "Q12",
+   "kind": "rest",
+   "title": "Audit API: return eventTimestamp as epoch millis",
+   "unit": "audit-service",
+   "predicted": [
+    "frontend"
+   ],
+   "agreed": [
+    "frontend"
+   ],
+   "disputed": [],
+   "tp": [
+    "frontend"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "frontend": [
+     "calls audit-service `/api/v1/audit/trail` (frontend/src/api/auditApi.ts:14); endpoint contract changed (keys: eventTimestamp)",
+     "calls audit-service `/api/v1/audit/orders/{*}` (frontend/src/api/auditApi.ts:19); endpoint contract changed (keys: eventTimestamp)",
+     "calls audit-service `/api/v1/audit/trail` (frontend/src/api/auditApi.ts:14); endpoint contract changed (keys: eventTimestamp)",
+     "calls audit-service `/api/v1/audit/orders/{*}` (frontend/src/api/auditApi.ts:19); endpoint contract changed (keys: eventTimestamp)"
+    ]
+   }
+  },
+  {
+   "id": "Q13",
+   "kind": "header",
+   "title": "JWT: rename role claim to authority",
+   "unit": "auth-service",
+   "predicted": [
+    "api-gateway",
+    "frontend",
+    "notification-service"
+   ],
+   "agreed": [
+    "api-gateway",
+    "notification-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "api-gateway",
+    "notification-service"
+   ],
+   "fp": [
+    "frontend"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "api-gateway": [
+     "reads key(s) role that auth-service changed in services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java"
+    ],
+    "frontend": [
+     "reads key(s) role that auth-service changed in services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java"
+    ],
+    "notification-service": [
+     "reads key(s) role that auth-service changed in services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java"
+    ]
+   }
+  },
+  {
+   "id": "Q14",
+   "kind": "config",
+   "title": "risk-service: move HTTP port 8085 -> 8095",
+   "unit": "risk-service",
+   "predicted": [
+    "api-gateway",
+    "order-service"
+   ],
+   "agreed": [
+    "api-gateway",
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "api-gateway",
+    "order-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "api-gateway": [
+     "references risk-service at risk-service:8085; risk-service's port changed",
+     "references risk-service at risk-service:8085; risk-service's port changed"
+    ],
+    "order-service": [
+     "references risk-service at risk-service:8085; risk-service's port changed"
+    ]
+   }
+  },
+  {
+   "id": "Q15",
+   "kind": "config",
+   "title": "auth-service: rename Redis token-blacklist key prefix",
+   "unit": "auth-service",
+   "predicted": [
+    "api-gateway"
+   ],
+   "agreed": [
+    "api-gateway"
+   ],
+   "disputed": [],
+   "tp": [
+    "api-gateway"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "api-gateway": [
+     "uses literal(s) auth:blacklist: that auth-service changed in services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java",
+     "reads key(s) auth:blacklist: that auth-service changed in services/auth-service/src/main/java/com/brokerdealer/authservice/service/JwtService.java"
+    ]
+   }
+  },
+  {
+   "id": "Q16",
+   "kind": "gateway",
+   "title": "api-gateway: forward username as X-User-Name instead of X-Username",
+   "unit": "api-gateway",
+   "predicted": [
+    "risk-service"
+   ],
+   "agreed": [
+    "risk-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "risk-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "risk-service": [
+     "uses literal(s) X-Username that api-gateway changed in services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java",
+     "reads key(s) X-Username that api-gateway changed in services/api-gateway/src/main/java/com/brokerdealer/apigateway/filter/JwtValidationFilter.java"
+    ]
+   }
+  },
+  {
+   "id": "Q17",
+   "kind": "frontend",
+   "title": "Order entry: send timeInForce instead of tif",
+   "unit": "frontend",
+   "predicted": [
+    "execution-service",
+    "order-service"
+   ],
+   "agreed": [
+    "order-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "order-service"
+   ],
+   "fp": [
+    "execution-service"
+   ],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "execution-service": [
+     "frontend changed how it uses execution-service (frontend/src/api/orderApi.ts) (keys: timeInForce)"
+    ],
+    "order-service": [
+     "frontend changed how it uses order-service (frontend/src/api/orderApi.ts) (keys: timeInForce)"
+    ]
+   }
+  },
+  {
+   "id": "Q18",
+   "kind": "frontend",
+   "title": "Notifications: switch SSE endpoint to /notifications/subscribe",
+   "unit": "frontend",
+   "predicted": [
+    "notification-service"
+   ],
+   "agreed": [
+    "api-gateway",
+    "notification-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "notification-service"
+   ],
+   "fp": [],
+   "fn": [
+    "api-gateway"
+   ],
+   "breaking": [
+    "frontend calls `/api/v1/notifications/subscribe`, which notification-service does not provide (frontend/src/hooks/useNotifications.ts:5)"
+   ],
+   "reasons": {
+    "notification-service": [
+     "frontend now calls `/api/v1/notifications/subscribe` on notification-service, which has no such endpoint"
+    ]
+   }
+  },
+  {
+   "id": "Q19",
+   "kind": "frontend",
+   "title": "Watchlist: add symbol via POST body instead of path",
+   "unit": "frontend",
+   "predicted": [
+    "marketdata-service"
+   ],
+   "agreed": [
+    "marketdata-service"
+   ],
+   "disputed": [],
+   "tp": [
+    "marketdata-service"
+   ],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {
+    "marketdata-service": [
+     "frontend changed how it uses marketdata-service (frontend/src/api/watchlistApi.ts) (keys: post, res)"
+    ]
+   }
+  },
+  {
+   "id": "Q20",
+   "kind": "internal",
+   "title": "Risk: skip qty-spike check when average history qty < 10",
+   "unit": "risk-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "Q21",
+   "kind": "internal",
+   "title": "client-service tests: assert clientId on empty-holdings portfolio",
+   "unit": "client-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "Q22",
+   "kind": "internal",
+   "title": "order.execution.requested: add optional routingDestination (not yet consumed)",
+   "unit": "order-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "Q23",
+   "kind": "internal",
+   "title": "marketdata: halve instrument price cache TTL",
+   "unit": "marketdata-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "Q24",
+   "kind": "internal",
+   "title": "notification: drop emitter on IllegalStateException during push",
+   "unit": "notification-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  },
+  {
+   "id": "Q25",
+   "kind": "internal",
+   "title": "audit: log unparseable event timestamps before falling back to now()",
+   "unit": "audit-service",
+   "predicted": [],
+   "agreed": [],
+   "disputed": [],
+   "tp": [],
+   "fp": [],
+   "fn": [],
+   "breaking": [],
+   "reasons": {}
+  }
+ ]
+}

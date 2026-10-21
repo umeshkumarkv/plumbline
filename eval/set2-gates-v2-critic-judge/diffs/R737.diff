@@ -1,0 +1,171 @@
+--- a/services/order-service/src/main/resources/db/migration/V8__add_order_milestone_timestamps.sql
++++ b/services/order-service/src/main/resources/db/migration/V8__add_order_milestone_timestamps.sql
+@@ -0,0 +1,12 @@
++-- Lifecycle milestone timestamps for order latency reporting
++ALTER TABLE order_schema.orders
++    ADD COLUMN IF NOT EXISTS risk_checked_at       TIMESTAMP NULL,
++    ADD COLUMN IF NOT EXISTS sent_to_execution_at  TIMESTAMP NULL,
++    ADD COLUMN IF NOT EXISTS completed_at          TIMESTAMP NULL;
++
++CREATE INDEX IF NOT EXISTS idx_orders_sent_to_execution_at
++    ON order_schema.orders (sent_to_execution_at);
++
++COMMENT ON COLUMN order_schema.orders.risk_checked_at IS 'Time the risk-service result was applied';
++COMMENT ON COLUMN order_schema.orders.sent_to_execution_at IS 'Time order.execution.requested was published';
++COMMENT ON COLUMN order_schema.orders.completed_at IS 'Time the order reached a terminal state';
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/domain/Order.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/domain/Order.java
+@@ -71,24 +71,34 @@
+     @Column(name = "created_at", nullable = false, updatable = false)
+     private Instant createdAt;
+ 
+     @Column(name = "updated_at", nullable = false)
+     private Instant updatedAt;
+ 
+     @Column(name = "created_by", nullable = false)
+     private UUID createdBy;
+ 
+     @Column(name = "routing_destination", length = 50)
+     private String routingDestination;
+ 
++    // --- Lifecycle milestones (latency reporting) ---
++    @Column(name = "risk_checked_at")
++    private java.time.LocalDateTime riskCheckedAt;
++
++    @Column(name = "sent_to_execution_at")
++    private java.time.LocalDateTime sentToExecutionAt;
++
++    @Column(name = "completed_at")
++    private java.time.LocalDateTime completedAt;
++
+     @PrePersist
+     protected void onCreate() {
+         Instant now = Instant.now();
+         if (createdAt == null) createdAt = now;
+         updatedAt = now;
+     }
+ 
+     @PreUpdate
+     protected void onUpdate() {
+         updatedAt = Instant.now();
+     }
+ }--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -5,24 +5,25 @@
+ import com.brokerdealer.orderservice.dto.kafka.OrderExecutionRequestedEvent;
+ import com.brokerdealer.orderservice.dto.kafka.OrderStateChangedEvent;
+ import com.brokerdealer.orderservice.exception.OrderNotFoundException;
+ import com.brokerdealer.orderservice.kafka.producer.OrderEventProducer;
+ import com.brokerdealer.orderservice.repository.OrderRepository;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.data.redis.core.RedisTemplate;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+ 
+ import java.time.Instant;
++import java.time.LocalDateTime;
+ import java.util.Collections;
+ import java.util.Map;
+ import java.util.Set;
+ import java.util.UUID;
+ 
+ @Service
+ @RequiredArgsConstructor
+ @Slf4j
+ public class OrderStateMachineService {
+ 
+     /**
+      * States that are terminal or already past the risk evaluation phase.
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -90,24 +90,26 @@
+             log.warn("Idempotency guard — order already in terminal state: orderId={} status={}",
+                     orderId, order.getStatus());
+             return;
+         }
+ 
+         if (order.getStatus() != OrderStatus.NEW) {
+             log.warn("Unexpected state for risk-rejected event: orderId={} status={}", orderId, order.getStatus());
+             return;
+         }
+ 
+         OrderStatus fromState = order.getStatus();
+         order.setStatus(OrderStatus.RISK_REJECTED);
++        order.setRiskCheckedAt(LocalDateTime.now());
++        order.setCompletedAt(order.getRiskCheckedAt());
+         order.setRejectionReason(rejectionReason);
+         orderRepository.save(order);
+ 
+         orderEventProducer.publishOrderStateChanged(OrderStateChangedEvent.builder()
+                 .orderId(order.getId())
+                 .clientId(order.getClientId())
+                 .userId(order.getCreatedBy())
+                 .fromState(fromState.name())
+                 .toState(OrderStatus.RISK_REJECTED.name())
+                 .triggeredBy(TRIGGERED_BY_RISK_ENGINE)
+                 .timestamp(Instant.now().toString())
+                 .metadata(Map.of(
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -160,24 +160,25 @@
+         Order order = orderRepository.findById(orderId)
+                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+         if (EXECUTION_TERMINAL_STATES.contains(order.getStatus())) {
+             log.warn("Idempotency: order already terminal: orderId={} status={}", orderId, order.getStatus());
+             return;
+         }
+         transitionState(order, order.getStatus(), OrderStatus.REJECTED, TRIGGERED_BY_EXECUTION);
+         evictRedisOrderState(orderId);
+         log.info("Order REJECTED by execution: orderId={}", orderId);
+     }
+ 
+     private void transitionState(Order order, OrderStatus from, OrderStatus to, String triggeredBy) {
++        stampMilestone(order, to);
+         order.setStatus(to);
+         orderRepository.save(order);
+ 
+         orderEventProducer.publishOrderStateChanged(OrderStateChangedEvent.builder()
+                 .orderId(order.getId())
+                 .clientId(order.getClientId())
+                 .userId(order.getCreatedBy())
+                 .fromState(from.name())
+                 .toState(to.name())
+                 .triggeredBy(triggeredBy)
+                 .timestamp(Instant.now().toString())
+                 .metadata(Collections.emptyMap())
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -178,16 +178,32 @@
+                 .clientId(order.getClientId())
+                 .userId(order.getCreatedBy())
+                 .fromState(from.name())
+                 .toState(to.name())
+                 .triggeredBy(triggeredBy)
+                 .timestamp(Instant.now().toString())
+                 .metadata(Collections.emptyMap())
+                 .build());
+ 
+         log.info("Order state transition: orderId={} {} -> {}", order.getId(), from, to);
+     }
+ 
++    /**
++     * Records the time an order reached a lifecycle milestone so that
++     * risk and execution latency can be reported per order.
++     */
++    private void stampMilestone(Order order, OrderStatus to) {
++        LocalDateTime now = LocalDateTime.now();
++        switch (to) {
++            case RISK_CHECK_PASSED -> order.setRiskCheckedAt(now);
++            case SENT_TO_EXECUTION -> order.setSentToExecutionAt(now);
++            case FILLED, REJECTED, EXPIRED -> order.setCompletedAt(now);
++            default -> {
++                // no milestone for intermediate states
++            }
++        }
++    }
++
+     private void evictRedisOrderState(UUID orderId) {
+         redisTemplate.delete("order:state:" + orderId);
+     }
+ }

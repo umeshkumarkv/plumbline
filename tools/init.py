@@ -1,0 +1,423 @@
+#!/usr/bin/env python3
+"""Plumbline init — set up (or check, or upgrade) a repository in one step.
+
+  python3 .agentic-sdlc/init.py                    detect → project.yaml → install → baseline → prerequisites → doctor
+  python3 .agentic-sdlc/init.py --domain broker-dealer   same, with the broker-dealer domain pack and all gate packs
+  python3 .agentic-sdlc/init.py --doctor           report only: what the framework can and cannot see (no writes)
+  python3 .agentic-sdlc/init.py --check            CI: exit 1 if generated files, project.yaml or baseline are stale
+  python3 .agentic-sdlc/init.py --upgrade FILE.tar.gz   replace the framework, keep project.yaml and the baseline
+
+Run from anywhere; the repository is the folder that contains .agentic-sdlc/. Nothing outside .agentic-sdlc/,
+.claude/, .github/{prompts,agents,workflows}/ and .gitignore is written. Existing project.yaml is never overwritten.
+"""
+import argparse
+import filecmp
+import json
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+from pathlib import Path
+
+G = Path(__file__).resolve().parent            # the .agentic-sdlc folder
+REPO = G.parent
+sys.path.insert(0, str(G / "impact"))
+import layout  # noqa: E402
+
+PROJECT = G / "project.yaml"
+BASELINE = G / "gates" / "baseline.json"
+KEEP_ON_UPGRADE = ("project.yaml", "gates/baseline.json")
+INSTALL = [   # (generated source in .agentic-sdlc, destination in the repo)
+    ("dist/claude-code/.claude/commands", ".claude/commands"),
+    ("dist/claude-code/.claude/agents", ".claude/agents"),
+    ("dist/copilot/.github/prompts", ".github/prompts"),
+    ("dist/copilot/.github/agents", ".github/agents"),
+]
+WORKFLOWS = [("gates/ci/guardrails.yml", "guardrails.yml"), ("gates/ci/critic.yml", "plumbline-critic.yml"),
+             ("gates/ci/impact-cache.yml", "impact-cache.yml")]
+DOMAINS = {   # domain pack + gate selection
+    "none": {"domain_pack": "none", "gates": {"semgrep": ["java-generic.yml"], "checks": ["structure_check"]}},
+    "broker-dealer": {"domain_pack": ".agentic-sdlc/packs/domain-rules/rules.yaml", "gates": None},  # None = all packs
+}
+
+
+def sh(*cmd, cwd=REPO):
+    try:
+        r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    except FileNotFoundError:
+        return 127, f"{cmd[0]}: not found"
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+def say(tag, msg):
+    print(f"{tag:6} {msg}")
+
+
+# ───────────── detect ─────────────
+
+def java_version(unit_dir: Path):
+    pom = unit_dir / "pom.xml"
+    if pom.is_file():
+        t = pom.read_text(errors="replace")
+        for pat in (r"<maven\.compiler\.release>(\d+)<", r"<release>(\d+)<", r"<java\.version>(\d+)<",
+                    r"<maven\.compiler\.source>(?:1\.)?(\d+)<"):
+            m = re.search(pat, t)
+            if m:
+                return int(m.group(1))
+    for g in ("build.gradle", "build.gradle.kts"):
+        f = unit_dir / g
+        if f.is_file():
+            t = f.read_text(errors="replace")
+            m = re.search(r"JavaLanguageVersion\.of\((\d+)\)", t) or re.search(r"sourceCompatibility\s*=\s*['\"]?(?:JavaVersion\.VERSION_)?(?:1[._])?(\d+)", t)
+            if m:
+                return int(m.group(1))
+    return None
+
+
+def frontend_framework(unit_dir: Path):
+    pj = unit_dir / "package.json"
+    if not pj.is_file():
+        return None
+    try:
+        d = json.loads(pj.read_text())
+    except ValueError:
+        return "unknown"
+    deps = {**(d.get("dependencies") or {}), **(d.get("devDependencies") or {})}
+    for key, name in (("@angular/core", "angular"), ("next", "next"), ("react", "react"), ("vue", "vue"), ("svelte", "svelte")):
+        if key in deps:
+            return f"{name} {str(deps[key]).lstrip('^~')}"
+    return "unknown"
+
+
+def base_branch():
+    rc, out = sh("git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+    if rc == 0 and out:
+        return out.split("/", 1)[-1]
+    for b in ("develop", "main", "master"):
+        if sh("git", "rev-parse", "--verify", "-q", b)[0] == 0 or sh("git", "rev-parse", "--verify", "-q", f"origin/{b}")[0] == 0:
+            return b
+    return "main"
+
+
+def detect():
+    units = layout.units(REPO)
+    for u in units:
+        d = REPO / u["path"]
+        if u["kind"] == "service":
+            u["java"] = java_version(d) or java_version(REPO)      # modules usually inherit it from the parent pom
+        else:
+            u["framework"] = frontend_framework(d)
+    return units
+
+
+# ───────────── project.yaml ─────────────
+
+def write_project(units, domain):
+    if PROJECT.is_file():
+        say("keep", f"{PROJECT.relative_to(REPO)} exists — not changed")
+        return False
+    d = DOMAINS[domain]
+    lines = ["# Plumbline project configuration — written by init.py, edited by people (protected path).",
+             "units:"]
+    for u in units:
+        lines.append(f"  - {{name: {u['name']}, path: {u['path']}, kind: {u['kind']}}}")
+    lines += ["", f"base_branch: {base_branch()}", "",
+              "# Domain rule pack the judge applies; `none` for a repository without one.",
+              f"domain_pack: {d['domain_pack']}"]
+    if d["gates"]:
+        lines += ["", "# Gate selection: Semgrep packs under .agentic-sdlc/gates/semgrep/, checks under gates/checks/.",
+                  "gates:", f"  semgrep: [{', '.join(d['gates']['semgrep'])}]", f"  checks: [{', '.join(d['gates']['checks'])}]"]
+    PROJECT.write_text("\n".join(lines) + "\n")
+    say("write", f"{PROJECT.relative_to(REPO)} ({len(units)} units, domain {domain})")
+    return True
+
+
+# ───────────── install generated files ─────────────
+
+def pairs():
+    for src, dst in INSTALL:
+        for f in sorted((G / src).glob("*.md")):
+            yield f, REPO / dst / f.name
+    for src, name in WORKFLOWS:
+        yield G / src, REPO / ".github" / "workflows" / name
+
+
+GENERATED_DIRS = [".claude/commands", ".claude/agents", ".github/prompts", ".github/agents", ".github/workflows"]
+
+
+def leftovers():
+    """Framework files from older installs that the current version no longer generates (old agent, critic, loop or
+    workflow names)."""
+    expected = {d for _s, d in pairs()}
+    out = []
+    for gd in GENERATED_DIRS:
+        for f in sorted((REPO / gd).glob("*")) if (REPO / gd).is_dir() else []:
+            if f not in expected and re.search(r"-originator(\.agent)?\.md$|-critic(\.agent|\.prompt)?\.(md|yml)$|"
+                                               r"^plumbline-|eval-loop(\.prompt)?\.md$", f.name):
+                out.append(str(f.relative_to(REPO)))
+    return out
+
+
+def install():
+    n = 0
+    for s, d in pairs():
+        d.parent.mkdir(parents=True, exist_ok=True)
+        if d.exists() and d.parent.name == "workflows" and not filecmp.cmp(s, d, shallow=False) \
+                and "agentic-sdlc" not in d.read_text(errors="replace"):
+            bak = d.with_name(d.name + ".bak")
+            shutil.copyfile(d, bak)
+            say("warn", f"{d.relative_to(REPO)} existed and was not Plumbline's — saved as {bak.name}")
+        if not d.exists() or not filecmp.cmp(s, d, shallow=False):
+            shutil.copyfile(s, d)
+            n += 1
+    for f in leftovers():
+        say("warn", f"left over from an older install (remove it): git rm {f}")
+    gi = REPO / ".gitignore"
+    text = gi.read_text() if gi.exists() else ""
+    if ".plumbline/" not in text.split():
+        gi.write_text(text + ("" if text.endswith("\n") or not text else "\n") + ".plumbline/\n")
+        say("write", ".gitignore += .plumbline/ (loop working files)")
+    say("write", f"generated agent files: {n} updated, {len(list(pairs())) - n} already current")
+
+
+def stale_generated():
+    return [str(d.relative_to(REPO)) for s, d in pairs() if not d.exists() or not filecmp.cmp(s, d, shallow=False)]
+
+
+# ───────────── prerequisites ─────────────
+
+def prerequisites(units):
+    probs = []
+    say("ok" if sys.version_info >= (3, 10) else "MISS", f"python {sys.version.split()[0]} (>= 3.10)")
+    if sys.version_info < (3, 10):
+        probs.append("python3 >= 3.10")
+    try:
+        import yaml  # noqa: F401
+        say("ok", "PyYAML")
+    except ImportError:
+        say("MISS", "PyYAML — pip install -r .agentic-sdlc/requirements.txt")
+        probs.append("PyYAML")
+    want = re.search(r"semgrep==([\d.]+)", (G / "requirements.txt").read_text())
+    rc, out = sh("semgrep", "--version")
+    if rc != 0:
+        say("MISS", "Semgrep — gates cannot run (pip install -r .agentic-sdlc/requirements.txt)")
+        probs.append("semgrep")
+    else:
+        say("ok" if not want or want.group(1) in out else "warn", f"semgrep {out.splitlines()[-1]}"
+            + ("" if not want or want.group(1) in out else f" (pinned {want.group(1)})"))
+    javas = sorted({u.get("java") for u in units if u.get("java")})
+    if javas:
+        rc, out = sh("java", "-version")
+        m = re.search(r'version "(?:1\.)?(\d+)', out)
+        have = int(m.group(1)) if m else None
+        for v in javas:
+            if have == v:
+                say("ok", f"JDK {have} (build declares {v})")
+            else:
+                say("warn", f"JDK {have or 'missing'}, build declares {v}: select it, e.g. "
+                            f"export JAVA_HOME=$(/usr/libexec/java_home -v {v})  — onboarding works without it; Dev/QA need it")
+        for w in ("mvnw", "gradlew"):
+            f = REPO / w
+            if f.exists():
+                raw = f.read_bytes()
+                if b"\r\n" in raw:
+                    say("warn", f"{w} has Windows line endings (CRLF): it will not run on macOS/Linux")
+                elif not (f.stat().st_mode & 0o111):
+                    say("warn", f"{w} is not executable: chmod +x {w}")
+    if any(u["kind"] == "frontend" for u in units):
+        rc, out = sh("node", "--version")
+        say("ok" if rc == 0 else "warn", f"node {out if rc == 0 else 'missing (frontend tests and coverage need it)'}")
+    rc, _ = sh("git", "rev-parse", "--git-dir")
+    if rc != 0:
+        say("MISS", "not a git repository")
+        probs.append("git")
+    return probs
+
+
+# ───────────── baseline ─────────────
+
+def foreign_baseline():
+    """The shipped baseline is broker-dealer's; any other repository needs its own."""
+    cfg = layout.project(config=PROJECT)
+    return BASELINE.is_file() and "services/order-service/" in BASELINE.read_text() and \
+        cfg.get("domain_pack", "none") == "none"
+
+
+def baseline(force=False):
+    foreign = foreign_baseline()
+    if BASELINE.is_file() and not (force or foreign):
+        say("keep", f"{BASELINE.relative_to(REPO)} exists — not changed (--rebaseline to rebuild)")
+        return
+    if sh("semgrep", "--version")[0] != 0:
+        say("skip", "baseline not written: Semgrep is missing")
+        return
+    rc, out = sh(sys.executable, str(G / "gates" / "run_gates.py"), ".", "--write-baseline", str(BASELINE))
+    say("write" if rc == 0 else "FAIL", f"gates baseline for this repository: {out.splitlines()[-1] if out else rc}")
+
+
+# ───────────── doctor ─────────────
+
+def doctor(units):
+    import contextlib
+    import io
+    import depmap
+    with contextlib.redirect_stderr(io.StringIO()):
+        dm = depmap.build(REPO, None, None)
+    cfg = layout.project(config=PROJECT)
+    print("\nPLUMBLINE DOCTOR — what the framework can see")
+    print(f"  repository   : {REPO.name}   base branch: {cfg.get('base_branch') or base_branch()}   "
+          f"domain pack: {cfg.get('domain_pack', 'none (no project.yaml: broker-dealer default)')}")
+    warn = []
+    for u in units:
+        e = dm["services"].get(u["name"]) or next((x for x in dm["services"].values() if x["path"] == u["path"]), {})
+        cm = layout.claude_md(u)
+        has_cm = (REPO / cm).is_file()
+        if u["kind"] == "service":
+            print(f"  [backend ] {u['name']:28} {u['path']:22} {u.get('build') or '?':6} Java {u.get('java') or '?':<3} "
+                  f"port {e.get('port') or '?':<5} endpoints {len(e.get('provides', [])):<4} kafka {len(e.get('kafka', [])):<3}"
+                  f" CLAUDE.md {'yes' if has_cm else 'no'} ({cm})")
+            if not e.get("provides"):
+                warn.append(f"{u['name']}: no endpoints found — check the controller layout")
+        else:
+            unres = e.get("unresolved", [])
+            calls = len(e.get("calls", []))
+            print(f"  [frontend] {u['name']:28} {u['path']:22} {u.get('framework') or '?':14} API calls {calls:<4} "
+                  f"unresolved {len(unres):<3} CLAUDE.md {'yes' if has_cm else 'no'} ({cm})")
+            if unres:
+                warn.append(f"{u['name']}: {len(unres)} call(s) whose URL could not be resolved, e.g. {unres[:3]}")
+    fe = {n for n, x in dm["services"].items() if x.get("kind") == "frontend"}
+    unmatched = sorted({e["path"] for e in dm["rest_edges"] if not e.get("to") and e["from"] in fe})
+    other = sorted({e["path"] for e in dm["rest_edges"] if not e.get("to") and e["from"] not in fe})
+    print(f"  links        : {len([e for e in dm['rest_edges'] if e.get('to')])} calls matched to an endpoint; "
+          f"{len(unmatched)} frontend call(s) with no endpoint; {len(other)} backend path literal(s) with no endpoint "
+          f"(often prefixes in filters — informational)")
+    if unmatched:
+        warn.append(f"{len(unmatched)} frontend call(s) have no matching endpoint (drift or dead code), e.g. {unmatched[:4]}")
+    root_cm = REPO / "CLAUDE.md"
+    print(f"  root CLAUDE.md (master): {'present' if root_cm.is_file() else 'missing'}"
+          f"{' — has solution block' if root_cm.is_file() and 'agentic-sdlc:begin solution' in root_cm.read_text(errors='replace') else ''}")
+    g = (cfg.get("gates") or {})
+    print(f"  gates        : semgrep {g.get('semgrep', 'all packs')}  checks {g.get('checks', 'all')}  "
+          f"baseline {'broker-dealer default — rebuild: init.py --rebaseline (needs Semgrep)' if foreign_baseline() else ('present' if BASELINE.is_file() else 'missing')}")
+    stale = stale_generated()
+    if stale:
+        warn.append(f"{len(stale)} generated agent file(s) missing or stale — run init.py")
+    if warn:
+        print("  attention    :")
+        for w in warn:
+            print(f"    - {w}")
+    else:
+        print("  attention    : none")
+    print()
+
+
+# ───────────── check / upgrade ─────────────
+
+def check():
+    bad = []
+    if not PROJECT.is_file():
+        bad.append("project.yaml missing — run init.py")
+    old_files = leftovers()
+    if old_files:
+        bad.append(f"files left over from an older install: {old_files[:5]}{' …' if len(old_files) > 5 else ''}")
+    stale = stale_generated()
+    if stale:
+        bad.append(f"generated files stale or missing: {stale[:5]}{' …' if len(stale) > 5 else ''}")
+    if PROJECT.is_file():
+        try:
+            declared = {(u["name"], u["path"]) for u in layout.units(REPO)}
+        except SystemExit as e:
+            bad.append(f"project.yaml invalid: {e}")
+            declared = set()
+        detected = {(u["path"]) for u in layout.units(REPO, config=str(G / "__none__.yaml"))}
+        missing = sorted(detected - {p for _n, p in declared})
+        if missing:
+            bad.append(f"units detected but not declared in project.yaml: {missing}")
+    if not BASELINE.is_file():
+        bad.append("gates baseline missing")
+    elif foreign_baseline():
+        bad.append("gates baseline is the broker-dealer default, not this repository's (init.py --rebaseline)")
+    for b in bad:
+        say("FAIL", b)
+    say("ok" if not bad else "FAIL", "plumbline check")
+    return 1 if bad else 0
+
+
+def upgrade(tarball):
+    stage = G.with_name(".agentic-sdlc.new")
+    shutil.rmtree(stage, ignore_errors=True)
+    with tempfile.TemporaryDirectory() as td:
+        with tarfile.open(tarball) as tf:
+            members = [m for m in tf.getmembers() if m.name.startswith(".agentic-sdlc/") and ".." not in m.name.split("/")
+                       and (m.isreg() or m.isdir())]
+            for m in members:                       # plain permissions only (no setuid/setgid/sticky)
+                m.mode = 0o755 if m.isdir() or m.mode & 0o111 else 0o644
+            try:
+                tf.extractall(td, members=members, filter="data")
+            except TypeError:                       # Python without extraction filters: members are already vetted
+                tf.extractall(td, members=members)
+        new = Path(td) / ".agentic-sdlc"
+        if not (new / "VERSION").is_file() or not (new / "init.py").is_file():
+            raise SystemExit("upgrade: the tarball has no .agentic-sdlc/VERSION and init.py")
+        for k in KEEP_ON_UPGRADE:                   # the tarball never brings its own project config or baseline
+            (new / k).unlink(missing_ok=True)
+        shutil.copytree(new, stage)
+    for k in KEEP_ON_UPGRADE:
+        if (G / k).is_file():
+            (stage / k).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(G / k, stage / k)
+    old_v = (G / "VERSION").read_text().strip() if (G / "VERSION").is_file() else "?"
+    retired = G.with_name(".agentic-sdlc.old")
+    shutil.rmtree(retired, ignore_errors=True)
+    G.rename(retired)                               # swap: the old framework stays intact until the new one is in place
+    try:
+        stage.rename(G)
+    except OSError:
+        retired.rename(G)                           # put the old framework back
+        raise
+    shutil.rmtree(retired, ignore_errors=True)
+    kept = [k for k in KEEP_ON_UPGRADE if (G / k).is_file()]
+    say("write", f"framework {old_v} → {(G / 'VERSION').read_text().strip()} (kept: {', '.join(kept) or 'nothing'})")
+    return subprocess.run([sys.executable, str(G / "init.py"), "--no-baseline"]).returncode
+
+
+# ───────────── main ─────────────
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--domain", choices=sorted(DOMAINS), default="none")
+    ap.add_argument("--doctor", action="store_true")
+    ap.add_argument("--check", action="store_true")
+    ap.add_argument("--upgrade", metavar="TARBALL")
+    ap.add_argument("--rebaseline", action="store_true")
+    ap.add_argument("--no-baseline", action="store_true")
+    a = ap.parse_args()
+    if a.check:
+        return check()
+    if a.upgrade:
+        return upgrade(a.upgrade)
+    print(f"Plumbline {(G / 'VERSION').read_text().strip()} — {REPO}")
+    units = detect()
+    if not units:
+        say("FAIL", "no units found (services/<name>/, top-level modules, an app at the root, or a frontend). "
+                    "Declare them in .agentic-sdlc/project.yaml — see project.yaml.example")
+        return 1
+    if not a.doctor:
+        write_project(units, a.domain)
+        units = detect()                      # names/paths as declared
+        install()
+    print()
+    probs = prerequisites(units)
+    if not a.doctor and not a.no_baseline:
+        baseline(a.rebaseline)
+    doctor(units)
+    if not a.doctor:
+        print("Next: commit .agentic-sdlc/ .claude/ .github/ .gitignore, add CODEOWNERS for them, then run "
+              "/onboard-eval-loop service:all in Claude Code or Copilot.")
+    return 1 if probs else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

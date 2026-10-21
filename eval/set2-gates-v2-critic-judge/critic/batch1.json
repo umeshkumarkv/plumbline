@@ -1,0 +1,38 @@
+{
+  "R305": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §15 / §10 (unit tests for all risk rules)", "evidence": "+public class MinOrderValueRule implements RiskRule {", "reason": "New risk rule added with no MinOrderValueRuleTest, while every existing rule has a matching unit test and §15 requires tests for all risk rules."}
+  ]},
+  "R326": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §5 / §10 (state machine; NEVER execute without RISK_CHECK_PASSED)", "evidence": "+        transitionState(order, OrderStatus.VALIDATED, OrderStatus.ACCEPTED, TRIGGERED_BY_RISK_ENGINE);\n+        transitionState(order, OrderStatus.ACCEPTED, OrderStatus.SENT_TO_EXECUTION, TRIGGERED_BY_OMS);", "reason": "The WARNED path skips RISK_CHECK_PASSED (VALIDATED -> ACCEPTED isn't a valid transition) and sends the order to execution without it."},
+    {"severity": "major", "rule": "risk-service CLAUDE.md §4/§11 (result is PASSED/REJECTED)", "evidence": "+            return RiskResult.warned(warnedRules, warnings.size() + \" risk warning(s) raised\");", "reason": "Adds a third risk.evaluation.result value (WARNED) to the Kafka contract, which only allows PASSED or REJECTED, without a rulebook update."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 (unit tests for all state transitions)", "evidence": "+    public void transitionOnRiskWarned(UUID orderId, String warnedRuleCodes) {", "reason": "New state-transition path and consumer branch come with no tests."}
+  ]},
+  "R342": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §7 (idempotent consumers, at-least-once)", "evidence": "+        int current = client.getDailyOrderCount() != null ? client.getDailyOrderCount() : 0;\n+        client.setDailyOrderCount(current + 1);", "reason": "A redelivered order.state.changed(NEW) event increments dailyOrderCount again, because nothing checks whether the order was already counted, so the client's daily limits get inflated."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 / §10 (NEVER skip unit tests for business logic)", "evidence": "+    public void recordNewOrder(UUID clientId) {", "reason": "New consumer filtering and counter logic come with no tests."}
+  ]},
+  "R355": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §7 (Kafka semantics / per-order event ordering)", "evidence": "+        if (event.getExecutionId() != null) {\n+            return event.getExecutionId().toString();", "reason": "Keying execution.completed by executionId instead of orderId spreads one order's PARTIAL and FULL fills across partitions, so consumers (order state, holdings/cash, audit, UI) can process them out of order."}
+  ]},
+  "R435": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §11 (Do NOT use CompletableFuture chains — just block)", "evidence": "+                .map(o -> CompletableFuture\n+                        .supplyAsync(() -> fetchFillsIfNeeded(o), FILL_FETCH_EXECUTOR)\n+                        .orTimeout(FILL_FETCH_TIMEOUT_MS, TimeUnit.MILLISECONDS)", "reason": "Adds a CompletableFuture chain, which the concurrency model explicitly forbids."},
+    {"severity": "minor", "rule": "CLAUDE.md §11 / §13e (no custom executor; DI)", "evidence": "+    private static final ExecutorService FILL_FETCH_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();", "reason": "A static, hand-managed executor outside Spring DI goes against 'no Executor configuration needed', and the @PreDestroy shuts down static state from an instance method."}
+  ]},
+  "R524": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §2 Flyway migrations (applied migrations are immutable)", "evidence": "-    ADD COLUMN IF NOT EXISTS order_value NUMERIC(19, 4);\n+    ADD COLUMN IF NOT EXISTS order_value NUMERIC(19, 4),\n+    ADD COLUMN IF NOT EXISTS estimated_commission NUMERIC(19, 4);", "reason": "Editing the already-applied V5 migration changes its checksum, so Flyway validation fails and existing databases never get the column; this needs a new V8 migration."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 / §10 (unit tests for business logic)", "evidence": "+    private BigDecimal estimateCommission(BigDecimal orderValue) {", "reason": "New monetary calculation (bps, min/max bounds) comes with no unit tests."}
+  ]},
+  "R562": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §15 (integration tests for REST endpoints; JaCoCo build gate)", "evidence": "-        return ResponseEntity.ok(auditService.getAuditTrail(clientId, page, size));\n+        return ResponseEntity.ok(auditService.getAuditTrail(clientId, from, to, page, size));", "reason": "The controller now calls the new 5-arg overload, but AuditControllerTest still stubs only the 3-arg method, so the mock returns null, the body is empty and the existing envelope tests fail."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 / §10 (unit tests for business logic)", "evidence": "+    public AuditTrailResponse getAuditTrail(UUID clientId, String from, String to, int page, int size) {", "reason": "New time-window parsing and validation logic (from > to, bad ISO input) has no tests."}
+  ]},
+  "R568": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §14 Security (SQL injection)", "evidence": "+                    + \"WHERE entity_type = '%s' ORDER BY event_timestamp DESC LIMIT %d OFFSET %d\";\n+        String sql = String.format(SELECT_BY_ENTITY_TYPE, entityType.toUpperCase(), limit, offset);", "reason": "The user-supplied entityType query parameter is formatted straight into SQL, which allows injection against audit_schema."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 (tests for business logic / endpoints)", "evidence": "+    public AuditTrailResponse getAuditTrailByEntityType(String entityType, int page, int size) {", "reason": "New query path and endpoint branch come with no tests."}
+  ]},
+  "R584": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §13i / §12 (domain exceptions mapped to error envelope)", "evidence": "+        Holding holding = holdingRepository.findByClientIdAndSymbol(clientId, symbol.toUpperCase())\n+                .orElseThrow();", "reason": "A missing holding throws a bare NoSuchElementException, which the generic handler turns into 500 INTERNAL_ERROR instead of a domain error such as 404 with a code."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 (integration tests for all REST endpoints, happy + error)", "evidence": "+    @GetMapping(\"/{id}/portfolio/holdings/{symbol}\")", "reason": "The new endpoint has no MockMvc test, and the holding-not-found case is untested."}
+  ]},
+  "R601": {"violation": false, "findings": []}
+}

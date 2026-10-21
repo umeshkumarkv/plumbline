@@ -1,0 +1,121 @@
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/LimitPriceCollarRule.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/rule/LimitPriceCollarRule.java
+@@ -0,0 +1,57 @@
++package com.brokerdealer.riskservice.rule;
++
++import com.brokerdealer.riskservice.domain.RiskResult;
++import com.brokerdealer.riskservice.domain.RiskRule;
++import com.brokerdealer.riskservice.dto.RiskContext;
++import com.brokerdealer.riskservice.dto.RiskEvaluationRequest;
++import lombok.RequiredArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
++
++import java.math.BigDecimal;
++import java.math.RoundingMode;
++
++/**
++ * Hard collar for LIMIT orders: REJECT when |limitPrice - lastPrice| / lastPrice exceeds
++ * the configured threshold. MARKET orders and orders without a reference price are skipped.
++ */
++@RequiredArgsConstructor
++@Slf4j
++public class LimitPriceCollarRule implements RiskRule {
++
++    private final BigDecimal threshold;
++    private final boolean enabled;
++
++    @Override
++    public String getRuleCode() {
++        return "LIMIT_PRICE_COLLAR";
++    }
++
++    @Override
++    public boolean isEnabled() {
++        return enabled;
++    }
++
++    @Override
++    public RiskResult evaluate(RiskEvaluationRequest request, RiskContext context) {
++        if (!"LIMIT".equals(request.getOrderType())
++                || request.getLimitPrice() == null || request.getLastPrice() == null || threshold == null) {
++            return RiskResult.passed();
++        }
++        BigDecimal limitPrice = new BigDecimal(request.getLimitPrice());
++        BigDecimal lastPrice = new BigDecimal(request.getLastPrice());
++        if (lastPrice.signum() <= 0) {
++            log.debug("LIMIT_PRICE_COLLAR skipped: non-positive lastPrice; orderId={}", context.getOrderId());
++            return RiskResult.passed();
++        }
++
++        BigDecimal deviation = limitPrice.subtract(lastPrice).abs()
++                .divide(lastPrice, 10, RoundingMode.HALF_UP);
++        if (deviation.compareTo(threshold) > 0) {
++            return RiskResult.rejected(getRuleCode(),
++                    "LIMIT_PRICE_COLLAR: limitPrice deviates "
++                            + deviation.multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)
++                            + "% from lastPrice");
++        }
++        return RiskResult.passed();
++    }
++}
+--- a/services/risk-service/src/main/resources/db/migration/V15__seed_limit_price_collar_rule.sql
++++ b/services/risk-service/src/main/resources/db/migration/V15__seed_limit_price_collar_rule.sql
+@@ -0,0 +1,10 @@
++-- Hard price collar for LIMIT orders (REJECT action)
++INSERT INTO risk_schema.risk_rule_config
++    (rule_code, rule_name, rule_category, description, enabled, threshold_value, threshold_unit, action, priority, updated_at)
++VALUES
++    ('LIMIT_PRICE_COLLAR',
++     'Limit Price Collar',
++     'FAT_FINGER',
++     'REJECT LIMIT orders whose limitPrice deviates more than 5% from lastPrice; skipped for MARKET orders',
++     true, 5.00, 'PERCENT', 'REJECT', 25, NOW())
++ON CONFLICT (rule_code) DO NOTHING;
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java
+@@ -103,16 +103,17 @@
+             case "RULE_DUPLICATE_ORDER"    -> new DuplicateOrderRule(stringRedisTemplate, config.getEnabled());
+             case "RULE_SELF_TRADE"         -> new SelfTradeRule(config.getEnabled());
+             case "RULE_MARGIN_CALL_ACTIVE" -> new MarginCallActiveRule(config.getEnabled());
+             case "RULE_TRADING_ENABLED"    -> new TradingEnabledRule(config.getEnabled());
+             case "RULE_KYC_VERIFIED"       -> new KycVerifiedRule(config.getEnabled());
+             case "RULE_SUFFICIENT_CASH"    -> new SufficientCashRule(config.getEnabled());
+             case "RULE_SUFFICIENT_HOLDINGS"  -> new SufficientHoldingsRule(config.getEnabled());
+             case "PRICE_DEVIATION_CHECK"     -> new PriceDeviationCheckRule(config.getThresholdValue(), config.getEnabled());
+             case "NOTIONAL_VALUE_CHECK"      -> new NotionalValueCheckRule(config.getThresholdValue(), config.getEnabled());
+             case "ORDER_QTY_SPIKE_CHECK"     -> new OrderQtySpikeCheckRule(config.getThresholdValue(), config.getEnabled());
+             case "ORDER_VALUE_SPIKE_CHECK"   -> new OrderValueSpikeCheckRule(config.getThresholdValue(), config.getEnabled());
+             case "RULE_DAILY_ORDER_COUNT"    -> new DailyOrderCountRule(config.getEnabled());
++            case "LIMIT_PRICE_COLLAR"        -> new LimitPriceCollarRule(config.getThresholdValue(), config.getEnabled());
+             default -> new StubRiskRule(config.getRuleCode(), config.getEnabled());
+         };
+     }
+ }
+--- a/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java
++++ b/services/risk-service/src/main/java/com/brokerdealer/riskservice/service/RiskEvaluationService.java
+@@ -2,24 +2,25 @@
+ 
+ import com.brokerdealer.riskservice.domain.RiskResult;
+ import com.brokerdealer.riskservice.domain.RiskRule;
+ import com.brokerdealer.riskservice.domain.RiskRuleConfig;
+ import com.brokerdealer.riskservice.domain.RiskWarning;
+ import com.brokerdealer.riskservice.dto.RiskContext;
+ import com.brokerdealer.riskservice.dto.RiskEvaluationRequest;
+ import com.brokerdealer.riskservice.repository.RiskRuleConfigRepository;
+ import com.brokerdealer.riskservice.repository.RiskWarningRepository;
+ import com.brokerdealer.riskservice.rule.DailyOrderCountRule;
+ import com.brokerdealer.riskservice.rule.DuplicateOrderRule;
+ import com.brokerdealer.riskservice.rule.KycVerifiedRule;
++import com.brokerdealer.riskservice.rule.LimitPriceCollarRule;
+ import com.brokerdealer.riskservice.rule.MarginCallActiveRule;
+ import com.brokerdealer.riskservice.rule.MaxOrderQtyRule;
+ import com.brokerdealer.riskservice.rule.MaxOrderValueRule;
+ import com.brokerdealer.riskservice.rule.NotionalValueCheckRule;
+ import com.brokerdealer.riskservice.rule.OrderQtySpikeCheckRule;
+ import com.brokerdealer.riskservice.rule.OrderValueLimitRule;
+ import com.brokerdealer.riskservice.rule.OrderValueSpikeCheckRule;
+ import com.brokerdealer.riskservice.rule.PriceDeviationCheckRule;
+ import com.brokerdealer.riskservice.rule.SelfTradeRule;
+ import com.brokerdealer.riskservice.rule.SingleOrderQtyLimitRule;
+ import com.brokerdealer.riskservice.rule.StubRiskRule;
+ import com.brokerdealer.riskservice.rule.SufficientCashRule;

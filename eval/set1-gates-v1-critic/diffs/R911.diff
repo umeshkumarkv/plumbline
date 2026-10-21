@@ -1,0 +1,28 @@
+--- a/services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java
++++ b/services/audit-service/src/main/java/com/brokerdealer/auditservice/kafka/consumer/AuditEventConsumer.java
+@@ -148,24 +148,25 @@
+         try {
+             return UUID.fromString(value.toString());
+         } catch (IllegalArgumentException e) {
+             return null;
+         }
+     }
+ 
+     private Instant parseTimestamp(String timestamp) {
+         if (timestamp == null || timestamp.isBlank()) return Instant.now();
+         try {
+             return Instant.parse(timestamp);
+         } catch (Exception e) {
++            log.debug("Unparseable event timestamp, defaulting to now: value={}", timestamp);
+             return Instant.now();
+         }
+     }
+ 
+     private String toJson(Object obj) {
+         try {
+             return objectMapper.writeValueAsString(obj);
+         } catch (JsonProcessingException e) {
+             return "{}";
+         }
+     }
+ }

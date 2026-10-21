@@ -1,0 +1,31 @@
+--- a/services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java
++++ b/services/client-service/src/main/java/com/brokerdealer/clientservice/service/ClientService.java
+@@ -178,27 +178,25 @@
+ 
+     @Transactional
+     public UpdateDefaultRouteResponse updateDefaultRoute(UUID id, UpdateDefaultRouteRequest request) {
+         log.debug("Updating default route: clientId={}", id);
+         Client client = clientRepository.findById(id)
+                 .orElseThrow(() -> new ClientNotFoundException("CLIENT_NOT_FOUND",
+                         "Client not found: " + id));
+ 
+         DefaultRoute route;
+         try {
+             route = DefaultRoute.valueOf(request.getDefaultRoute());
+         } catch (IllegalArgumentException e) {
+-            throw new ValidationException("INVALID_ROUTE",
+-                    "Invalid route value: " + request.getDefaultRoute()
+-                            + ". Valid values: NASDAQ, NYSE, ARCA, BATS");
++            throw new RuntimeException("Invalid route value: " + request.getDefaultRoute());
+         }
+ 
+         client.setDefaultRoute(route);
+         clientRepository.save(client);
+         evictPortfolioCache(id);
+ 
+         log.info("Default route updated: clientId={} defaultRoute={}", id, route);
+ 
+         return UpdateDefaultRouteResponse.builder()
+                 .clientId(id)
+                 .defaultRoute(route)
+                 .build();

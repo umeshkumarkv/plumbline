@@ -1,0 +1,94 @@
+{
+ "services": 999,
+ "java_lines": 3266064,
+ "topics": 555,
+ "rest_endpoints": 4884,
+ "cold_build_s": 39.5,
+ "cold_peak_rss_mb": 71,
+ "prs": [
+  {
+   "branch": "pr-a",
+   "seconds": 1.6,
+   "changed": [
+    "execution-service-c042"
+   ],
+   "affected": 2,
+   "affected_units": [
+    "audit-service-c042",
+    "client-service-c042"
+   ],
+   "breaking": 0,
+   "bundle_kb": 26.9,
+   "units_scanned": 1,
+   "units_cached": 1997
+  },
+  {
+   "branch": "pr-b",
+   "seconds": 3.8,
+   "changed": [
+    "order-service-c000"
+   ],
+   "affected": 113,
+   "affected_units": [
+    "audit-service-c000",
+    "audit-service-c001",
+    "audit-service-c002",
+    "audit-service-c003",
+    "audit-service-c004",
+    "audit-service-c005",
+    "audit-service-c006",
+    "audit-service-c007",
+    "audit-service-c008",
+    "audit-service-c009",
+    "audit-service-c010",
+    "audit-service-c011"
+   ],
+   "breaking": 0,
+   "bundle_kb": 74.5,
+   "units_scanned": 1,
+   "units_cached": 1997
+  },
+  {
+   "branch": "pr-c",
+   "seconds": 1.7,
+   "changed": [
+    "client-service-c077"
+   ],
+   "affected": 0,
+   "affected_units": [],
+   "breaking": 0,
+   "bundle_kb": 0.2,
+   "units_scanned": 1,
+   "units_cached": 1997
+  },
+  {
+   "branch": "pr-d",
+   "seconds": 1.5,
+   "changed": [],
+   "affected": 99,
+   "affected_units": [
+    "api-gateway-c001",
+    "api-gateway-c011",
+    "api-gateway-c021",
+    "api-gateway-c031",
+    "api-gateway-c041",
+    "api-gateway-c051",
+    "api-gateway-c061",
+    "api-gateway-c071",
+    "api-gateway-c081",
+    "api-gateway-c091",
+    "api-gateway-c101",
+    "audit-service-c002"
+   ],
+   "breaking": 0,
+   "bundle_kb": 5.7,
+   "units_scanned": 0,
+   "units_cached": 1998
+  }
+ ],
+ "warm_build_s": 0.8,
+ "cold_build_raw_blobs_s": 64.4,
+ "gates_changed_only_s": 19.3,
+ "gates_changed_only_note": "pr-a: gates: 3 findings, 0 baseline debt, 3 NEW (no baseline for the synthetic repo, so its pre-existing findings show as NEW)",
+ "peak_rss_mb": 139
+}

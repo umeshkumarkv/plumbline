@@ -1,0 +1,13 @@
+openapi: 3.0.3
+info: {title: pay-service, version: "1"}
+paths:
+  /api/v1/payments/{id}:
+    get:
+      responses: {"200": {description: ok}}
+components:
+  schemas:
+    PaymentView:
+      type: object
+      properties:
+        paymentId: {type: string}
+        status: {type: string}

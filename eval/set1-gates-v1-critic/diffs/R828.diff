@@ -1,0 +1,26 @@
+--- a/services/audit-service/src/main/java/com/brokerdealer/auditservice/repository/AuditLogSearchRepository.java
++++ b/services/audit-service/src/main/java/com/brokerdealer/auditservice/repository/AuditLogSearchRepository.java
+@@ -0,0 +1,23 @@
++package com.brokerdealer.auditservice.repository;
++
++import lombok.RequiredArgsConstructor;
++import org.springframework.jdbc.core.JdbcTemplate;
++import org.springframework.stereotype.Repository;
++
++import java.util.List;
++import java.util.Map;
++
++@Repository
++@RequiredArgsConstructor
++public class AuditLogSearchRepository {
++
++    private final JdbcTemplate jdbcTemplate;
++
++    public List<Map<String, Object>> searchByEntityType(String entityType, String newState, int limit) {
++        String sql = "SELECT id, entity_type, entity_id, previous_state, new_state, actor_type, event_timestamp "
++                + "FROM audit_schema.audit_logs WHERE entity_type = '" + entityType + "'"
++                + (newState != null ? " AND new_state = '" + newState + "'" : "")
++                + " ORDER BY event_timestamp DESC LIMIT " + limit;
++        return jdbcTemplate.queryForList(sql);
++    }
++}

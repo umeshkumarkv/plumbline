@@ -1,0 +1,31 @@
+--- a/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
++++ b/services/order-service/src/main/java/com/brokerdealer/orderservice/service/OrderStateMachineService.java
+@@ -143,24 +143,28 @@
+         Order order = orderRepository.findById(orderId)
+                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+         if (EXECUTION_TERMINAL_STATES.contains(order.getStatus()) ||
+                 order.getStatus() == OrderStatus.PARTIALLY_FILLED) {
+             log.debug("Idempotency: skipping partial fill for orderId={} status={}", orderId, order.getStatus());
+             return;
+         }
+         transitionState(order, order.getStatus(), OrderStatus.PARTIALLY_FILLED, TRIGGERED_BY_EXECUTION);
+         evictRedisOrderState(orderId);
+         log.info("Order PARTIALLY_FILLED: orderId={}", orderId);
+     }
+ 
++    /**
++     * Moves an order to REJECTED after execution-service rejects the fill.
++     * No-op when the order is already terminal (idempotent consumer).
++     */
+     @Transactional
+     public void transitionOnExecutionRejected(UUID orderId) {
+         Order order = orderRepository.findById(orderId)
+                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+         if (EXECUTION_TERMINAL_STATES.contains(order.getStatus())) {
+             log.warn("Idempotency: order already terminal: orderId={} status={}", orderId, order.getStatus());
+             return;
+         }
+         transitionState(order, order.getStatus(), OrderStatus.REJECTED, TRIGGERED_BY_EXECUTION);
+         evictRedisOrderState(orderId);
+         log.info("Order REJECTED by execution: orderId={}", orderId);
+     }

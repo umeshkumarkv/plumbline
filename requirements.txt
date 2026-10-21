@@ -1,0 +1,3 @@
+# The only Python packages the guardrails need (python3 >= 3.10, standard library otherwise)
+pyyaml==6.0.2
+semgrep==1.180.0   # code gates only

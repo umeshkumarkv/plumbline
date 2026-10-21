@@ -1,0 +1,40 @@
+{
+  "R669": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §10 / §12 (money correctness)", "evidence": "BigDecimal totalEquity = client.getCashBalance()\n                .add(totalMarketValue)\n                .add(totalUnrealisedPnL)", "reason": "Market value already embeds unrealised P&L (qty*currentPrice), so adding totalUnrealisedPnL double-counts it and overstates/understates client equity; equity = cash + market value (test does not assert totalEquity)."}
+  ]},
+  "R687": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §6 Level 2 check #13 (BUY buyingPower >= orderValue); client-service §11 buyingPower = cashBalance - reservedCash", "evidence": "BigDecimal pendingSellProceeds = orderRepository.sumOpenSellOrderValues(clientId, openStatuses);\n...\n                .subtract(committedBuy)\n                .add(pendingSellProceeds)", "reason": "Credits proceeds of unfilled (possibly never-filled) SELL and SHORT_SELL orders as available cash, inflating buying power so BUY orders pass check #13 without settled funds."},
+    {"severity": "minor", "rule": "CLAUDE.md §10 / §15 (unit tests for business logic)", "evidence": "+public class BuyingPowerCalculator {", "reason": "New buying-power business logic is introduced with no unit tests."}
+  ]},
+  "R688": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §13a / §13f (enums stored as STRING, never ORDINAL)", "evidence": "@Enumerated\n    @Column(name = \"severity\", nullable = false)\n    private WarningSeverity severity;", "reason": "Bare @Enumerated defaults to EnumType.ORDINAL, which breaks on enum reorder."},
+    {"severity": "major", "rule": "CLAUDE.md §13a / §13f (migrations aligned with STRING enums)", "evidence": "ADD COLUMN IF NOT EXISTS severity SMALLINT NOT NULL DEFAULT 0;", "reason": "Migration bakes in an ordinal SMALLINT column (default 0 = LOW) and backfills existing rows with a positional value instead of a VARCHAR enum name."}
+  ]},
+  "R701": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §5/§10 data integrity; client-service §10 (holdings consistency)", "evidence": "public Map<String, Object> journalPosition(UUID sourceClientId, UUID targetClientId,\n...\n        holdingRepository.save(source);\n        upsertHolding(targetClientId, symbol, quantity, source.getAvgPrice());", "reason": "Multi-row position transfer is not @Transactional, so a failure after debiting the source leaves shares destroyed (and concurrent journals/fills can race on the same holding)."},
+    {"severity": "minor", "rule": "CLAUDE.md §13g (service returns DTOs) / §4 dto.request", "evidence": "return Map.of(\"sourceClientId\", sourceClientId, \"targetClientId\", targetClientId,", "reason": "Service returns an untyped Map and the POST takes business inputs as query params instead of a Request/Response DTO."},
+    {"severity": "minor", "rule": "CLAUDE.md §10 / §15 (unit + integration tests)", "evidence": "@PostMapping(\"/{id}/position-journal\")", "reason": "New endpoint and holdings-mutating business logic added with no unit or MockMvc tests."}
+  ]},
+  "R708": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §14 (role enforcement) / §6 check #14 (marginCallActive gate)", "evidence": "if (\"PATCH\".equalsIgnoreCase(method) && path.endsWith(\"/margin-call\")) {\n            return !\"VIEWER\".equals(role);", "reason": "Deny-list authorization lets TRADER (and SYSTEM) clear a client's margin call flag, letting a trader bypass Level 2 check #14 and resume BUYs."},
+    {"severity": "minor", "rule": "CLAUDE.md §10 / §15 (unit + integration tests)", "evidence": "public ClientProfileResponse updateMarginCall(UUID id, Boolean marginCallActive) {", "reason": "New state-changing endpoint and service logic shipped without unit or MockMvc/filter tests."}
+  ]},
+  "R714": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §9 (configurable risk rule correctness)", "evidence": "true, 5.00, 'PERCENT', 'REJECT', 25, NOW())\n...\n        if (deviation.compareTo(threshold) > 0) {", "reason": "Rule compares a fractional deviation (e.g. 0.05) against threshold 5.00 (existing PERCENT rules store fractions like 0.10), so the collar only triggers at >500% deviation and is effectively inert."},
+    {"severity": "major", "rule": "CLAUDE.md §15 (unit tests for all risk rules)", "evidence": "+public class LimitPriceCollarRule implements RiskRule {", "reason": "New risk rule added with no LimitPriceCollarRuleTest, unlike every other rule."}
+  ]},
+  "R724": {"violation": true, "findings": [
+    {"severity": "blocker", "rule": "CLAUDE.md §10 / §13a (never float/double/long for money)", "evidence": "long buyCents = 0L;\n...\n        BigDecimal buyNotional = BigDecimal.valueOf(buyCents / 100.0).setScale(2, RoundingMode.HALF_UP);", "reason": "Monetary notionals are accumulated in long cents and converted via double division, violating BigDecimal-only money handling and risking precision loss."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 (unit + integration tests)", "evidence": "@GetMapping(\"/open-exposure\")", "reason": "New endpoint and aggregation logic added without unit or MockMvc tests."}
+  ]},
+  "R733": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §4 (controller: REST endpoints only, no business logic) / §13e layering", "evidence": "private final ExecutionRepository executionRepository;\n...\n        BigDecimal vwap = notional.divide(BigDecimal.valueOf(totalQty), 4, RoundingMode.HALF_UP);", "reason": "Controller injects the repository directly and performs the VWAP query and computation, bypassing the service layer."},
+    {"severity": "minor", "rule": "CLAUDE.md §10 / §15 (unit tests for business logic)", "evidence": "@GetMapping(\"/symbol/{symbol}/vwap\")", "reason": "VWAP calculation and new endpoint added without unit or MockMvc tests."}
+  ]},
+  "R737": {"violation": true, "findings": [
+    {"severity": "major", "rule": "CLAUDE.md §5 (transitions timestamped in UTC) / §13a (UTC timestamps use Instant)", "evidence": "private java.time.LocalDateTime riskCheckedAt;\n...\n        LocalDateTime now = LocalDateTime.now();", "reason": "Milestone timestamps use zone-less LocalDateTime captured in the JVM default zone instead of UTC Instant, making latency/ordering data ambiguous across hosts and DST."},
+    {"severity": "minor", "rule": "CLAUDE.md §13a (UTC timestamps) / migrations", "evidence": "ADD COLUMN IF NOT EXISTS risk_checked_at       TIMESTAMP NULL,", "reason": "Migration uses TIMESTAMP without time zone, unlike UTC Instant columns, persisting the same ambiguity."},
+    {"severity": "minor", "rule": "CLAUDE.md §15 (unit tests for all state transitions)", "evidence": "private void stampMilestone(Order order, OrderStatus to) {", "reason": "State-transition side effects changed without updated unit tests."}
+  ]},
+  "R788": {"violation": false, "findings": []}
+}
