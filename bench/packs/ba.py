@@ -36,9 +36,9 @@ def run(r, ctx):
     r.add("BA-5", "Story points one of 1/2/3/5/8", val in (1, 2, 3, 5, 8), f"found: {val}")
 
     tc = section(t, "tech constraints")
-    req = {"service + port": r"Service\s*:\s*[\w\-]+.*port\s*\d+", "branch ai/SCRUM-{n}-{slug}": r"ai/[A-Z]+-\d+-[\w\-]+",
+    req = {"service + port": r"Service\s*:\s*[\w\-]+.*port\s*\d+", "branch ai/SCRUM-{n}-{slug}": r"ai/[A-Z][A-Z0-9_]*-\d+-[\w\-]+",
            "PR target develop": r"PR target\s*:\s*develop", "CLAUDE.md read instruction": r"Read CLAUDE\.md",
-           "blocked-by line": r"Blocked by\s*:\s*(?:[A-Z]+-\d+|None)"}
+           "blocked-by line": r"Blocked by\s*:\s*(?:[A-Z][A-Z0-9_]*-\d+|None)"}
     miss = [k for k, p in req.items() if not re.search(p, tc, re.I)]
     r.add("BA-6", "Tech constraints complete", not miss, f"missing: {miss}" if miss else "5/5")
 

@@ -6,5 +6,17 @@ units:
 #  - {name: billing, path: modules/billing, kind: service}
 
 # Domain rule pack the judge applies (business rules of THIS domain). `none` for a repo without one.
-# Without project.yaml the broker-dealer pack (.plumbline/packs/domain-rules/rules.yaml) is used.
+# The broker-dealer example pack: .plumbline/packs/domain-rules/rules.yaml (init.py --domain broker-dealer).
 domain_pack: none
+
+# Gate selection (default: the generic set below).
+gates:
+  semgrep: [java-generic.yml]
+  checks: [structure_check]
+
+# Project settings, rendered into the installed agent files. Edit, then re-run init.py.
+jira_project: PROJ                   # JIRA project key (tickets look like PROJ-123)
+confluence_space: PROJ               # Confluence space for test plans, reports and runbooks
+api_url: http://localhost:8080       # where QA reaches the running backend (or its gateway)
+frontend_url: http://localhost:4200  # where QA reaches the running frontend
+login_path: /api/v1/auth/login       # QA login endpoint for the demo user

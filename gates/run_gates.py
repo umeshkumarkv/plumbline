@@ -7,6 +7,7 @@ existing violations (recorded in the baseline) are reported as debt; any NEW vio
   run_gates.py <repo> --baseline gates/baseline.json            # check (exit 1 on new findings)
   run_gates.py <repo> --write-baseline gates/baseline.json      # record current debt
   run_gates.py <repo> --json                                     # machine-readable findings
+  run_gates.py <repo> --all-packs                                # every pack/check (self-tests, eval harness)
 
 Fingerprint = rule + path + whitespace-normalised source line, so findings survive
 line-number shifts but a changed offending line counts as new.
@@ -23,6 +24,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "impact"))
 import layout  # noqa: E402
 RULES = HERE / "semgrep"          # rule packs (*.yml)
+ALL_PACKS = False
+GENERIC_PACKS, GENERIC_CHECKS = ["java-generic.yml"], ["structure_check"]   # any Spring/Java repository
 ALL_CHECKS = {"structure_check": HERE / "checks" / "structure_check.py", "domain_check": HERE / "checks" / "domain_check.py"}
 # The configuration that judges a repository is the one next to THIS script (in CI: the base branch's copy), never the
 # pull request's: a PR cannot switch gates off or redeclare units.
@@ -31,15 +34,16 @@ layout.TRUSTED_CONFIG = str(CONFIG)   # missing file = auto-detect; never fall b
 
 
 def gate_config():
-    """`gates:` in project.yaml — {semgrep: [packs], checks: [names]}. Without it, every pack and check (broker-dealer)."""
+    """`gates:` in project.yaml — {semgrep: [packs], checks: [names]}. Without it: the generic set only."""
+    if ALL_PACKS:                    # self-tests and the eval harness: every pack and check in this folder
+        return sorted(RULES.glob("*.yml")), list(ALL_CHECKS.values())
     g = (layout.project(config=CONFIG) or {}).get("gates") or {}
-    packs = g.get("semgrep")
-    files = sorted(RULES.glob("*.yml")) if packs is None else [RULES / x for x in packs]
+    packs = g.get("semgrep", GENERIC_PACKS)
+    files = [RULES / x for x in packs]
     missing = [str(f) for f in files if not f.is_file()]
     if missing:
         raise SystemExit(f"gates: rule pack(s) not found: {missing}")
-    checks = g.get("checks")
-    names = list(ALL_CHECKS) if checks is None else checks
+    names = g.get("checks", GENERIC_CHECKS)
     unknown = [n for n in names if n not in ALL_CHECKS]
     if unknown:
         raise SystemExit(f"gates: unknown check(s) {unknown}; known: {list(ALL_CHECKS)}")
@@ -237,7 +241,13 @@ def main():
     ap.add_argument("--write-baseline")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--changed-from", help="only gate services changed since this git ref (large monorepos)")
+    ap.add_argument("--all-packs", action="store_true", help="every Semgrep pack and check, ignoring project.yaml")
     a = ap.parse_args()
+    global ALL_PACKS
+    ALL_PACKS = a.all_packs
+    if a.baseline and not Path(a.baseline).is_file():
+        print(f"gates: baseline {a.baseline} not found — create it: python3 .plumbline/init.py --rebaseline, then commit")
+        return 2
     repo = Path(a.repo).resolve()
     units = changed_units(repo, a.changed_from) if a.changed_from else None
     if units is not None and not units:

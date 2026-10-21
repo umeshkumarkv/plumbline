@@ -6,7 +6,7 @@ On persistent violations after 3 rounds, escalates to human.
 
 ## Usage
 ```
-/plumbline-code-review SCRUM-{n}
+/plumbline-code-review {{JIRA_KEY}}-{n}
 /plumbline-code-review pr:{n}
 ```
 
@@ -78,7 +78,7 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : SCRUM-{n}
+  Ticket : {{JIRA_KEY}}-{n}
   Action : {add label "plumbline-code-review-approved" | transition to "In Progress" | etc.}
   Reason : {one-line reason}
 
@@ -99,7 +99,7 @@ START_TIME=$(date +%s)
 3. Read `services/{service}/CLAUDE.md`
 4. Fetch the PR number if not provided:
    ```bash
-   gh pr list --search "SCRUM-{n}" --json number,title,headRefName,reviewDecision
+   gh pr list --search "{{JIRA_KEY}}-{n}" --json number,title,headRefName,reviewDecision
    ```
 5. Check out the PR head in a clean, isolated worktree and pin the reviewed SHA. Everything below (gates, artifact,
    critic, status) uses this worktree and this SHA, never your local working tree:
@@ -124,9 +124,9 @@ START_TIME=$(date +%s)
 
 ### Determine Current Round
 
-Read all JIRA comments on SCRUM-{n} to find prior code-review-eval-loop comments:
+Read all JIRA comments on {{JIRA_KEY}}-{n} to find prior code-review-eval-loop comments:
 ```
-getJiraIssue(issueIdOrKey: "SCRUM-{n}")
+getJiraIssue(issueIdOrKey: "{{JIRA_KEY}}-{n}")
 ```
 
 Search comments for the round marker `[plumbline:code-review pr=#{pr-number} ` (every round comment starts with it — see Phases 3, 4 and Escalation). Do not match on free text.
@@ -146,7 +146,7 @@ Print:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CODE REVIEW EVAL LOOP — Round {round} / {max_rounds}
-Story : SCRUM-{n} — {summary}
+Story : {{JIRA_KEY}}-{n} — {summary}
 PR    : #{pr-number} — {pr-title}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
@@ -238,7 +238,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -279,7 +279,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 The categories below are the critic's rubric (`code-review 12-category`). Run the critic in a context that has never seen the Dev Eval Loop session for this ticket. This agent only verifies evidence and posts the review.
 
@@ -421,7 +421,7 @@ Apply the **GitHub Write Guard**, then post the verdict. The bot never approves 
 gh api repos/{owner}/{repo}/statuses/$REVIEWED_SHA \
   -f state=success -f context=plumbline/code-review -f description="All 12 categories pass (round {round})"
 gh pr review {pr-number} --comment \
-  --body "## Code Review Eval Loop — SCRUM-{n} — APPROVED
+  --body "## Code Review Eval Loop — {{JIRA_KEY}}-{n} — APPROVED
 
 ### Results by Category
 
@@ -452,7 +452,7 @@ Add JIRA comment:
 [plumbline:code-review pr=#{pr-number} round={round}/{max_rounds} verdict=APPROVED]
 Code Review Eval Loop ({date}): PR #{pr-number} APPROVED — Round {round}/{max_rounds}.
 All 12 categories passed. Ready for QA.
-Run: /plumbline-qa SCRUM-{n}
+Run: /plumbline-qa {{JIRA_KEY}}-{n}
 ```
 
 Apply the **JIRA Write Guard**, then add label `plumbline-code-review-approved` to the ticket.
@@ -473,7 +473,7 @@ Apply the **GitHub Write Guard**, then post the verdict as a failing `plumbline/
 gh api repos/{owner}/{repo}/statuses/$REVIEWED_SHA \
   -f state=failure -f context=plumbline/code-review -f description="{n} violation(s), round {round}/{max_rounds}"
 gh pr review {pr-number} --comment \
-  --body "## Code Review Eval Loop — SCRUM-{n} — Round {round}/{max_rounds}
+  --body "## Code Review Eval Loop — {{JIRA_KEY}}-{n} — Round {round}/{max_rounds}
 
 ### Results by Category
 
@@ -483,7 +483,7 @@ gh pr review {pr-number} --comment \
 
 ### Decision
 REQUEST CHANGES — {n} violation(s) found. Each is listed above in this review.
-Fix all violations on branch {branch-name} and re-run /plumbline-code-review SCRUM-{n}.
+Fix all violations on branch {branch-name} and re-run /plumbline-code-review {{JIRA_KEY}}-{n}.
 
 This is Round {round} of {max_rounds}. Escalation to human required after Round {max_rounds}."
 ```
@@ -497,7 +497,7 @@ PR #{pr-number} — {n} violation(s) found.
 Violations:
 {numbered list with file:line evidence}
 
-Dev action: Fix violations on branch {branch-name} and re-run /plumbline-code-review SCRUM-{n}.
+Dev action: Fix violations on branch {branch-name} and re-run /plumbline-code-review {{JIRA_KEY}}-{n}.
 ```
 
 Apply the **JIRA Write Guard**, then transition ticket: In Review → **In Progress**
@@ -509,7 +509,7 @@ Apply the **JIRA Write Guard**, then transition ticket: In Review → **In Progr
 First return to the repo root and remove the review worktree: `git worktree remove --force .plumbline/run/review/pr-{pr-number}`.
 
 ```
-CODE REVIEW EVAL LOOP — SCRUM-{n} — Round {round}
+CODE REVIEW EVAL LOOP — {{JIRA_KEY}}-{n} — Round {round}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PR       : #{pr-number} — {pr-title}
 Verdict  : {APPROVED | REQUEST CHANGES — {n} violation(s)}
@@ -517,7 +517,7 @@ Categories: {n} / 12 passed
 Round    : {round} of {max_rounds}
 {if violations: Top categories with issues: {comma-separated names}}
 
-Next step: {/plumbline-qa SCRUM-{n} | Fix violations and re-run /plumbline-code-review SCRUM-{n}}
+Next step: {/plumbline-qa {{JIRA_KEY}}-{n} | Fix violations and re-run /plumbline-code-review {{JIRA_KEY}}-{n}}
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 Tokens consumed: {session input + output tokens from the Claude Code usage counter if visible}
@@ -530,7 +530,7 @@ Tokens consumed: {session input + output tokens from the Claude Code usage count
 ```
 CODE REVIEW EVAL LOOP — ESCALATION REQUIRED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SCRUM-{n} has persistent code violations after {max_rounds} review rounds.
+{{JIRA_KEY}}-{n} has persistent code violations after {max_rounds} review rounds.
 
 Violations still present after Round {max_rounds}:
 {numbered list with file:line evidence}
@@ -544,13 +544,13 @@ Human action required:
 1. Review the persistent violations above
 2. Determine if they are genuine violations or if CLAUDE.md needs updating
 3. Either fix manually or update CLAUDE.md to reflect a new approved pattern
-4. A human posts `[plumbline:code-review reset pr=#{pr-number}]` on the ticket (agents never do), then re-run /plumbline-code-review SCRUM-{n}
+4. A human posts `[plumbline:code-review reset pr=#{pr-number}]` on the ticket (agents never do), then re-run /plumbline-code-review {{JIRA_KEY}}-{n}
 ```
 
 Post to JIRA as a comment (informational — no approval needed under the Plumbline write policy; any label or transition that follows still needs the Write Guard):
 ```
 [plumbline:code-review pr=#{pr-number} round={round}/{max_rounds} verdict=ESCALATED]
-Code Review Eval Loop ESCALATED — SCRUM-{n}
+Code Review Eval Loop ESCALATED — {{JIRA_KEY}}-{n}
 Failed after 3 rounds. Persistent violations:
 {violations list}
 Human review required before any further action.

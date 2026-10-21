@@ -6,7 +6,7 @@ On persistent gaps after 3 attempts, escalates to BA Agent.
 
 ## Usage
 ```
-/plumbline-arch SCRUM-{n}
+/plumbline-arch {{JIRA_KEY}}-{n}
 ```
 
 ## How It Works
@@ -65,7 +65,7 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : SCRUM-{n}
+  Ticket : {{JIRA_KEY}}-{n}
   Action : {add label "plumbline-arch-approved" | add label "plumbline-arch-blocked" | etc.}
   Reason : {one-line reason}
 
@@ -82,7 +82,7 @@ Record the session start time before any work begins:
 START_TIME=$(date +%s)
 ```
 
-1. Fetch the JIRA story: `getJiraIssue(SCRUM-{n})`
+1. Fetch the JIRA story: `getJiraIssue({{JIRA_KEY}}-{n})`
 2. Verify the story has label `plumbline-dor-ready` or that ACs exist — if neither, STOP: "Run /plumbline-ba first."
 3. Read root `CLAUDE.md` fully (all sections)
 4. Identify the service from the ticket
@@ -112,7 +112,7 @@ Print:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ARCH EVAL LOOP — Attempt {attempt} / {max_attempts}
-Story : SCRUM-{n} — {summary}
+Story : {{JIRA_KEY}}-{n} — {summary}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -208,7 +208,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -250,7 +250,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 Rubric `arch DoR 15-item`: the critic marks [x] PASS or [ ] GAP with specific reason for each GAP.
 
@@ -357,14 +357,14 @@ DoR SCORECARD — Attempt {attempt}
 
 ## Phase 1 — JIRA Update (reached only on PASS)
 
-1. Post full technical design as a JIRA comment on SCRUM-{n}:
+1. Post full technical design as a JIRA comment on {{JIRA_KEY}}-{n}:
 ```
 Arch Eval Loop ({date}): Technical design complete — passed DoR on attempt {attempt}/{max_attempts}.
 
 {paste the approved design from `.plumbline/run/review/{ticket}-design.md`}
 
 DEFINITION OF READY: ALL 15 CHECKS PASSED
-Story is ready for development. Run: /plumbline-dev SCRUM-{n}
+Story is ready for development. Run: /plumbline-dev {{JIRA_KEY}}-{n}
 ```
 
 2. Apply the JIRA Write Guard, then add label `plumbline-arch-approved` to the ticket.
@@ -374,7 +374,7 @@ Story is ready for development. Run: /plumbline-dev SCRUM-{n}
 ## Phase 2 — Summary to User
 
 ```
-ARCH EVAL LOOP — SCRUM-{n} COMPLETE
+ARCH EVAL LOOP — {{JIRA_KEY}}-{n} COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Story      : {summary}
 Service    : {service-name}
@@ -391,7 +391,7 @@ DESIGN COMPLETE
 
 DoR STATUS : APPROVED (label: plumbline-arch-approved)
 
-Next step  : /plumbline-dev SCRUM-{n}
+Next step  : /plumbline-dev {{JIRA_KEY}}-{n}
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 Tokens consumed: {session input + output tokens from the Claude Code usage counter if visible}
@@ -404,7 +404,7 @@ Tokens consumed: {session input + output tokens from the Claude Code usage count
 ```
 ARCH EVAL LOOP — ESCALATION REQUIRED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SCRUM-{n} has DoR gaps that could not be resolved in {max_attempts} design attempts.
+{{JIRA_KEY}}-{n} has DoR gaps that could not be resolved in {max_attempts} design attempts.
 This indicates a story-level problem, not a design problem.
 
 Persistent gaps:
@@ -416,7 +416,7 @@ that the Architect cannot invent. A BA Agent revision is required.
 Recommended action:
 1. Run /plumbline-ba epic:{epic-key} to revisit the story
 2. Specifically address: {list of gap areas}
-3. Re-run /plumbline-arch SCRUM-{n} after story is updated
+3. Re-run /plumbline-arch {{JIRA_KEY}}-{n} after story is updated
 ```
 
 Post to JIRA as a comment (informational — no approval needed under the Plumbline write policy; any label or transition that follows still needs the Write Guard):

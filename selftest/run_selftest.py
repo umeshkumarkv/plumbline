@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FIX = ROOT / "selftest" / "fixture"
 
-out = subprocess.run([sys.executable, str(ROOT / "gates" / "run_gates.py"), str(FIX), "--json"],
+out = subprocess.run([sys.executable, str(ROOT / "gates" / "run_gates.py"), str(FIX), "--json", "--all-packs"],
                      capture_output=True, text=True)
 new = json.loads(out.stdout)["new"]
 got = {(f["path"], f["line"], f["rule"]) for f in new}
@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory() as td:
     work = Path(td) / "repo"
     shutil.copytree(FIX, work)
     base = Path(td) / "baseline.json"
-    gates = [sys.executable, str(ROOT / "gates" / "run_gates.py"), str(work)]
+    gates = [sys.executable, str(ROOT / "gates" / "run_gates.py"), str(work), "--all-packs"]
     subprocess.run(gates + ["--write-baseline", str(base)], capture_output=True, check=True)
     ok_clean = subprocess.run(gates + ["--baseline", str(base)], capture_output=True).returncode == 0
     svc = work / "services/order-service/src/main/java/com/brokerdealer/orderservice/service/BadService.java"
@@ -104,7 +104,7 @@ with tempfile.TemporaryDirectory() as td:
     shutil.copytree(FIX, work)
     f = work / "services/order-service/src/main/java/com/brokerdealer/orderservice/service/BadService.java"
     f.write_bytes(f.read_text().encode("utf-16-le"))
-    r = subprocess.run([sys.executable, str(ROOT / "gates" / "run_gates.py"), str(work)], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "gates" / "run_gates.py"), str(work), "--all-packs"], capture_output=True, text=True)
     ok = r.returncode != 0 and "not plain UTF-8" in (r.stdout + r.stderr)
     print(f"non-UTF-8 source fails closed: {ok}")
     fails += not ok

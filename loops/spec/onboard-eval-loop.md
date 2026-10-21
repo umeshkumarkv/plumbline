@@ -15,14 +15,14 @@ Max 3 attempts on the service docs loop. Gate: `plumbline-onboard-approved` labe
 
 ## Usage
 ```
-/plumbline-onboard SCRUM-{n}           ← JIRA story describes the service to onboard
+/plumbline-onboard {{JIRA_KEY}}-{n}           ← JIRA story describes the service to onboard
 /plumbline-onboard service:{name}      ← direct service name, no JIRA story
 /plumbline-onboard service:all         ← auto-discover all modules, run per-module CLAUDE.md
                                           generation for each, then run global consistency check
 ```
 
 <!-- @copilot -->
-Target: ${input:target:SCRUM-n | service:name | service:all}
+Target: ${input:target:{{JIRA_KEY}}-n | service:name | service:all}
 
 <!-- @end -->
 **Output:** the unit's CLAUDE.md — `services/{name}/CLAUDE.md`, `{name}/CLAUDE.md`, or `src/CLAUDE.md` for an app at the repository root — merged, never overwritten. The root CLAUDE.md is the master file.
@@ -126,7 +126,7 @@ Root CLAUDE.md sync always runs after the loop passes — it is not retried.
 
 - **Mode:** run in Copilot Chat **Agent** mode. Ask/Edit modes cannot call tools.
 - **Subagents:** Stage 1 (originator) and Stage 3 (judge) run as isolated subagents from `.github/agents/`. They need a VS Code with custom-agent subagents and the **Run Subagent** tool (`agent/runSubagent`) enabled in this chat's tool picker. If it is missing, STOP before Stage 1 and tell the user (never do the originator's work in this chat); the judge has a new-chat fallback (`/plumbline-critic`).
-- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `SCRUM-{n}`, `pr:{n}`, etc.
+- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `{{JIRA_KEY}}-{n}`, `pr:{n}`, etc.
 - **Atlassian tools:** before the first JIRA or Confluence call, call `getAccessibleAtlassianResources` once, keep the `cloudId`, and pass it on every Atlassian call. Tool names may carry a server prefix (e.g. `atlassian_getJiraIssue`) — use the tool whose name ends with the name written in this spec.
 - **Approval gates:** wherever this spec says "Write Guard", print the approval block, then END YOUR TURN and wait for the user's next message. Only an explicit "yes" from the user counts. Copilot's own tool-confirmation dialog is NOT the approval.
 - **Project rules:** Copilot does not load `CLAUDE.md` automatically. When this spec says read `CLAUDE.md` or `services/{service}/CLAUDE.md`, open and read the file.
@@ -435,7 +435,7 @@ Consumes: {topic} → what it does on receive → idempotency check
 
 #### 4. Business Rules
 Numbered list of all business rules evidenced in the code.
-Each rule must trace to a specific class or migration (e.g. "Rule 3: SCRUM-48, MarketDataClient").
+Each rule must trace to a specific class or migration (e.g. "Rule 3: {{JIRA_KEY}}-48, MarketDataClient").
 
 #### 5. Out of Scope
 What this service explicitly does NOT do, per CLAUDE.md Section 18 or domain boundaries.
@@ -529,7 +529,7 @@ Known Tech Debt line) — never invent what they do. Routes of this app (pages) 
 
 | Variable | Required | Purpose | Example |
 |----------|----------|---------|---------|
-| {VITE_API_URL} | Yes | Backend base URL | http://localhost:8080 |
+| {VITE_API_URL} | Yes | Backend base URL | {{API_URL}} |
 
 ---
 
@@ -883,8 +883,7 @@ any CLAUDE.md, and never remove a line outside the `onboard` block.
 The root CLAUDE.md is the master file: the solution and its architecture. Keep everything people wrote there; the
 generated part is the `solution` block.
 
-**If the root CLAUDE.md already defines the solution** (a service/unit table, the topics, the cache strategy — as in
-broker-dealer), check drift for this unit only:
+**If the root CLAUDE.md already defines the solution** (a service/unit table, the topics, the cache strategy), check drift for this unit only:
 - Unit row: port, "owns" (unit CLAUDE.md purpose) and "must never" match the unit's CLAUDE.md.
 - Kafka topics this unit produces/consumes are in the topic table, with correct producer/consumer; nothing stale.
 - Redis keys this unit owns are in the cache table, with TTL and invalidation; nothing stale.
@@ -933,7 +932,7 @@ Known Tech Debt Documented
   {list — or "None"}
 
 Next Step
-  Run /plumbline-ba SCRUM-{n} to begin story decomposition now that the service is documented.
+  Run /plumbline-ba {{JIRA_KEY}}-{n} to begin story decomposition now that the service is documented.
 
 Execution time : {elapsed}
 ```
@@ -999,7 +998,7 @@ grep -r "groupId" services/*/src/main --include="*.java" -h \
   | grep -oE '"[a-z-.]+-group"' | sort -u
 ```
 
-Produce this matrix:
+Produce this matrix (the rows are an illustration from an order-management system — list this repository's topics):
 
 ```
 KAFKA CONSISTENCY MATRIX
@@ -1056,7 +1055,7 @@ grep -r "api/v1" frontend/src --include="*.ts" --include="*.tsx" -h 2>/dev/null 
   | grep -oE "/api/v1/[a-zA-Z0-9/_-]+" | sort -u
 ```
 
-Cross-reference each frontend path against the service CLAUDE.md route tables.
+Cross-reference each frontend path against the service CLAUDE.md route tables (example row shown).
 
 ```
 FRONTEND ROUTE COVERAGE

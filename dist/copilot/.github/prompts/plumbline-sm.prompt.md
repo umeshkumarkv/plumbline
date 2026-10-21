@@ -12,11 +12,11 @@ Escalates to human for unresolved blockers or DoD gate failures.
 ## Usage
 ```
 /plumbline-sm                — daily standup health check
-/plumbline-sm SCRUM-{n}      — single-ticket health check + DoD gate
+/plumbline-sm {{JIRA_KEY}}-{n}      — single-ticket health check + DoD gate
 /plumbline-sm release-notes  — sprint-close: Release Notes → Confluence + Go/No-Go pack
 ```
 
-Target: ${input:target:daily | SCRUM-n | release-notes}
+Target: ${input:target:daily | {{JIRA_KEY}}-n | release-notes}
 
 ## How It Works (daily mode)
 
@@ -38,7 +38,7 @@ After attempt 3 without PASS → ESCALATE → human (unresolved flags) (full att
 
 - **Mode:** run in Copilot Chat **Agent** mode. Ask/Edit modes cannot call tools.
 - **Subagents:** Stage 1 (originator) and Stage 3 (judge) run as isolated subagents from `.github/agents/`. They need a VS Code with custom-agent subagents and the **Run Subagent** tool (`agent/runSubagent`) enabled in this chat's tool picker. If it is missing, STOP before Stage 1 and tell the user (never do the originator's work in this chat); the judge has a new-chat fallback (`/plumbline-critic`).
-- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `SCRUM-{n}`, `pr:{n}`, etc.
+- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `{{JIRA_KEY}}-{n}`, `pr:{n}`, etc.
 - **Atlassian tools:** before the first JIRA or Confluence call, call `getAccessibleAtlassianResources` once, keep the `cloudId`, and pass it on every Atlassian call. Tool names may carry a server prefix (e.g. `atlassian_getJiraIssue`) — use the tool whose name ends with the name written in this spec.
 - **Approval gates:** wherever this spec says "Write Guard", print the approval block, then END YOUR TURN and wait for the user's next message. Only an explicit "yes" from the user counts. Copilot's own tool-confirmation dialog is NOT the approval.
 - **Project rules:** Copilot does not load `CLAUDE.md` automatically. When this spec says read `CLAUDE.md` or `services/{service}/CLAUDE.md`, open and read the file.
@@ -73,7 +73,7 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : SCRUM-{n}
+  Ticket : {{JIRA_KEY}}-{n}
   Action : {transition to "Done" | add label | etc.}
   Reason : {one-line reason}
 
@@ -94,7 +94,7 @@ START_TIME=$(date +%s)
 
 ```
 searchJiraIssuesUsingJql(
-  "project = SCRUM AND sprint in openSprints() ORDER BY status ASC",
+  "project = {{JIRA_KEY}} AND sprint in openSprints() ORDER BY status ASC",
   fields: ["summary", "status", "assignee", "created", "updated", "blockedBy", "acceptanceCriteria", "labels"]
 )
 ```
@@ -105,14 +105,14 @@ Fetch the previous sprint's Done count for velocity comparison.
 
 For every In Review ticket, fetch its PR state from GitHub (the originator has no GitHub access):
 ```bash
-gh pr list --search "SCRUM-{n}" --json number,reviewDecision,headRefOid,mergedAt,state
+gh pr list --search "{{JIRA_KEY}}-{n}" --json number,reviewDecision,headRefOid,mergedAt,state
 gh api repos/{owner}/{repo}/commits/{headRefOid}/status --jq '[.statuses[]|select(.context=="plumbline/code-review")|.state][0]'
 ```
 Write all of it, **unedited**, to `.plumbline/run/review/sprint-{sprint}-facts.json`. This file is the originator's only input
 and the benchmark's ground truth:
 ```json
-{"today": "YYYY-MM-DD", "previous_done": 0, "issues": {"SCRUM-1": {"status": "In Progress", "assignee": null,
-  "updated": "YYYY-MM-DD", "points": 3, "has_ac": true, "blocked_by": ["SCRUM-0"], "pr": 42,
+{"today": "YYYY-MM-DD", "previous_done": 0, "issues": {"{{JIRA_KEY}}-1": {"status": "In Progress", "assignee": null,
+  "updated": "YYYY-MM-DD", "points": 3, "has_ac": true, "blocked_by": ["{{JIRA_KEY}}-0"], "pr": 42,
   "pr_state": {"reviewDecision": "APPROVED", "code_review_status": "success", "merged": false}}}}
 ```
 
@@ -237,7 +237,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -287,7 +287,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 Artifact: the standup report. Rubric `sm report`:
 ```
@@ -401,14 +401,14 @@ Print the partial standup report with INCOMPLETE items clearly marked.
 
 ---
 
-## Single-Ticket Mode — /plumbline-sm SCRUM-{n}
+## Single-Ticket Mode — /plumbline-sm {{JIRA_KEY}}-{n}
 
 Runs checks 1–6 against one specific ticket. No eval loop — single pass only (velocity requires sprint-wide data).
 
 ### Phase 0 — Fetch Ticket
 
 ```
-getJiraIssue(issueIdOrKey: "SCRUM-{n}", fields: [...])
+getJiraIssue(issueIdOrKey: "{{JIRA_KEY}}-{n}", fields: [...])
 ```
 
 ### Phase 1 — Run Applicable Checks
@@ -427,9 +427,9 @@ For DoD gate, run the full 7-item verification (same as daily mode Check 6).
 ### Phase 2 — Single-Ticket Report
 
 ```
-SM Eval Loop — SCRUM-{n} — {YYYY-MM-DD}
+SM Eval Loop — {{JIRA_KEY}}-{n} — {YYYY-MM-DD}
 
-Ticket  : SCRUM-{n} {summary}
+Ticket  : {{JIRA_KEY}}-{n} {summary}
 Status  : {status}
 Assignee: {name or UNASSIGNED}
 Age     : {n} day(s) in current status
@@ -437,7 +437,7 @@ Age     : {n} day(s) in current status
 CHECKS
   Stuck In Progress  : {OK | AT RISK — {n} days | N/A}
   Stuck In Review    : {OK | NEEDS ATTENTION — {n} days | N/A}
-  Blocked            : {None | BLOCKED by SCRUM-{x} ({blocker status})}
+  Blocked            : {None | BLOCKED by {{JIRA_KEY}}-{x} ({blocker status})}
   Assignee           : {OK | UNASSIGNED}
   Acceptance Criteria: {Present | MISSING}
   DoD Gate           : {PASSED | FAILED — missing: [...] | N/A (not In Review)}
@@ -451,13 +451,13 @@ ACTIONS TAKEN
 
 ## Sprint Close Mode — /plumbline-sm release-notes
 
-Run at sprint close after every story has a QA Eval Loop report (`/plumbline-qa SCRUM-{n}`) and after `/plumbline-devops security-report`.
+Run at sprint close after every story has a QA Eval Loop report (`/plumbline-qa {{JIRA_KEY}}-{n}`) and after `/plumbline-devops security-report`.
 Assembles the full release pack for the Go/No-Go meeting. Decision is made by humans.
 
 ### Step 1 — Verify sprint is complete
 ```
 searchJiraIssuesUsingJql(
-  "project = SCRUM AND sprint in openSprints() AND status != Done AND status != 'In Review'"
+  "project = {{JIRA_KEY}} AND sprint in openSprints() AND status != Done AND status != 'In Review'"
 )
 ```
 If any story is In Progress or To Do — STOP.
@@ -472,7 +472,7 @@ Search for:
 ### Step 3 — Publish Release Notes to Confluence
 ```
 createConfluencePage(
-  spaceKey: "SCRUM",
+  spaceKey: "{{CONFLUENCE_SPACE}}",
   parentPageTitle: "Releases",
   title: "Release Notes — {sprint name} — {date}",
   body: {see template below}
@@ -487,7 +487,7 @@ Prepared by: SM Eval Loop · Human sign-off required before deployment
 
 h2. What's New — Stories Delivered
 || Story || Summary || Service || Status ||
-| SCRUM-{n} | {summary} | {service} | Done |
+| {{JIRA_KEY}}-{n} | {summary} | {service} | Done |
 
 h2. Defects Fixed
 {Stories tagged as bug-fix, or "None"}

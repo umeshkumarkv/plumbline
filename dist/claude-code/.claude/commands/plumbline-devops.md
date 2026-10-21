@@ -253,7 +253,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -295,7 +295,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 Artifact: `git diff {last-green-sha}..HEAD` of this fix, written to `.plumbline/run/review/{branch-slug}-devops.diff`. Rubric `devops fix`:
 ```
@@ -420,13 +420,18 @@ source security/tool-versions.env   # defines VERACODE_PIPELINE_SCAN_URL, VERACO
 curl -sSfL "$VERACODE_PIPELINE_SCAN_URL" -o pipeline-scan.zip
 echo "$VERACODE_PIPELINE_SCAN_SHA256  pipeline-scan.zip" | sha256sum -c - || { echo "CHECKSUM MISMATCH — STOP"; exit 1; }
 unzip -o pipeline-scan.zip pipeline-scan.jar
-for service in order-service client-service risk-service execution-service marketdata-service auth-service audit-service notification-service api-gateway; do
+# Every backend unit, from the project layout (services/<name>/, modules, or an app at the root)
+python3 "${PLUMBLINE_HOME:-.plumbline}/impact/layout.py" . | python3 -c 'import json,sys
+[print(u["name"], u["path"]) for u in json.load(sys.stdin) if u["kind"] == "service"]' |
+while read -r name path; do
+  jar=$(ls "$path"/target/*.jar 2>/dev/null | grep -v -- '-plain\.jar$' | head -1)
+  [ -n "$jar" ] || { echo "no jar for $name in $path/target — build it first"; continue; }
   java -jar pipeline-scan.jar \
     --veracode_api_id "$VERACODE_API_ID" \
     --veracode_api_key "$VERACODE_API_KEY" \
-    --file "services/${service}/target/${service}-*.jar" \
+    --file "$jar" \
     --json_output true \
-    --json_output_file "veracode-${service}.json"
+    --json_output_file "veracode-${name}.json"
 done
 ```
 
@@ -438,7 +443,7 @@ echo "$DETECT_JAR_SHA256  detect.jar" | sha256sum -c - || { echo "CHECKSUM MISMA
 java -jar detect.jar \
   --blackduck.url="$BLACKDUCK_URL" \
   --blackduck.api.token="$BLACKDUCK_API_TOKEN" \
-  --detect.project.name="broker-dealer" \
+  --detect.project.name="$(basename "$(git rev-parse --show-toplevel)")" \
   --detect.project.version.name="sprint-{n}" \
   --detect.tools=DETECTOR
 ```
@@ -447,7 +452,7 @@ java -jar detect.jar \
 
 Create the page with `createConfluencePage` (apply the Write Guard first):
 ```
-Space  : SCRUM
+Space  : {{CONFLUENCE_SPACE}}
 Parent : Releases
 Title  : Security Report — {sprint name} — {date}
 

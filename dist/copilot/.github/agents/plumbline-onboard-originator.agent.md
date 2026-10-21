@@ -54,7 +54,7 @@ Consumes: {topic} → what it does on receive → idempotency check
 
 #### 4. Business Rules
 Numbered list of all business rules evidenced in the code.
-Each rule must trace to a specific class or migration (e.g. "Rule 3: SCRUM-48, MarketDataClient").
+Each rule must trace to a specific class or migration (e.g. "Rule 3: {{JIRA_KEY}}-48, MarketDataClient").
 
 #### 5. Out of Scope
 What this service explicitly does NOT do, per CLAUDE.md Section 18 or domain boundaries.
@@ -148,7 +148,7 @@ Known Tech Debt line) — never invent what they do. Routes of this app (pages) 
 
 | Variable | Required | Purpose | Example |
 |----------|----------|---------|---------|
-| {VITE_API_URL} | Yes | Backend base URL | http://localhost:8080 |
+| {VITE_API_URL} | Yes | Backend base URL | {{API_URL}} |
 
 ---
 

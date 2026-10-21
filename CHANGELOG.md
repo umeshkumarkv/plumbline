@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.11.0 — 2026-10-21
+
+### Generic by default — nothing from the reference project leaks into yours
+- **No baseline is shipped.** Releases up to 1.10.1 carried the broker-dealer repository's gate baseline; every
+  project now builds its own (`init.py` when Semgrep is present, else `--rebaseline` later). An old shipped baseline is
+  removed on install when Semgrep is missing, and rebuilt when it is present. The reference copy moved to
+  `eval/broker-dealer-baseline.json` (not in the kit).
+- **Generic defaults everywhere:** no `gates:` in project.yaml now means `java-generic.yml` + `structure_check` (was:
+  every pack); the CI critic's default domain pack is `none` (was: broker-dealer). `--domain broker-dealer` writes its
+  packs explicitly. `run_gates.py --all-packs` for self-tests and the eval harness.
+- **Project settings, rendered into the agents at install:** `jira_project`, `confluence_space`, `api_url`,
+  `frontend_url`, `login_path` in project.yaml (`--jira KEY`, `--confluence SPACE`). The specs no longer hard-code the
+  JIRA key `SCRUM`, the Confluence space, `localhost:8080`/`:5173` or the login path. URLs are detected (backend port
+  from the code; frontend port from the framework: Angular 4200, Next 3000, Vite 5173). Doctor shows them and flags an
+  unset JIRA key; `--check` compares the rendered files.
+- **DevOps loop** scans every backend unit from the layout (was: nine broker-dealer service names); the Black Duck
+  project name is the repository's. **QA** checks the backend via `api_url` instead of grepping broker-dealer
+  container names. Onboarding's Kafka/route tables are marked as illustrations.
+- **Upgrade keeps existing projects working unchanged:** a pre-1.11 broker-dealer project.yaml gets its full gate list
+  written out, the JIRA key `SCRUM` is kept if the installed agents used it, and the project's own baseline is kept.
+- `run_gates.py --baseline` with a missing file exits 2 with the command to create it (was: a traceback).
+- The dev benchmark's baseline override (`PLUMBLINE_BASELINE`, self-tests) must point inside the framework folder.
+
 ## 1.10.1 — 2026-10-21
 
 - **Install from the repository:** `git clone https://github.com/umeshkumarkv/plumbline ~/plumbline`, then

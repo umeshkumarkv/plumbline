@@ -60,7 +60,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every

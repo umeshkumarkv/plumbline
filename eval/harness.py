@@ -23,7 +23,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 GATES = HERE.parent / "gates" / "run_gates.py"
-BASELINE = HERE.parent / "gates" / "baseline.json"
+BASELINE = HERE / "broker-dealer-baseline.json"   # the reference repository's debt (a project's own lives in .plumbline/gates/)
 
 
 def apply(entry, repo: Path):
@@ -59,7 +59,7 @@ def gates(clean: Path, defects_path: Path, out: Path):
                     before.splitlines(True), after.splitlines(True),
                     fromfile=f"a/{edit['file']}", tofile=f"b/{edit['file']}", n=12))
             (out / "diffs" / f"{aid}.diff").write_text(diff)
-            r = subprocess.run([sys.executable, str(GATES), str(work), "--baseline", str(BASELINE), "--json"],
+            r = subprocess.run([sys.executable, str(GATES), str(work), "--baseline", str(BASELINE), "--json", "--all-packs"],
                                capture_output=True, text=True)
             try:
                 new = json.loads(r.stdout)["new"]

@@ -49,7 +49,7 @@ def main():
     # deterministic gates on the services the first PR changed
     gates = Path(__file__).resolve().parents[2] / "gates" / "run_gates.py"
     t = time.time()
-    g = subprocess.run([sys.executable, str(gates), str(repo), "--changed-from", base], capture_output=True, text=True)
+    g = subprocess.run([sys.executable, str(gates), str(repo), "--changed-from", base, "--all-packs"], capture_output=True, text=True)
     res["gates_changed_only_s"] = round(time.time() - t, 1)
     res["gates_changed_only_note"] = (f"{prs[0]}: {g.stdout.splitlines()[0] if g.stdout else g.stderr[-200:]} "
                                       "(no baseline for the synthetic repo, so its pre-existing findings show as NEW)")

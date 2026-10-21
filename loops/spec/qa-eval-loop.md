@@ -13,11 +13,11 @@ On persistent failure after 3 attempts, escalates to human.
 
 ## Usage
 ```
-/plumbline-qa SCRUM-{n}
+/plumbline-qa {{JIRA_KEY}}-{n}
 ```
 <!-- @copilot -->
 
-Target: ${input:target:SCRUM-n}
+Target: ${input:target:{{JIRA_KEY}}-n}
 <!-- @end -->
 
 ## How It Works
@@ -42,7 +42,7 @@ After attempt 3 without PASS → ESCALATE → human (full attempt history, open 
 
 - **Mode:** run in Copilot Chat **Agent** mode. Ask/Edit modes cannot call tools.
 - **Subagents:** Stage 1 (originator) and Stage 3 (judge) run as isolated subagents from `.github/agents/`. They need a VS Code with custom-agent subagents and the **Run Subagent** tool (`agent/runSubagent`) enabled in this chat's tool picker. If it is missing, STOP before Stage 1 and tell the user (never do the originator's work in this chat); the judge has a new-chat fallback (`/plumbline-critic`).
-- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `SCRUM-{n}`, `pr:{n}`, etc.
+- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `{{JIRA_KEY}}-{n}`, `pr:{n}`, etc.
 - **Atlassian tools:** before the first JIRA or Confluence call, call `getAccessibleAtlassianResources` once, keep the `cloudId`, and pass it on every Atlassian call. Tool names may carry a server prefix (e.g. `atlassian_getJiraIssue`) — use the tool whose name ends with the name written in this spec.
 - **Approval gates:** wherever this spec says "Write Guard", print the approval block, then END YOUR TURN and wait for the user's next message. Only an explicit "yes" from the user counts. Copilot's own tool-confirmation dialog is NOT the approval.
 - **Project rules:** Copilot does not load `CLAUDE.md` automatically. When this spec says read `CLAUDE.md` or `services/{service}/CLAUDE.md`, open and read the file.
@@ -89,7 +89,7 @@ incompatible UUID domains, RBAC misconfiguration, missing header propagation), t
 
 1. STOP immediately — do not touch any code
 2. Post the failure evidence to JIRA using the four-field format above only
-3. Escalate to human with message: "Design gap found — run /plumbline-arch SCRUM-{n}"
+3. Escalate to human with message: "Design gap found — run /plumbline-arch {{JIRA_KEY}}-{n}"
 4. Do NOT attempt to fix the issue, suggest a workaround, or retry with a code change
 
 A test failure caused by a design problem is not a QA failure. It is an architecture failure.
@@ -107,7 +107,7 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : SCRUM-{n}
+  Ticket : {{JIRA_KEY}}-{n}
   Action : {transition to "In Review" | transition to "In Progress" | etc.}
   Reason : {one-line reason}
 
@@ -124,32 +124,33 @@ Record the session start time before any work begins:
 START_TIME=$(date +%s)
 ```
 
-1. Fetch the JIRA story: `getJiraIssue(SCRUM-{n})`
+1. Fetch the JIRA story: `getJiraIssue({{JIRA_KEY}}-{n})`
 2. Extract every acceptance criterion line by line from the description
 3. Identify the service and endpoint(s) under test
 
 ### Gate — Code Review Approved
 
 ```bash
-gh pr list --search "SCRUM-{n}" --json number,title,reviewDecision,headRefName,headRefOid | jq .
+gh pr list --search "{{JIRA_KEY}}-{n}" --json number,title,reviewDecision,headRefName,headRefOid | jq .
 # bot review status on the current head commit
 gh api repos/{owner}/{repo}/commits/{headRefOid}/status \
   --jq '.statuses[] | select(.context=="plumbline/code-review") | .state'
 ```
 
-- If the `plumbline/code-review` status on the PR's current head is not `success` — STOP: "Run /plumbline-code-review SCRUM-{n} first."
+- If the `plumbline/code-review` status on the PR's current head is not `success` — STOP: "Run /plumbline-code-review {{JIRA_KEY}}-{n} first."
 - If `reviewDecision` is NOT `"APPROVED"` — STOP: "A human CODEOWNER must approve the PR (the bot never approves)."
-- If no PR exists — STOP: "No PR found. Run /plumbline-dev SCRUM-{n} first."
+- If no PR exists — STOP: "No PR found. Run /plumbline-dev {{JIRA_KEY}}-{n} first."
 
-4. Verify required Docker services are running:
+4. Verify the backend is running and reachable:
 ```bash
-docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "api-gateway|client-service|order-service|auth-service"
+curl -s -o /dev/null -w "%{http_code}" {{API_URL}}/actuator/health   # or any endpoint the story touches
+docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null       # if the project runs in containers
 ```
-If any required service is not running — STOP and tell the user.
+If the backend (or a container the story needs) is not running — STOP and tell the user.
 
 5. Verify the frontend dev server is reachable:
 ```bash
-curl -s -o /dev/null -w "%{http_code}" http://localhost:5173
+curl -s -o /dev/null -w "%{http_code}" {{FRONTEND_URL}}
 ```
 - If returns `200` — frontend is running, proceed.
 - If not reachable — note it; Playwright config will auto-start it via `npm run dev`
@@ -164,7 +165,7 @@ If browsers are missing: `npx playwright install chromium` — wait for completi
 
 7. Obtain JWT token for curl-based REST checks:
 ```bash
-export TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+export TOKEN=$(curl -s -X POST {{API_URL}}{{LOGIN_PATH}} \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"$PLUMBLINE_DEMO_USER\",\"password\":\"$PLUMBLINE_DEMO_PASSWORD\"}" | jq -r '.data.token')
 ```
@@ -227,7 +228,7 @@ Before entering the loop, classify every AC from the JIRA ticket on two axes:
 
 Print the classification table before entering the loop:
 ```
-AC CLASSIFICATION — SCRUM-{n}
+AC CLASSIFICATION — {{JIRA_KEY}}-{n}
   AC-1 [REST][MUTATING] : POST /api/v1/orders returns 202 with orderId
   AC-2 [UI]             : Order Entry form shows Limit Price field when LIMIT is selected
   AC-3 [BOTH][MUTATING] : Submitting a valid order shows success toast and navigates to blotter
@@ -243,8 +244,8 @@ AC CLASSIFICATION — SCRUM-{n}
 **Save the plan for the originator** (it cannot read your context). Write `.plumbline/run/review/{ticket}-story.md` (the
 ticket's summary, description and ACs as fetched) and `.plumbline/run/review/{ticket}-qa-plan.json`:
 ```json
-{"ticket": "SCRUM-{n}", "acs": [{"id": "AC-1", "text": "…", "layer": "REST", "mutation": "MUTATING"}],
- "urls": {"gateway": "http://localhost:8080", "frontend": "http://localhost:5173"},
+{"ticket": "{{JIRA_KEY}}-{n}", "acs": [{"id": "AC-1", "text": "…", "layer": "REST", "mutation": "MUTATING"}],
+ "urls": {"gateway": "{{API_URL}}", "frontend": "{{FRONTEND_URL}}"},
  "db": {"available": true, "schema": "order_schema"}, "kafka": {"available": true, "topics": ["order.state.changed"]},
  "login_env": ["PLUMBLINE_DEMO_USER", "PLUMBLINE_DEMO_PASSWORD"]}
 ```
@@ -274,7 +275,7 @@ Print:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 QA EVAL LOOP — Attempt {attempt} / {max_attempts}
-Story  : SCRUM-{n} — {summary}
+Story  : {{JIRA_KEY}}-{n} — {summary}
 Layers : REST (curl) + UI (Playwright/Chromium) + DB State (psql) + Kafka Events
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
@@ -293,7 +294,7 @@ PREVIOUSLY FAILED — watch these specifically this attempt:
 Read `.plumbline/run/review/{ticket}-qa-plan.json`: it holds the AC classification, the URLs, and whether Postgres and Kafka
 are reachable (skip Step C1 / C2 when `available` is false and record why). Get your own token; never print it:
 ```bash
-export TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" \
+export TOKEN=$(curl -s -X POST {{API_URL}}{{LOGIN_PATH}} -H "Content-Type: application/json" \
   -d "{\"username\":\"$PLUMBLINE_DEMO_USER\",\"password\":\"$PLUMBLINE_DEMO_PASSWORD\"}" | jq -r '.data.token')
 test -n "$TOKEN" && test "$TOKEN" != null || echo "LOGIN FAILED"
 ```
@@ -331,10 +332,10 @@ frontend/e2e/qa-scrum-{n}-attempt-{attempt}.spec.ts
 import { test, expect } from '@playwright/test'
 import { loginAsTrader, loginAsAdmin, loginAsOps } from './helpers/auth'
 
-// QA Eval Loop — SCRUM-{n} — Attempt {attempt}
+// QA Eval Loop — {{JIRA_KEY}}-{n} — Attempt {attempt}
 // Generated: {ISO 8601 timestamp}
 
-test.describe('QA SCRUM-{n}: {story summary}', () => {
+test.describe('QA {{JIRA_KEY}}-{n}: {story summary}', () => {
 
   // For each UI or BOTH AC, generate one test block:
   test('{ac-slug}: {ac text}', async ({ page }) => {
@@ -417,13 +418,13 @@ Parse the output:
 ```bash
 # 1. Unknown ID → 404
 curl -s -w "\nHTTP_STATUS:%{http_code}" \
-  http://localhost:8080/api/v1/{resource}/00000000-0000-0000-0000-000000000000 \
+  {{API_URL}}/api/v1/{resource}/00000000-0000-0000-0000-000000000000 \
   -H "Authorization: Bearer $TOKEN"
 # Assert: HTTP 404, error.code = {RESOURCE}_NOT_FOUND
 
 # 2. Missing auth → 401
 curl -s -w "\nHTTP_STATUS:%{http_code}" \
-  http://localhost:8080/api/v1/{resource}/{id}
+  {{API_URL}}/api/v1/{resource}/{id}
 # Assert: HTTP 401
 
 # 3. Response envelope structure
@@ -584,7 +585,7 @@ A missing Kafka event is a FAIL — it means the event pipeline is broken even i
 
 Write every result of this attempt (REST and UI ACs, and the mandatory edge cases with `"kind": "EDGE"` and `ac` starting `EDGE:`) to `.plumbline/run/review/{ticket}-qa-results.json`:
 ```json
-{"ticket": "SCRUM-n", "results": [{"ac": "<AC text as in the story>", "kind": "REST|UI|EDGE", "command": "curl ...",
+{"ticket": "{{JIRA_KEY}}-n", "results": [{"ac": "<AC text as in the story>", "kind": "REST|UI|EDGE", "command": "curl ...",
   "expected_status": 200, "http_status": 200, "response": "<full raw body>", "verdict": "PASS|FAIL",
   "screenshot": "frontend/test-results/... (UI only, path from the repo root)"}]}
 ```
@@ -706,7 +707,7 @@ QA EVAL SCORECARD — Attempt {attempt}
 
 Compile full report:
 ```
-QA Eval Loop Report — SCRUM-{n}
+QA Eval Loop Report — {{JIRA_KEY}}-{n}
 Date      : {ISO 8601 timestamp}
 Service   : {service-name}
 Eval Loop : Passed on attempt {attempt} / {max_attempts}
@@ -764,7 +765,7 @@ The ticket is already **In Review** (set by Dev Eval Loop when the PR was raised
 Do NOT transition the status — it is correct as-is.
 The SM Agent will transition In Review → Done after the PR is merged and DoD is verified.
 
-Post execution audit comment on SCRUM-{n} (no Write Guard required — informational only):
+Post execution audit comment on {{JIRA_KEY}}-{n} (no Write Guard required — informational only):
 ```
 END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME))
 ```
@@ -786,7 +787,7 @@ Comment body:
 ## Phase 2 — Summary to User
 
 ```
-QA EVAL LOOP — SCRUM-{n} COMPLETE
+QA EVAL LOOP — {{JIRA_KEY}}-{n} COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Story        : {summary}
 JIRA         : In Review
@@ -813,7 +814,7 @@ Tokens consumed: {session input + output tokens from the Claude Code usage count
 ```
 QA EVAL LOOP — ESCALATION REQUIRED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SCRUM-{n} failed QA after {max_attempts} attempts.
+{{JIRA_KEY}}-{n} failed QA after {max_attempts} attempts.
 
 PERSISTENTLY FAILING — REST ACs:
 {for each REST AC in all_failures:
@@ -837,7 +838,7 @@ Post to JIRA as a comment (informational — no approval needed) — use ONLY th
 Do NOT add root cause analysis, class names, fix suggestions, or explanatory text of any kind.
 
 ```
-QA Eval Loop ESCALATED — SCRUM-{n}
+QA Eval Loop ESCALATED — {{JIRA_KEY}}-{n}
 Failed after {max_attempts} attempts.
 
 FAILING REST ACs:

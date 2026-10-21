@@ -7,7 +7,7 @@ Always raises a docs PR — never commits directly to develop.
 
 ## Usage
 ```
-/plumbline-doc SCRUM-{n}
+/plumbline-doc {{JIRA_KEY}}-{n}
 /plumbline-doc pr:{n}
 ```
 
@@ -53,8 +53,8 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 GITHUB ACTION — AWAITING YOUR APPROVAL
-  Action  : {push branch "docs/SCRUM-{n}-update-docs" | create PR → develop}
-  Branch  : docs/SCRUM-{n}-update-docs
+  Action  : {push branch "docs/{{JIRA_KEY}}-{n}-update-docs" | create PR → develop}
+  Branch  : docs/{{JIRA_KEY}}-{n}-update-docs
   Reason  : {one-line reason}
 
 Proceed? (yes / no)
@@ -71,14 +71,14 @@ START_TIME=$(date +%s)
 
 1. Find the PR for this ticket:
    ```bash
-   gh pr list --search "SCRUM-{n}" --json number,title,headRefName,mergedAt
+   gh pr list --search "{{JIRA_KEY}}-{n}" --json number,title,headRefName,mergedAt
    ```
 2. Fetch PR metadata and full diff:
    ```bash
    gh pr view {pr-number} --json title,body,files,headRefName,mergedAt
    gh pr diff {pr-number}
    ```
-3. Fetch the linked JIRA story: `getJiraIssue(SCRUM-{n})`
+3. Fetch the linked JIRA story: `getJiraIssue({{JIRA_KEY}}-{n})`
 4. Read `services/{service}/openapi.yaml` — note all existing paths and component schemas
 5. Read `services/{service}/CLAUDE.md` — note current state of all sections
 
@@ -116,7 +116,7 @@ Print:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DOC EVAL LOOP — Attempt {attempt} / {max_attempts}
 PR     : #{pr-number} — {pr-title}
-Story  : SCRUM-{n}
+Story  : {{JIRA_KEY}}-{n}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -212,7 +212,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -255,7 +255,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 Rubric `doc completeness 8-item`: the critic marks [x] COMPLETE or [ ] GAP with specific reason for each GAP.
 
@@ -338,14 +338,14 @@ DOC COMPLETENESS SCORECARD — Attempt {attempt}
 ```bash
 git checkout develop
 git pull origin develop
-git checkout -b docs/SCRUM-{n}-update-docs
+git checkout -b docs/{{JIRA_KEY}}-{n}-update-docs
 
 git add services/{service}/openapi.yaml
 git add services/{service}/CLAUDE.md
 # Add CLAUDE.md (root) only if it was changed in Step D
 
 git commit -m "$(cat <<'EOF'
-docs({service}): update openapi.yaml and CLAUDE.md for SCRUM-{n}
+docs({service}): update openapi.yaml and CLAUDE.md for {{JIRA_KEY}}-{n}
 
 - {bullet: what was added to openapi.yaml}
 - {bullet: what was added to CLAUDE.md}
@@ -361,16 +361,16 @@ approval. If the user says no, restore both files (`git checkout -- <files>`).
 
 Apply the **GitHub Write Guard**, then push:
 ```bash
-git push -u origin docs/SCRUM-{n}-update-docs
+git push -u origin docs/{{JIRA_KEY}}-{n}-update-docs
 ```
 
 Apply the **GitHub Write Guard**, then create PR:
 ```bash
 gh pr create \
-  --title "docs({service}): sync openapi.yaml and CLAUDE.md for SCRUM-{n}" \
+  --title "docs({service}): sync openapi.yaml and CLAUDE.md for {{JIRA_KEY}}-{n}" \
   --base develop \
   --body "$(cat <<'EOF'
-## Documentation sync for SCRUM-{n}
+## Documentation sync for {{JIRA_KEY}}-{n}
 
 Updates openapi.yaml and service CLAUDE.md to reflect the implementation merged in PR #{n}.
 Doc Eval Loop: passed on attempt {attempt}/{max_attempts}.
@@ -392,7 +392,7 @@ EOF
 ## Phase 2 — Summary to User
 
 ```
-DOC EVAL LOOP — SCRUM-{n} COMPLETE
+DOC EVAL LOOP — {{JIRA_KEY}}-{n} COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Eval Loop  : Passed on attempt {attempt} / {max_attempts}
 {if attempt > 1: Gaps resolved: {list}}
@@ -419,7 +419,7 @@ Tokens consumed: {session input + output tokens from the Claude Code usage count
 ```
 DOC EVAL LOOP — ESCALATION REQUIRED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Documentation for SCRUM-{n} has completeness gaps that could not be resolved in {max_attempts} attempts.
+Documentation for {{JIRA_KEY}}-{n} has completeness gaps that could not be resolved in {max_attempts} attempts.
 This may indicate a conflict with the existing API contract that requires architectural review.
 
 Persistent gaps:
@@ -430,8 +430,8 @@ patterns that need clarification before documentation can be written accurately.
 
 Recommended action:
 1. Review the persistent gaps above
-2. If the merged code changes an existing API contract — run /plumbline-arch SCRUM-{n}
-3. Re-run /plumbline-doc SCRUM-{n} after the contract is clarified
+2. If the merged code changes an existing API contract — run /plumbline-arch {{JIRA_KEY}}-{n}
+3. Re-run /plumbline-doc {{JIRA_KEY}}-{n} after the contract is clarified
 ```
 
 STOP — do not raise a partial docs PR.

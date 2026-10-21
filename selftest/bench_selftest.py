@@ -3,6 +3,7 @@
 planted checks. Fixtures: selftest/bench-fixture/{repo,good,bad}. Dev/code-review/doc run on scratch git repos."""
 import json
 import shutil
+import os
 import subprocess
 import sys
 import tempfile
@@ -27,7 +28,9 @@ CASES = [  # (agent, args builder(variant), FAIL ids the bad variant must produc
 
 
 def bench(agent, args, out):
-    r = subprocess.run(RUN + [agent, *args, "--out-dir", str(out), "--name", agent, "--quiet"], capture_output=True, text=True)
+    env = dict(os.environ, PLUMBLINE_BASELINE=str(ROOT / "eval/broker-dealer-baseline.json"), PLUMBLINE_ALL_PACKS="1")
+    r = subprocess.run(RUN + [agent, *args, "--out-dir", str(out), "--name", agent, "--quiet"], capture_output=True, text=True,
+                       env=env)   # the fixtures are the broker-dealer reference repository
     try:
         rep = json.loads((Path(out) / f"{agent}-benchmark.json").read_text())
     except OSError:

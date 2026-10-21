@@ -11,10 +11,10 @@ On persistent failure after 3 attempts, escalates to human.
 
 ## Usage
 ```
-/plumbline-dev SCRUM-{n}
+/plumbline-dev {{JIRA_KEY}}-{n}
 ```
 
-Target: ${input:target:SCRUM-n}
+Target: ${input:target:{{JIRA_KEY}}-n}
 
 ## How It Works
 
@@ -36,7 +36,7 @@ After attempt 3 without PASS → ESCALATE → human (full attempt history, open 
 
 - **Mode:** run in Copilot Chat **Agent** mode. Ask/Edit modes cannot call tools.
 - **Subagents:** Stage 1 (originator) and Stage 3 (judge) run as isolated subagents from `.github/agents/`. They need a VS Code with custom-agent subagents and the **Run Subagent** tool (`agent/runSubagent`) enabled in this chat's tool picker. If it is missing, STOP before Stage 1 and tell the user (never do the originator's work in this chat); the judge has a new-chat fallback (`/plumbline-critic`).
-- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `SCRUM-{n}`, `pr:{n}`, etc.
+- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `{{JIRA_KEY}}-{n}`, `pr:{n}`, etc.
 - **Atlassian tools:** before the first JIRA or Confluence call, call `getAccessibleAtlassianResources` once, keep the `cloudId`, and pass it on every Atlassian call. Tool names may carry a server prefix (e.g. `atlassian_getJiraIssue`) — use the tool whose name ends with the name written in this spec.
 - **Approval gates:** wherever this spec says "Write Guard", print the approval block, then END YOUR TURN and wait for the user's next message. Only an explicit "yes" from the user counts. Copilot's own tool-confirmation dialog is NOT the approval.
 - **Project rules:** Copilot does not load `CLAUDE.md` automatically. When this spec says read `CLAUDE.md` or `services/{service}/CLAUDE.md`, open and read the file.
@@ -64,7 +64,7 @@ or any AC cannot be implemented as designed), the Dev Agent MUST:
 
 1. STOP immediately — do not implement a workaround
 2. Post the gap to JIRA with full evidence (which field, which line, why it is wrong)
-3. Escalate to the Arch Agent: "Run /plumbline-arch SCRUM-{n} — design gap found"
+3. Escalate to the Arch Agent: "Run /plumbline-arch {{JIRA_KEY}}-{n} — design gap found"
 4. Do NOT retry with a self-invented fix
 
 A design gap is not a code problem. It is an architecture problem. The Arch Agent
@@ -85,7 +85,7 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : SCRUM-{n}
+  Ticket : {{JIRA_KEY}}-{n}
   Action : {transition to "In Progress" | transition to "In Review" | etc.}
   Reason : {one-line reason}
 
@@ -104,8 +104,8 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 GITHUB ACTION — AWAITING YOUR APPROVAL
-  Action  : {push branch "ai/SCRUM-{n}-{slug}" to origin | create PR "{title}" → develop}
-  Branch  : ai/SCRUM-{n}-{slug}
+  Action  : {push branch "ai/{{JIRA_KEY}}-{n}-{slug}" to origin | create PR "{title}" → develop}
+  Branch  : ai/{{JIRA_KEY}}-{n}-{slug}
   Reason  : {one-line reason}
 
 Proceed? (yes / no)
@@ -121,12 +121,12 @@ Record the session start time before any work begins:
 START_TIME=$(date +%s)
 ```
 
-1. Fetch the JIRA story using `getJiraIssue(SCRUM-{n})`
+1. Fetch the JIRA story using `getJiraIssue({{JIRA_KEY}}-{n})`
 2. Extract: summary, description, acceptance criteria, tech constraints, blocked-by links, labels
 
 ### Gate 1 — Definition of Ready
 - Must have label `plumbline-dor-ready` — if missing, STOP: "Run /plumbline-ba first."
-- Must have label `plumbline-arch-approved` — if missing, STOP: "Run /plumbline-arch SCRUM-{n} first."
+- Must have label `plumbline-arch-approved` — if missing, STOP: "Run /plumbline-arch {{JIRA_KEY}}-{n} first."
 - Must NOT have label `plumbline-arch-blocked` — if present, STOP and show the blocking comment.
 
 ### Gate 2 — Blockers
@@ -134,17 +134,17 @@ START_TIME=$(date +%s)
 
 ### Gate 3 — JIRA Transition
 4. Apply the JIRA Write Guard, then transition JIRA: To Do → **In Progress**
-5. Add JIRA comment: "Dev Eval Loop starting SCRUM-{n} — attempt 1 of 3."
+5. Add JIRA comment: "Dev Eval Loop starting {{JIRA_KEY}}-{n} — attempt 1 of 3."
 6. Read `CLAUDE.md` fully (all sections)
 7. Identify the service from the ticket
 8. Read `services/{service}/CLAUDE.md` fully
 9. Read `services/{service}/openapi.yaml` — extract exact endpoint path, HTTP method, request/response shape, field names, HTTP status codes
-10. Check if branch `ai/SCRUM-{n}-*` already exists: `git branch -a | grep SCRUM-{n}`
-    - If exists: `git checkout ai/SCRUM-{n}-{slug}`
-    - If not: `git checkout develop && git pull origin develop && git checkout -b ai/SCRUM-{n}-{kebab-slug-of-summary}`
+10. Check if branch `ai/{{JIRA_KEY}}-{n}-*` already exists: `git branch -a | grep {{JIRA_KEY}}-{n}`
+    - If exists: `git checkout ai/{{JIRA_KEY}}-{n}-{slug}`
+    - If not: `git checkout develop && git pull origin develop && git checkout -b ai/{{JIRA_KEY}}-{n}-{kebab-slug-of-summary}`
 11. Save the originator's inputs (it has no JIRA access): write `.plumbline/run/review/{ticket}-story.md` (summary, description,
     ACs, tech constraints as fetched) and `.plumbline/run/review/{ticket}-design.md` (the full text of the approved Arch design
-    comment on SCRUM-{n}, the one that set `plumbline-arch-approved`). If no such comment exists — Design Gap Rule, STOP.
+    comment on {{JIRA_KEY}}-{n}, the one that set `plumbline-arch-approved`). If no such comment exists — Design Gap Rule, STOP.
 
 ---
 
@@ -168,7 +168,7 @@ Print:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DEV EVAL LOOP — Attempt {attempt} / {max_attempts}
-Story : SCRUM-{n} — {summary}
+Story : {{JIRA_KEY}}-{n} — {summary}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -281,7 +281,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -329,7 +329,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 The 12 categories below are the critic's rubric (`dev 12-category`). The critic marks PASS or FAIL with file:line evidence for each FAIL. You do not.
 
@@ -477,7 +477,7 @@ Stage only the files changed for this ticket:
 ```bash
 git add services/{service}/src/... [list specific files]
 git commit -m "$(cat <<'EOF'
-feat({service}): {short description} — SCRUM-{n}
+feat({service}): {short description} — {{JIRA_KEY}}-{n}
 
 - {bullet: what was added/changed}
 - {bullet: what was added/changed}
@@ -490,7 +490,7 @@ EOF
 
 Apply the **GitHub Write Guard**, then:
 ```bash
-git push -u origin ai/SCRUM-{n}-{slug}
+git push -u origin ai/{{JIRA_KEY}}-{n}-{slug}
 ```
 
 ---
@@ -501,12 +501,12 @@ Apply the **GitHub Write Guard**, then:
 
 ```bash
 gh pr create \
-  --title "feat({service}): {summary} — SCRUM-{n}" \
+  --title "feat({service}): {summary} — {{JIRA_KEY}}-{n}" \
   --base develop \
   --body "$(cat <<'EOF'
 ## Summary
 
-- [SCRUM-{n}]({jira-url}) — {one-line description}
+- [{{JIRA_KEY}}-{n}]({jira-url}) — {one-line description}
 - Eval loop: {attempt} attempt(s) — passed on attempt {attempt}/{max_attempts}
 {if attempt > 1: list what was fixed between attempts}
 
@@ -520,16 +520,16 @@ gh pr create \
 ## curl test guide
 
 \`\`\`bash
-export TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+export TOKEN=$(curl -s -X POST {{API_URL}}{{LOGIN_PATH}} \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"$PLUMBLINE_DEMO_USER\",\"password\":\"$PLUMBLINE_DEMO_PASSWORD\"}" | jq -r '.data.token')
 
-curl -s http://localhost:8080/api/v1/{resource}/{id} \
+curl -s {{API_URL}}/api/v1/{resource}/{id} \
   -H "Authorization: Bearer $TOKEN" | jq .
 \`\`\`
 
 ---
-Generated by Dev Eval Loop for SCRUM-{n}
+Generated by Dev Eval Loop for {{JIRA_KEY}}-{n}
 EOF
 )"
 ```
@@ -546,10 +546,10 @@ EOF
 ## Phase 4 — Summary to User
 
 ```
-DEV EVAL LOOP — SCRUM-{n} COMPLETE
+DEV EVAL LOOP — {{JIRA_KEY}}-{n} COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Story      : {summary}
-Branch     : ai/SCRUM-{n}-{slug}
+Branch     : ai/{{JIRA_KEY}}-{n}-{slug}
 PR         : {pr_url}
 JIRA       : In Review
 Tests      : PASSED
@@ -557,7 +557,7 @@ Coverage   : >= 80%
 Eval Loop  : Passed on attempt {attempt} / {max_attempts}
 {if attempt > 1: Fixed between attempts: {list of what changed}}
 
-Next step  : /plumbline-qa SCRUM-{n}  (after code review approves PR)
+Next step  : /plumbline-qa {{JIRA_KEY}}-{n}  (after code review approves PR)
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 ```
@@ -569,7 +569,7 @@ Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf
 ```
 DEV EVAL LOOP — ESCALATION REQUIRED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SCRUM-{n} failed evaluation after {max_attempts} attempts.
+{{JIRA_KEY}}-{n} failed evaluation after {max_attempts} attempts.
 
 Persistent violations (across all attempts):
 {numbered list of all_findings with file:line references}
@@ -577,12 +577,12 @@ Persistent violations (across all attempts):
 Human action required:
 1. Review the violations above
 2. Either fix manually or provide clarifying constraints
-3. Re-run /plumbline-dev SCRUM-{n} after clarification
+3. Re-run /plumbline-dev {{JIRA_KEY}}-{n} after clarification
 ```
 
 Post to JIRA as a comment (informational — no approval needed under the Plumbline write policy; any label or transition that follows still needs the Write Guard):
 ```
-Dev Eval Loop ESCALATED — SCRUM-{n}
+Dev Eval Loop ESCALATED — {{JIRA_KEY}}-{n}
 Failed after 3 attempts. Persistent violations:
 {all_findings}
 Human review required before retry.

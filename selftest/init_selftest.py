@@ -92,10 +92,22 @@ with tempfile.TemporaryDirectory() as td:
     if shutil.which("semgrep"):
         ok((r / ".plumbline/gates/baseline.json").is_file() and "order-service" not in
            (r / ".plumbline/gates/baseline.json").read_text(), "init: this repository's own gate baseline written")
+    import re as _re
+    left = [str(f.relative_to(r)) for d in (".claude", ".github") for f in (r / d).rglob("*.md")
+            if _re.search(r"\{\{(JIRA_KEY|CONFLUENCE_SPACE|API_URL|FRONTEND_URL|LOGIN_PATH)\}\}", f.read_text())]
+    qa = (r / ".claude/commands/plumbline-qa.md").read_text()
+    ok(not left and "PROJ-{n}" in qa and "http://localhost:4200" in qa and "SCRUM" not in qa
+       and "JIRA project key not set" in out and not (kit / ".plumbline/gates/baseline.json").exists(),
+       f"generic: settings rendered (PROJ, Angular port 4200), no SCRUM, key-not-set flagged, no baseline shipped {left[:3]}")
     proj_before = proj
     res2 = subprocess.run(init, cwd=r, capture_output=True, text=True)
     ok((r / ".plumbline/project.yaml").read_text() == proj_before and "not changed" in res2.stdout,
        "init again: project.yaml kept")
+    subprocess.run(init + ["--jira", "CRS"], cwd=r, capture_output=True, text=True)
+    pj = (r / ".plumbline/project.yaml").read_text()
+    ok("jira_project: CRS" in pj and "confluence_space: CRS" in pj and "CRS-{n}" in (r / ".github/prompts/plumbline-dev.prompt.md").read_text(),
+       "--jira CRS: project.yaml updated (Confluence follows) and entry files re-rendered")
+    proj_before = (r / ".plumbline/project.yaml").read_text()
     chk = subprocess.run(init + ["--check"], cwd=r, capture_output=True, text=True)
     if shutil.which("semgrep"):
         ok(chk.returncode == 0, f"--check passes on a fresh install: {chk.stdout.strip().splitlines()[-1:]}")
@@ -169,6 +181,6 @@ with tempfile.TemporaryDirectory() as td:
        f"migration from 1.9: config, baseline and drafts kept, .agentic-sdlc removed, root .gitignore line removed "
        f"{up.stdout.strip().splitlines()[:6]} {up.stderr.strip()[-200:]}")
 
-total = 22 + (1 if shutil.which("semgrep") else 0)
+total = 24 + (1 if shutil.which("semgrep") else 0)
 print(f"init selftest: {total - fails}/{total}")
 sys.exit(1 if fails else 0)

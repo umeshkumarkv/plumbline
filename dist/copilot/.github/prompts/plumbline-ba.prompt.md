@@ -16,7 +16,7 @@ On persistent gaps after 3 attempts, escalates to PM Eval Loop for Epic revision
 /plumbline-ba epic:{epicKey}
 ```
 
-Target: ${input:target:plain English requirement | confluence:pageId | epic:SCRUM-n}
+Target: ${input:target:plain English requirement | confluence:pageId | epic:{{JIRA_KEY}}-n}
 
 ## How It Works
 
@@ -42,7 +42,7 @@ has an underlying definition problem that the PM Agent must resolve.
 
 - **Mode:** run in Copilot Chat **Agent** mode. Ask/Edit modes cannot call tools.
 - **Subagents:** Stage 1 (originator) and Stage 3 (judge) run as isolated subagents from `.github/agents/`. They need a VS Code with custom-agent subagents and the **Run Subagent** tool (`agent/runSubagent`) enabled in this chat's tool picker. If it is missing, STOP before Stage 1 and tell the user (never do the originator's work in this chat); the judge has a new-chat fallback (`/plumbline-critic`).
-- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `SCRUM-{n}`, `pr:{n}`, etc.
+- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `{{JIRA_KEY}}-{n}`, `pr:{n}`, etc.
 - **Atlassian tools:** before the first JIRA or Confluence call, call `getAccessibleAtlassianResources` once, keep the `cloudId`, and pass it on every Atlassian call. Tool names may carry a server prefix (e.g. `atlassian_getJiraIssue`) — use the tool whose name ends with the name written in this spec.
 - **Approval gates:** wherever this spec says "Write Guard", print the approval block, then END YOUR TURN and wait for the user's next message. Only an explicit "yes" from the user counts. Copilot's own tool-confirmation dialog is NOT the approval.
 - **Project rules:** Copilot does not load `CLAUDE.md` automatically. When this spec says read `CLAUDE.md` or `services/{service}/CLAUDE.md`, open and read the file.
@@ -78,7 +78,7 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : {SCRUM-key or "new Story"}
+  Ticket : {{{JIRA_KEY}}-key or "new Story"}
   Action : {create Story | add label "plumbline-dor-ready" | etc.}
   Reason : {one-line reason}
 
@@ -107,7 +107,7 @@ START_TIME=$(date +%s)
 3. Identify which microservice(s) are involved based on domain ownership
 4. Search JIRA for related existing tickets:
    ```
-   searchJiraIssuesUsingJql("project = SCRUM AND text ~ '{keyword}'")
+   searchJiraIssuesUsingJql("project = {{JIRA_KEY}} AND text ~ '{keyword}'")
    ```
 5. For anything in the requirement that matches CLAUDE.md Section 18 — flag it explicitly to the user and do NOT create a ticket for it
 6. Produce the list of Stories to be drafted (one per service boundary)
@@ -232,7 +232,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -282,7 +282,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 Rubric `ba story 9-item`: the critic marks [x] PASS or [ ] GAP with specific reason for each GAP.
 
@@ -384,7 +384,7 @@ For every story created, output the DoR checklist. A story is NOT ready for deve
 until ALL items are checked.
 
 ```
-DEFINITION OF READY — SCRUM-{n}
+DEFINITION OF READY — {{JIRA_KEY}}-{n}
   [x] User story written (As a / I want / So that)
   [x] Acceptance criteria present and curl-verifiable
   [x] Single microservice boundary — no cross-service DB access
@@ -393,7 +393,7 @@ DEFINITION OF READY — SCRUM-{n}
   [x] No out-of-scope items per CLAUDE.md Section 18
   [x] Tech constraints section complete (service, port, branch, PR target)
   [x] Seed data or test data identified
-  [ ] Architect design doc approved (label: plumbline-arch-approved) ← run /plumbline-arch SCRUM-{n}
+  [ ] Architect design doc approved (label: plumbline-arch-approved) ← run /plumbline-arch {{JIRA_KEY}}-{n}
 ```
 
 Apply the JIRA Write Guard, then add label `plumbline-dor-ready` to each story that passed.
@@ -406,23 +406,23 @@ Apply the JIRA Write Guard, then add label `plumbline-dor-ready` to each story t
 BA EVAL LOOP — DECOMPOSITION COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Epic
-  {SCRUM-key}: {epic summary}
+  {{{JIRA_KEY}}-key}: {epic summary}
 
 Stories Created
-  {SCRUM-key}: {story summary} [{points} pts] — Eval Loop: {attempt}/{max} attempts — DoR: 8/8 checks (arch pending)
+  {{{JIRA_KEY}}-key}: {story summary} [{points} pts] — Eval Loop: {attempt}/{max} attempts — DoR: 8/8 checks (arch pending)
   ...
 
 Stories Escalated (require PM Eval Loop revision)
   {story summary} — persistent gaps: {list}
 
 Blocked-By Links
-  {SCRUM-key} blocked by {SCRUM-key}
+  {{{JIRA_KEY}}-key} blocked by {{{JIRA_KEY}}-key}
 
 Out of Scope (flagged, not ticketed)
   - {item}: reason per CLAUDE.md Section 18
 
 Next Step
-  Run /plumbline-arch SCRUM-{n} for each story before development begins.
+  Run /plumbline-arch {{JIRA_KEY}}-{n} for each story before development begins.
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 ```

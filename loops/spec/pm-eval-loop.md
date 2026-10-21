@@ -19,7 +19,7 @@ On persistent gaps after 3 attempts, escalates to human for PA review.
 ```
 <!-- @copilot -->
 
-Target: ${input:target:plain English feature idea | roadmap | epic:SCRUM-n}
+Target: ${input:target:plain English feature idea | roadmap | epic:{{JIRA_KEY}}-n}
 <!-- @end -->
 
 ## How It Works
@@ -46,7 +46,7 @@ has a fundamental business-level problem that requires human clarification.
 
 - **Mode:** run in Copilot Chat **Agent** mode. Ask/Edit modes cannot call tools.
 - **Subagents:** Stage 1 (originator) and Stage 3 (judge) run as isolated subagents from `.github/agents/`. They need a VS Code with custom-agent subagents and the **Run Subagent** tool (`agent/runSubagent`) enabled in this chat's tool picker. If it is missing, STOP before Stage 1 and tell the user (never do the originator's work in this chat); the judge has a new-chat fallback (`/plumbline-critic`).
-- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `SCRUM-{n}`, `pr:{n}`, etc.
+- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `{{JIRA_KEY}}-{n}`, `pr:{n}`, etc.
 - **Atlassian tools:** before the first JIRA or Confluence call, call `getAccessibleAtlassianResources` once, keep the `cloudId`, and pass it on every Atlassian call. Tool names may carry a server prefix (e.g. `atlassian_getJiraIssue`) — use the tool whose name ends with the name written in this spec.
 - **Approval gates:** wherever this spec says "Write Guard", print the approval block, then END YOUR TURN and wait for the user's next message. Only an explicit "yes" from the user counts. Copilot's own tool-confirmation dialog is NOT the approval.
 - **Project rules:** Copilot does not load `CLAUDE.md` automatically. When this spec says read `CLAUDE.md` or `services/{service}/CLAUDE.md`, open and read the file.
@@ -79,7 +79,7 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : {SCRUM-key or "new Epic"}
+  Ticket : {{{JIRA_KEY}}-key or "new Epic"}
   Action : {create Epic | add label "plumbline-prd-approved" | etc.}
   Reason : {one-line reason}
 
@@ -99,11 +99,11 @@ START_TIME=$(date +%s)
 
 1. Fetch current roadmap and open Epics:
    ```
-   searchJiraIssuesUsingJql("project = SCRUM AND issueType = Epic ORDER BY created DESC")
+   searchJiraIssuesUsingJql("project = {{JIRA_KEY}} AND issueType = Epic ORDER BY created DESC")
    ```
 2. Fetch the current sprint to understand capacity:
    ```
-   searchJiraIssuesUsingJql("project = SCRUM AND sprint in openSprints() ORDER BY status ASC")
+   searchJiraIssuesUsingJql("project = {{JIRA_KEY}} AND sprint in openSprints() ORDER BY status ASC")
    ```
 3. Read `CLAUDE.md` — Section 3 (service boundaries), Section 18 (Out of Scope):
    - If the feature request maps to anything in Section 18 — STOP and tell the user it is out of scope for the POC.
@@ -300,7 +300,7 @@ PRD QUALITY SCORECARD — Attempt {attempt}
 
 1. Search for an existing Epic that covers this theme:
    ```
-   searchJiraIssuesUsingJql("project = SCRUM AND issueType = Epic AND summary ~ '{keyword}'")
+   searchJiraIssuesUsingJql("project = {{JIRA_KEY}} AND issueType = Epic AND summary ~ '{keyword}'")
    ```
 2. If no matching Epic exists, apply the JIRA Write Guard, then create one:
    ```
@@ -334,7 +334,7 @@ Apply the JIRA Write Guard, then add label `plumbline-prd-approved` to the Epic.
 PM EVAL LOOP — COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Feature    : {feature description}
-Epic       : {SCRUM-key — new | existing}
+Epic       : {{{JIRA_KEY}}-key — new | existing}
 Eval Loop  : Passed on attempt {attempt} / {max_attempts}
 {if attempt > 1: Gaps resolved: {list what changed}}
 

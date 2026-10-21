@@ -9,7 +9,7 @@ true vertical: a deterministic benchmark first, then an isolated judge, with a h
 ```bash
 git clone https://github.com/umeshkumarkv/plumbline ~/plumbline      # once per machine
 cd <your-project>                                                    # any git repository
-~/plumbline/install.sh                                               # install (or upgrade) Plumbline here
+~/plumbline/install.sh --jira <KEY>                                  # install (or upgrade); KEY = your JIRA project
 ```
 Then open the project in **Claude Code** or **VS Code Copilot (Agent mode)** and run:
 ```
@@ -20,8 +20,10 @@ and open a PR to share with your team.
 
 - **Needs:** Python 3.10+ with PyYAML (`python3 -m pip install --user pyyaml`); Semgrep recommended
   (`brew install semgrep` — without it only the Semgrep checks are skipped); your project's own JDK / node.
-- **Options** (passed through to `init.py`): `--domain broker-dealer` (OMS rule pack; default `none` = generic),
-  `--ci` (also install GitHub workflows).
+- **Options** (passed through to `init.py`): `--jira KEY` / `--confluence SPACE` (default: the JIRA key),
+  `--ci` (also install GitHub workflows), `--domain broker-dealer` (example OMS rule pack; default `none` = generic).
+- **Settings** live in `.plumbline/project.yaml` (JIRA key, Confluence space, API/frontend URLs, QA login path — URLs
+  detected from the code); edit and re-run `install.sh` to re-render the agents.
 - **Update:** `git -C ~/plumbline pull && ~/plumbline/install.sh` — keeps your `project.yaml` and gate baseline.
 - **Check:** `python3 .plumbline/init.py --doctor` (what it sees) · `--check` (CI: fails on drift).
 - **Remove:** `python3 .plumbline/init.py --uninstall --yes` (your CLAUDE.md files stay).
@@ -75,7 +77,6 @@ gates/
   checks/domain_check.py          order state machine (§5), cross-schema SQL (§3)
   checks/protected_paths.py       agent PRs may not touch the controls that judge them
   run_gates.py                    runner + ratchet baseline (fingerprints survive line shifts)
-  baseline.json                   26 pre-existing findings (one per rule per line) on broker-dealer@develop
   ci/guardrails.yml ci/critic.yml CI templates (gates + protected paths; headless critic)
   archunit/
 eval/
@@ -87,6 +88,7 @@ eval/
   set2-gates-v2-critic-judge/     set 2 held-out: gates v2, critic verdicts, judge adjudication
   set2-critic-primed/             bias probe: critic primed with author self-review
   set2-gates-v3/                  set 2 with committed gates (training; see RESULTS)
+  broker-dealer-baseline.json     the reference repository's gate baseline (eval only; each project builds its own)
   RESULTS.md
 bench/
   run.py common.py packs/*.py     Stage 2 benchmark per agent (pm ba arch dev code-review qa devops sm doc onboard)

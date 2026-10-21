@@ -57,7 +57,7 @@ Before performing ANY of the following operations, STOP and request explicit use
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : {SCRUM-key or "new Epic"}
+  Ticket : {{{JIRA_KEY}}-key or "new Epic"}
   Action : {create Epic | add label "plumbline-prd-approved" | etc.}
   Reason : {one-line reason}
 
@@ -77,11 +77,11 @@ START_TIME=$(date +%s)
 
 1. Fetch current roadmap and open Epics:
    ```
-   searchJiraIssuesUsingJql("project = SCRUM AND issueType = Epic ORDER BY created DESC")
+   searchJiraIssuesUsingJql("project = {{JIRA_KEY}} AND issueType = Epic ORDER BY created DESC")
    ```
 2. Fetch the current sprint to understand capacity:
    ```
-   searchJiraIssuesUsingJql("project = SCRUM AND sprint in openSprints() ORDER BY status ASC")
+   searchJiraIssuesUsingJql("project = {{JIRA_KEY}} AND sprint in openSprints() ORDER BY status ASC")
    ```
 3. Read `CLAUDE.md` — Section 3 (service boundaries), Section 18 (Out of Scope):
    - If the feature request maps to anything in Section 18 — STOP and tell the user it is out of scope for the POC.
@@ -205,7 +205,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -247,7 +247,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 Rubric `pm PRD 10-item`: the critic marks [x] PASS or [ ] GAP with specific reason for each GAP.
 
@@ -334,7 +334,7 @@ PRD QUALITY SCORECARD — Attempt {attempt}
 
 1. Search for an existing Epic that covers this theme:
    ```
-   searchJiraIssuesUsingJql("project = SCRUM AND issueType = Epic AND summary ~ '{keyword}'")
+   searchJiraIssuesUsingJql("project = {{JIRA_KEY}} AND issueType = Epic AND summary ~ '{keyword}'")
    ```
 2. If no matching Epic exists, apply the JIRA Write Guard, then create one:
    ```
@@ -368,7 +368,7 @@ Apply the JIRA Write Guard, then add label `plumbline-prd-approved` to the Epic.
 PM EVAL LOOP — COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Feature    : {feature description}
-Epic       : {SCRUM-key — new | existing}
+Epic       : {{{JIRA_KEY}}-key — new | existing}
 Eval Loop  : Passed on attempt {attempt} / {max_attempts}
 {if attempt > 1: Gaps resolved: {list what changed}}
 

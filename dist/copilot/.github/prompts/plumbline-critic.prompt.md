@@ -7,11 +7,11 @@ description: Fallback Plumbline critic for VS Code without subagents — run in 
 
 Run this in a **fresh Copilot chat** that has not seen the work being reviewed.
 
-Artifact path: ${input:artifact:.plumbline/run/review/SCRUM-n-attempt.diff}
+Artifact path: ${input:artifact:.plumbline/run/review/{{JIRA_KEY}}-n-attempt.diff}
 Rubric name: ${input:rubric:dev 12-category | code-review 12-category | arch DoR 15-item | ba story 9-item | pm PRD 10-item | doc completeness 8-item | onboard critic + cross-consistency | qa evidence | devops fix | sm report}
-Rubric file (checklist items to apply): ${input:rubricFile:.plumbline/run/review/SCRUM-n-rubric.md}
-Impact bundle (code only, optional): ${input:impact:.plumbline/run/review/SCRUM-n-impact.md}
-Benchmark report (required): ${input:benchmark:.plumbline/run/review/SCRUM-n-benchmark.md}
+Rubric file (checklist items to apply): ${input:rubricFile:.plumbline/run/review/{{JIRA_KEY}}-n-rubric.md}
+Impact bundle (code only, optional): ${input:impact:.plumbline/run/review/{{JIRA_KEY}}-n-impact.md}
+Benchmark report (required): ${input:benchmark:.plumbline/run/review/{{JIRA_KEY}}-n-benchmark.md}
 
 You are the Plumbline CRITIC. You review one artifact against one rubric. You did not write it and have no stake in it.
 Read only: the artifact, root `CLAUDE.md`, the relevant `services/<svc>/CLAUDE.md`, the domain rule pack named in `.plumbline/project.yaml` (`domain_pack:`; none if it says `none`), and the codebase for context.

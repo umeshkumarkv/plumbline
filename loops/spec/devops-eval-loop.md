@@ -44,7 +44,7 @@ After attempt 3 without PASS → ESCALATE → human (with logs) (full attempt hi
 
 - **Mode:** run in Copilot Chat **Agent** mode. Ask/Edit modes cannot call tools.
 - **Subagents:** Stage 1 (originator) and Stage 3 (judge) run as isolated subagents from `.github/agents/`. They need a VS Code with custom-agent subagents and the **Run Subagent** tool (`agent/runSubagent`) enabled in this chat's tool picker. If it is missing, STOP before Stage 1 and tell the user (never do the originator's work in this chat); the judge has a new-chat fallback (`/plumbline-critic`).
-- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `SCRUM-{n}`, `pr:{n}`, etc.
+- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `{{JIRA_KEY}}-{n}`, `pr:{n}`, etc.
 - **Atlassian tools:** before the first JIRA or Confluence call, call `getAccessibleAtlassianResources` once, keep the `cloudId`, and pass it on every Atlassian call. Tool names may carry a server prefix (e.g. `atlassian_getJiraIssue`) — use the tool whose name ends with the name written in this spec.
 - **Approval gates:** wherever this spec says "Write Guard", print the approval block, then END YOUR TURN and wait for the user's next message. Only an explicit "yes" from the user counts. Copilot's own tool-confirmation dialog is NOT the approval.
 - **Project rules:** Copilot does not load `CLAUDE.md` automatically. When this spec says read `CLAUDE.md` or `services/{service}/CLAUDE.md`, open and read the file.
@@ -410,13 +410,18 @@ source security/tool-versions.env   # defines VERACODE_PIPELINE_SCAN_URL, VERACO
 curl -sSfL "$VERACODE_PIPELINE_SCAN_URL" -o pipeline-scan.zip
 echo "$VERACODE_PIPELINE_SCAN_SHA256  pipeline-scan.zip" | sha256sum -c - || { echo "CHECKSUM MISMATCH — STOP"; exit 1; }
 unzip -o pipeline-scan.zip pipeline-scan.jar
-for service in order-service client-service risk-service execution-service marketdata-service auth-service audit-service notification-service api-gateway; do
+# Every backend unit, from the project layout (services/<name>/, modules, or an app at the root)
+python3 "${PLUMBLINE_HOME:-.plumbline}/impact/layout.py" . | python3 -c 'import json,sys
+[print(u["name"], u["path"]) for u in json.load(sys.stdin) if u["kind"] == "service"]' |
+while read -r name path; do
+  jar=$(ls "$path"/target/*.jar 2>/dev/null | grep -v -- '-plain\.jar$' | head -1)
+  [ -n "$jar" ] || { echo "no jar for $name in $path/target — build it first"; continue; }
   java -jar pipeline-scan.jar \
     --veracode_api_id "$VERACODE_API_ID" \
     --veracode_api_key "$VERACODE_API_KEY" \
-    --file "services/${service}/target/${service}-*.jar" \
+    --file "$jar" \
     --json_output true \
-    --json_output_file "veracode-${service}.json"
+    --json_output_file "veracode-${name}.json"
 done
 ```
 
@@ -428,7 +433,7 @@ echo "$DETECT_JAR_SHA256  detect.jar" | sha256sum -c - || { echo "CHECKSUM MISMA
 java -jar detect.jar \
   --blackduck.url="$BLACKDUCK_URL" \
   --blackduck.api.token="$BLACKDUCK_API_TOKEN" \
-  --detect.project.name="broker-dealer" \
+  --detect.project.name="$(basename "$(git rev-parse --show-toplevel)")" \
   --detect.project.version.name="sprint-{n}" \
   --detect.tools=DETECTOR
 ```
@@ -437,7 +442,7 @@ java -jar detect.jar \
 
 Create the page with `createConfluencePage` (apply the Write Guard first):
 ```
-Space  : SCRUM
+Space  : {{CONFLUENCE_SPACE}}
 Parent : Releases
 Title  : Security Report — {sprint name} — {date}
 

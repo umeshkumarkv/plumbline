@@ -2,7 +2,8 @@
 """Plumbline init — set up (or check, or upgrade) a repository in one step.
 
   python3 .plumbline/init.py                    detect → project.yaml → install → baseline → prerequisites → doctor
-  python3 .plumbline/init.py --domain broker-dealer   same, with the broker-dealer domain pack and all gate packs
+  python3 .plumbline/init.py --jira KEY        set the JIRA project key (and Confluence space; --confluence to differ)
+  python3 .plumbline/init.py --domain broker-dealer   same, with the broker-dealer example domain pack and its gates
   python3 .plumbline/init.py --doctor           report only: what the framework can and cannot see (no writes)
   python3 .plumbline/init.py --check            CI: exit 1 if generated files, project.yaml or baseline are stale
   python3 .plumbline/init.py --upgrade FILE.tar.gz   replace the framework, keep project.yaml and the baseline
@@ -15,7 +16,6 @@ Footprint: everything lives in .plumbline/ (framework, project.yaml, baseline, l
 The root .gitignore is not touched. An existing project.yaml is never overwritten.
 """
 import argparse
-import filecmp
 import json
 import re
 import shutil
@@ -48,8 +48,20 @@ WORKFLOWS = [("gates/ci/guardrails.yml", "plumbline-guardrails.yml"), ("gates/ci
 LEGACY = REPO / ".agentic-sdlc"                 # the folder name before 1.10
 DOMAINS = {   # domain pack + gate selection
     "none": {"domain_pack": "none", "gates": {"semgrep": ["java-generic.yml"], "checks": ["structure_check"]}},
-    "broker-dealer": {"domain_pack": ".plumbline/packs/domain-rules/rules.yaml", "gates": None},  # None = all packs
+    "broker-dealer": {"domain_pack": ".plumbline/packs/domain-rules/rules.yaml",
+                      "gates": {"semgrep": ["java-generic.yml", "oms-rules.yml", "oms-domain-rules.yml"],
+                                "checks": ["structure_check", "domain_check"]}},
 }
+BD_PACK = DOMAINS["broker-dealer"]["domain_pack"]
+# Project settings rendered into the installed agent files ({{TOKEN}} in dist/). Edit them in project.yaml, re-run init.
+SETTINGS = {   # key in project.yaml → (token, comment)
+    "jira_project": ("JIRA_KEY", "JIRA project key the loops read and write (tickets look like <key>-123)"),
+    "confluence_space": ("CONFLUENCE_SPACE", "Confluence space for test plans, reports and runbooks"),
+    "api_url": ("API_URL", "where QA reaches the running backend (or its gateway)"),
+    "frontend_url": ("FRONTEND_URL", "where QA reaches the running frontend"),
+    "login_path": ("LOGIN_PATH", "QA login endpoint for the demo user (POST username/password, returns a token)"),
+}
+FRONTEND_PORT = {"angular": 4200, "next": 3000, "vue": 5173, "react": 5173, "svelte": 5173}
 
 
 def sh(*cmd, cwd=REPO, timeout=600):
@@ -138,12 +150,83 @@ def write_project(units, domain):
     lines += ["", f"base_branch: {base_branch()}", "",
               "# Domain rule pack the judge applies; `none` for a repository without one.",
               f"domain_pack: {d['domain_pack']}"]
-    if d["gates"]:
-        lines += ["", "# Gate selection: Semgrep packs under .plumbline/gates/semgrep/, checks under gates/checks/.",
-                  "gates:", f"  semgrep: [{', '.join(d['gates']['semgrep'])}]", f"  checks: [{', '.join(d['gates']['checks'])}]"]
+    lines += ["", "# Gate selection: Semgrep packs under .plumbline/gates/semgrep/, checks under gates/checks/.",
+              "gates:", f"  semgrep: [{', '.join(d['gates']['semgrep'])}]", f"  checks: [{', '.join(d['gates']['checks'])}]"]
     PROJECT.write_text("\n".join(lines) + "\n")
     say("write", f"{PROJECT.relative_to(REPO)} ({len(units)} units, domain {domain})")
     return True
+
+
+def setting_defaults(units, jira=None, confluence=None):
+    import depmap
+    import contextlib
+    import io
+    with contextlib.redirect_stderr(io.StringIO()):
+        svc = depmap.build(REPO, None, None)["services"]
+    backends = [u for u in units if u["kind"] == "service"]
+    gw = next((u for u in backends if "gateway" in u["name"]), backends[0] if backends else None)
+    port = (svc.get(gw["name"], {}).get("port") if gw else None) or 8080
+    fe = next((u for u in units if u["kind"] != "service"), None)
+    fport = FRONTEND_PORT.get(((fe or {}).get("framework") or "").split(" ")[0], 5173)
+    old = legacy_jira()
+    return {"jira_project": jira or old or "PROJ", "confluence_space": confluence or jira or old or "PROJ",
+            "api_url": f"http://localhost:{port}", "frontend_url": f"http://localhost:{fport}",
+            "login_path": "/api/v1/auth/login"}
+
+
+def legacy_jira():
+    """Installs before 1.11 had the JIRA key SCRUM written into the agent files: keep it on upgrade."""
+    for gd in (".claude/commands", ".github/prompts"):
+        for f in (REPO / gd).glob("*.md") if (REPO / gd).is_dir() else []:
+            if (f.name.startswith("plumbline-") or "eval-loop" in f.name) and "SCRUM-{n}" in f.read_text(errors="replace"):
+                return "SCRUM"
+    return None
+
+
+def ensure_settings(units, jira=None, confluence=None):
+    """Add missing settings (and, for a pre-1.11 broker-dealer project.yaml, its explicit gate list) to project.yaml,
+    keeping everything people wrote. --jira/--confluence replace the stored value."""
+    cfg = layout.project(config=PROJECT) or {}
+    text = PROJECT.read_text()
+    add, changed = [], []
+    if "gates" not in cfg:                          # before 1.11 a missing `gates:` meant every pack (broker-dealer)
+        d = DOMAINS["broker-dealer" if cfg.get("domain_pack") == BD_PACK else "none"]["gates"]
+        add += ["", "# Gate selection: Semgrep packs under .plumbline/gates/semgrep/, checks under gates/checks/.",
+                "gates:", f"  semgrep: [{', '.join(d['semgrep'])}]", f"  checks: [{', '.join(d['checks'])}]"]
+    if jira and not confluence and str(cfg.get("confluence_space", "PROJ")) == "PROJ":
+        confluence = jira                           # the space was never set: follow the JIRA key
+    wanted = {"jira_project": jira, "confluence_space": confluence}
+    for k, v in wanted.items():
+        if v and k in cfg and str(cfg[k]) != v:
+            text = re.sub(rf"(?m)^{k}:.*$", f"{k}: {v}", text)
+            changed.append(f"{k}={v}")
+    missing = [k for k in SETTINGS if k not in cfg]
+    if missing:
+        dflt = setting_defaults(units, jira, confluence)
+        add += ["", "# Project settings, rendered into the installed agent files. Edit, then re-run init.py."]
+        for k in missing:
+            add.append(f"{k}: {dflt[k]}{' ' * max(1, 34 - len(k) - len(str(dflt[k])))}# {SETTINGS[k][1]}")
+    if add or changed:
+        PROJECT.write_text(text.rstrip("\n") + "\n" + ("\n".join(add) + "\n" if add else ""))
+        say("write", f"{PROJECT.relative_to(REPO)}: " + ", ".join(
+            (["gate selection"] if "gates" not in cfg else []) + [f"{k}" for k in missing] + changed) + " added/updated")
+
+
+def settings():
+    cfg = layout.project(config=PROJECT) or {}
+    return {tok: str(cfg.get(k, "PROJ" if k in ("jira_project", "confluence_space") else "")) for k, (tok, _c) in SETTINGS.items()}
+
+
+def render(src):
+    text = src.read_text()
+    if src.suffix == ".md":
+        for tok, v in settings().items():
+            text = text.replace("{{" + tok + "}}", v)
+    return text
+
+
+def same(src, dst):
+    return dst.exists() and dst.read_text(errors="replace") == render(src)
 
 
 # ───────────── install generated files ─────────────
@@ -189,8 +272,8 @@ def install(ci=False):
     n = 0
     for s_, d in pairs(ci=ci or None):
         d.parent.mkdir(parents=True, exist_ok=True)
-        if not d.exists() or not filecmp.cmp(s_, d, shallow=False):
-            shutil.copyfile(s_, d)
+        if not same(s_, d):
+            d.write_text(render(s_))
             n += 1
     for f in leftovers():
         say("warn", f"left over from an older install (remove it): git rm {f}")
@@ -199,7 +282,7 @@ def install(ci=False):
 
 
 def stale_generated():
-    return [str(d.relative_to(REPO)) for s, d in pairs() if not d.exists() or not filecmp.cmp(s, d, shallow=False)]
+    return [str(d.relative_to(REPO)) for s, d in pairs() if not same(s, d)]
 
 
 # ───────────── prerequisites ─────────────
@@ -255,10 +338,10 @@ def prerequisites(units):
 # ───────────── baseline ─────────────
 
 def foreign_baseline():
-    """The shipped baseline is broker-dealer's; any other repository needs its own."""
-    cfg = layout.project(config=PROJECT)
+    """Releases before 1.11 shipped the broker-dealer reference repo's baseline; every repository needs its own."""
+    cfg = layout.project(config=PROJECT) or {}
     return BASELINE.is_file() and "services/order-service/" in BASELINE.read_text() and \
-        cfg.get("domain_pack", "none") == "none"
+        cfg.get("domain_pack", "none") != BD_PACK
 
 
 def baseline(force=False):
@@ -267,7 +350,10 @@ def baseline(force=False):
         say("keep", f"{BASELINE.relative_to(REPO)} exists — not changed (--rebaseline to rebuild)")
         return
     if sh("semgrep", "--version", timeout=60)[0] != 0:
-        say("skip", "baseline not written: Semgrep is missing")
+        if foreign:
+            BASELINE.unlink()
+            say("remove", "the baseline an older release shipped (another repository's findings)")
+        say("skip", "baseline not written: Semgrep is missing — install it, then run: python3 .plumbline/init.py --rebaseline")
         return
     rc, out = sh(sys.executable, str(G / "gates" / "run_gates.py"), ".", "--write-baseline", str(BASELINE))
     say("write" if rc == 0 else "FAIL", f"gates baseline for this repository: {out.splitlines()[-1] if out else rc}")
@@ -284,7 +370,10 @@ def doctor(units):
     cfg = layout.project(config=PROJECT)
     print("\nPLUMBLINE DOCTOR — what the framework can see")
     print(f"  repository   : {REPO.name}   base branch: {cfg.get('base_branch') or base_branch()}   "
-          f"domain pack: {cfg.get('domain_pack', 'none (no project.yaml: broker-dealer default)')}")
+          f"domain pack: {cfg.get('domain_pack', 'none')}")
+    s = settings()
+    print(f"  settings     : JIRA {s['JIRA_KEY']}   Confluence {s['CONFLUENCE_SPACE']}   API {s['API_URL']}   "
+          f"frontend {s['FRONTEND_URL']}   login {s['LOGIN_PATH']}")
     warn = []
     for u in units:
         e = dm["services"].get(u["name"]) or next((x for x in dm["services"].values() if x["path"] == u["path"]), {})
@@ -315,8 +404,11 @@ def doctor(units):
     print(f"  root CLAUDE.md (master): {'present' if root_cm.is_file() else 'missing'}"
           f"{' — has solution block' if root_cm.is_file() and 'plumbline:begin solution' in root_cm.read_text(errors='replace') else ''}")
     g = (cfg.get("gates") or {})
-    print(f"  gates        : semgrep {g.get('semgrep', 'all packs')}  checks {g.get('checks', 'all')}  "
-          f"baseline {'broker-dealer default — rebuild: init.py --rebaseline (needs Semgrep)' if foreign_baseline() else ('present' if BASELINE.is_file() else 'missing')}")
+    print(f"  gates        : semgrep {g.get('semgrep', ['java-generic.yml'])}  checks {g.get('checks', ['structure_check'])}  "
+          f"baseline {'from another repository — rebuild: init.py --rebaseline' if foreign_baseline() else ('present' if BASELINE.is_file() else 'missing — install Semgrep, then init.py --rebaseline')}")
+    if s["JIRA_KEY"] == "PROJ":
+        warn.append("JIRA project key not set: edit jira_project (and confluence_space) in .plumbline/project.yaml, "
+                    "or re-run init.py --jira <KEY>")
     stale = stale_generated()
     if stale:
         warn.append(f"{len(stale)} generated agent file(s) missing or stale — run init.py")
@@ -352,16 +444,16 @@ def check():
         if missing:
             bad.append(f"units detected but not declared in project.yaml: {missing}")
     if not BASELINE.is_file():
-        bad.append("gates baseline missing")
+        bad.append("gates baseline missing (install Semgrep, then: python3 .plumbline/init.py --rebaseline)")
     elif foreign_baseline():
-        bad.append("gates baseline is the broker-dealer default, not this repository's (init.py --rebaseline)")
+        bad.append("gates baseline belongs to another repository (python3 .plumbline/init.py --rebaseline)")
     for b in bad:
         say("FAIL", b)
     say("ok" if not bad else "FAIL", "plumbline check")
     return 1 if bad else 0
 
 
-def upgrade(tarball):
+def upgrade(tarball, passthrough=()):
     stage = G.with_name(".plumbline.new")
     shutil.rmtree(stage, ignore_errors=True)
     with tempfile.TemporaryDirectory() as td:
@@ -400,7 +492,7 @@ def upgrade(tarball):
     shutil.rmtree(retired, ignore_errors=True)
     kept = [k for k in KEEP_ON_UPGRADE if (G / k).is_file()]
     say("write", f"framework {old_v} → {(G / 'VERSION').read_text().strip()} (kept: {', '.join(kept) or 'nothing'})")
-    return subprocess.run([sys.executable, str(G / "init.py")]).returncode   # keeps this repo's baseline; replaces only the shipped broker-dealer one
+    return subprocess.run([sys.executable, str(G / "init.py"), *passthrough]).returncode   # keeps this repo's baseline; replaces only the shipped broker-dealer one
 
 
 def uninstall(yes):
@@ -462,6 +554,8 @@ def migrate_legacy():
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--domain", choices=sorted(DOMAINS), default="none")
+    ap.add_argument("--jira", metavar="KEY", help="JIRA project key (written to project.yaml)")
+    ap.add_argument("--confluence", metavar="SPACE", help="Confluence space key (default: the JIRA key)")
     ap.add_argument("--doctor", action="store_true")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--upgrade", metavar="TARBALL")
@@ -474,7 +568,8 @@ def main():
     if a.check:
         return check()
     if a.upgrade:
-        return upgrade(a.upgrade)
+        return upgrade(a.upgrade, [*(["--jira", a.jira] if a.jira else []), *(["--confluence", a.confluence] if a.confluence else []),
+                                   *(["--ci"] if a.ci else [])])
     if layout is None:
         raise SystemExit("init: .plumbline/ is incomplete; run: python3 .plumbline/init.py --upgrade <plumbline tarball>")
     if a.uninstall:
@@ -490,6 +585,7 @@ def main():
     if not a.doctor:
         write_project(units, a.domain)
         units = detect()                      # names/paths as declared
+        ensure_settings(units, a.jira, a.confluence)
         install(a.ci)
     print()
     probs = prerequisites(units)

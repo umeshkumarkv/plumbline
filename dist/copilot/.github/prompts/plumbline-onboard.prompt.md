@@ -13,13 +13,13 @@ Max 3 attempts on the service docs loop. Gate: `plumbline-onboard-approved` labe
 
 ## Usage
 ```
-/plumbline-onboard SCRUM-{n}           ← JIRA story describes the service to onboard
+/plumbline-onboard {{JIRA_KEY}}-{n}           ← JIRA story describes the service to onboard
 /plumbline-onboard service:{name}      ← direct service name, no JIRA story
 /plumbline-onboard service:all         ← auto-discover all modules, run per-module CLAUDE.md
                                           generation for each, then run global consistency check
 ```
 
-Target: ${input:target:SCRUM-n | service:name | service:all}
+Target: ${input:target:{{JIRA_KEY}}-n | service:name | service:all}
 
 **Output:** the unit's CLAUDE.md — `services/{name}/CLAUDE.md`, `{name}/CLAUDE.md`, or `src/CLAUDE.md` for an app at the repository root — merged, never overwritten. The root CLAUDE.md is the master file.
 
@@ -65,7 +65,7 @@ Root CLAUDE.md sync always runs after the loop passes — it is not retried.
 
 - **Mode:** run in Copilot Chat **Agent** mode. Ask/Edit modes cannot call tools.
 - **Subagents:** Stage 1 (originator) and Stage 3 (judge) run as isolated subagents from `.github/agents/`. They need a VS Code with custom-agent subagents and the **Run Subagent** tool (`agent/runSubagent`) enabled in this chat's tool picker. If it is missing, STOP before Stage 1 and tell the user (never do the originator's work in this chat); the judge has a new-chat fallback (`/plumbline-critic`).
-- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `SCRUM-{n}`, `pr:{n}`, etc.
+- **Arguments:** use the value of `target` above (or text typed after the command) wherever this spec says `{{JIRA_KEY}}-{n}`, `pr:{n}`, etc.
 - **Atlassian tools:** before the first JIRA or Confluence call, call `getAccessibleAtlassianResources` once, keep the `cloudId`, and pass it on every Atlassian call. Tool names may carry a server prefix (e.g. `atlassian_getJiraIssue`) — use the tool whose name ends with the name written in this spec.
 - **Approval gates:** wherever this spec says "Write Guard", print the approval block, then END YOUR TURN and wait for the user's next message. Only an explicit "yes" from the user counts. Copilot's own tool-confirmation dialog is NOT the approval.
 - **Project rules:** Copilot does not load `CLAUDE.md` automatically. When this spec says read `CLAUDE.md` or `services/{service}/CLAUDE.md`, open and read the file.
@@ -436,7 +436,7 @@ artifact, so it runs Stages 2 and 3 only.
 Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
-**Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
+**Repository layout.** This spec writes service paths as `services/{service}/` (the default layout). The real
 location of each unit comes from `python3 "$G/impact/layout.py" .` (name, path, kind): `services/<name>/`, a top-level
 module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE.md is `src/CLAUDE.md`; the root CLAUDE.md is
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
@@ -489,7 +489,7 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
 **Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+Without a project.yaml, the domain pack is `none`.
 Never apply another domain's rules to this repository.
 Rubric `onboard critic` (12 items for Java, 20 for React — listed below).
 
@@ -696,8 +696,7 @@ any CLAUDE.md, and never remove a line outside the `onboard` block.
 The root CLAUDE.md is the master file: the solution and its architecture. Keep everything people wrote there; the
 generated part is the `solution` block.
 
-**If the root CLAUDE.md already defines the solution** (a service/unit table, the topics, the cache strategy — as in
-broker-dealer), check drift for this unit only:
+**If the root CLAUDE.md already defines the solution** (a service/unit table, the topics, the cache strategy), check drift for this unit only:
 - Unit row: port, "owns" (unit CLAUDE.md purpose) and "must never" match the unit's CLAUDE.md.
 - Kafka topics this unit produces/consumes are in the topic table, with correct producer/consumer; nothing stale.
 - Redis keys this unit owns are in the cache table, with TTL and invalidation; nothing stale.
@@ -746,7 +745,7 @@ Known Tech Debt Documented
   {list — or "None"}
 
 Next Step
-  Run /plumbline-ba SCRUM-{n} to begin story decomposition now that the service is documented.
+  Run /plumbline-ba {{JIRA_KEY}}-{n} to begin story decomposition now that the service is documented.
 
 Execution time : {elapsed}
 ```
@@ -812,7 +811,7 @@ grep -r "groupId" services/*/src/main --include="*.java" -h \
   | grep -oE '"[a-z-.]+-group"' | sort -u
 ```
 
-Produce this matrix:
+Produce this matrix (the rows are an illustration from an order-management system — list this repository's topics):
 
 ```
 KAFKA CONSISTENCY MATRIX
@@ -869,7 +868,7 @@ grep -r "api/v1" frontend/src --include="*.ts" --include="*.tsx" -h 2>/dev/null 
   | grep -oE "/api/v1/[a-zA-Z0-9/_-]+" | sort -u
 ```
 
-Cross-reference each frontend path against the service CLAUDE.md route tables.
+Cross-reference each frontend path against the service CLAUDE.md route tables (example row shown).
 
 ```
 FRONTEND ROUTE COVERAGE

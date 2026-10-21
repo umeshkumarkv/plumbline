@@ -27,9 +27,9 @@ fails CI unless a human adds the `plumbline-policy-change` label). Add them to C
 | `packs/` | domain rule pack, governance schema | domain-specific |
 | `selftest/` | self-tests: `python3 .plumbline/selftest/agents_selftest.py` etc. | |
 
-**Current fit:** Java/Spring Boot services under `services/<name>/`, React under `frontend/`, Kafka, Postgres, JIRA,
-GitHub. The Semgrep rules, domain pack, `gates/baseline.json` and ArchUnit test are written for broker-dealer: replace
-them for another domain, and regenerate the baseline (`python3 .plumbline/gates/run_gates.py . --write-baseline`).
+**Fit:** Java/Spring Boot backends (any layout below) and React/Angular/Vue frontends, JIRA + Confluence, GitHub.
+Generic by default: `java-generic.yml` + `structure_check`, no domain pack, and a gate baseline built from *this*
+repository (`init.py --rebaseline`). `--domain broker-dealer` adds the example OMS rule packs and domain invariants.
 
 ## Repository layouts
 The checks find each deployable unit with `python3 .plumbline/impact/layout.py .`. Detected automatically:

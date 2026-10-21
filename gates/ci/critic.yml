@@ -32,8 +32,8 @@ jobs:
           # The rulebook comes from the BASE branch, so a PR cannot rewrite the rules it is judged by.
           mkdir -p .plumbline/run/review/rulebook
           git archive origin/${{ github.base_ref }} ':(glob)**/CLAUDE.md' 2>/dev/null | tar -x -C .plumbline/run/review/rulebook || true
-          # Domain pack named in the base branch's project.yaml (none, or the broker-dealer default without project.yaml)
-          python3 -c "import sys;sys.path.insert(0,'.plumbline/impact');import layout;p=layout.project(config='.plumbline/project.yaml');print(p.get('domain_pack','.plumbline/packs/domain-rules/rules.yaml') if p else '.plumbline/packs/domain-rules/rules.yaml')" > .plumbline/run/review/domain-pack.txt
+          # Domain pack named in the base branch's project.yaml (`none` when it names none)
+          python3 -c "import sys;sys.path.insert(0,'.plumbline/impact');import layout;p=layout.project(config='.plumbline/project.yaml') or {};print(p.get('domain_pack','none'))" > .plumbline/run/review/domain-pack.txt
       - uses: actions/cache/restore@v4   # READ-ONLY: PR runs never write the cache (see impact-cache.yml)
         if: env.PL_EMPTY != '1'
         with:

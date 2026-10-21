@@ -2,6 +2,7 @@
 Runs the deterministic gates, the cross-service impact check and reads test + coverage evidence.
 Judge keeps: logic and domain correctness, design adherence, test quality, the categories gates cannot see."""
 import json
+import os
 import re
 import subprocess
 import sys
@@ -14,6 +15,15 @@ sys.path.insert(0, str(ROOT / "impact"))
 import layout  # noqa: E402
 
 UNITS = {}   # changed backend unit name -> its directory relative to the repo ("" for a root app, else "path/")
+
+
+def baseline_path():
+    """The framework's baseline. Self-tests point at the reference one; an override must stay inside the (hashed)
+    framework folder, so nothing outside it can swap in a permissive baseline."""
+    o = os.environ.get("PLUMBLINE_BASELINE")
+    if o and Path(o).resolve().is_relative_to(ROOT.resolve()):
+        return Path(o)
+    return ROOT / "gates/baseline.json"
 
 
 def changed_services(repo: Path, base: str):
@@ -42,7 +52,7 @@ def run(r, ctx):
 
     # 1. deterministic gates (Semgrep + structure + domain), baseline ratchet, nosemgrep ignored
     cmd = [sys.executable, str(ROOT / "gates/run_gates.py"), str(repo), "--json",
-           "--baseline", str(ROOT / "gates/baseline.json"), "--changed-from", ctx.base]
+           "--baseline", str(baseline_path()), "--changed-from", ctx.base] + (["--all-packs"] if os.environ.get("PLUMBLINE_ALL_PACKS") else [])
     g = subprocess.run(cmd, capture_output=True, text=True)
     try:
         new = json.loads(g.stdout)["new"]

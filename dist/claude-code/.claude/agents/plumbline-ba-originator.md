@@ -51,13 +51,13 @@ So that {business outcome}
 
 #### Acceptance Criteria
 Each AC must be:
-- Testable with a single curl command against localhost:8080
+- Testable with a single curl command against {{API_URL}}
 - Specific about HTTP status code, response field, and value
 - Cover: happy path, not-found (404), validation error (400/422)
 
 Format:
 ```
-- [ ] GET http://localhost:8080/api/v1/{resource}/{id} returns 200 with {field}={value}
+- [ ] GET {{API_URL}}/api/v1/{resource}/{id} returns 200 with {field}={value}
 - [ ] Unknown {id} returns 404 with error code {CODE}
 - [ ] Standard response envelope: { data: {}, meta: { timestamp, requestId } }
 ```
@@ -73,9 +73,9 @@ Explicit list of what is NOT in this ticket, including:
 - Service: {service-name} (port {port}) — exposed via API Gateway port 8080
 - Read CLAUDE.md and services/{service}/CLAUDE.md before writing any code
 - Follow openapi.yaml exactly for response shape
-- Branch: ai/SCRUM-{n}-{slug} from develop
+- Branch: ai/{{JIRA_KEY}}-{n}-{slug} from develop
 - PR target: develop
-- Blocked by: SCRUM-{x} (if applicable — or "None")
+- Blocked by: {{JIRA_KEY}}-{x} (if applicable — or "None")
 ```
 
 #### Story Points

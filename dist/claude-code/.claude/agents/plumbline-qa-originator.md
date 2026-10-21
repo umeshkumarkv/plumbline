@@ -30,7 +30,7 @@ After you, a deterministic benchmark and an isolated judge check your work. You 
 Read `.plumbline/run/review/{ticket}-qa-plan.json`: it holds the AC classification, the URLs, and whether Postgres and Kafka
 are reachable (skip Step C1 / C2 when `available` is false and record why). Get your own token; never print it:
 ```bash
-export TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" \
+export TOKEN=$(curl -s -X POST {{API_URL}}{{LOGIN_PATH}} -H "Content-Type: application/json" \
   -d "{\"username\":\"$PLUMBLINE_DEMO_USER\",\"password\":\"$PLUMBLINE_DEMO_PASSWORD\"}" | jq -r '.data.token')
 test -n "$TOKEN" && test "$TOKEN" != null || echo "LOGIN FAILED"
 ```
@@ -68,10 +68,10 @@ frontend/e2e/qa-scrum-{n}-attempt-{attempt}.spec.ts
 import { test, expect } from '@playwright/test'
 import { loginAsTrader, loginAsAdmin, loginAsOps } from './helpers/auth'
 
-// QA Eval Loop — SCRUM-{n} — Attempt {attempt}
+// QA Eval Loop — {{JIRA_KEY}}-{n} — Attempt {attempt}
 // Generated: {ISO 8601 timestamp}
 
-test.describe('QA SCRUM-{n}: {story summary}', () => {
+test.describe('QA {{JIRA_KEY}}-{n}: {story summary}', () => {
 
   // For each UI or BOTH AC, generate one test block:
   test('{ac-slug}: {ac text}', async ({ page }) => {
@@ -154,13 +154,13 @@ Parse the output:
 ```bash
 # 1. Unknown ID → 404
 curl -s -w "\nHTTP_STATUS:%{http_code}" \
-  http://localhost:8080/api/v1/{resource}/00000000-0000-0000-0000-000000000000 \
+  {{API_URL}}/api/v1/{resource}/00000000-0000-0000-0000-000000000000 \
   -H "Authorization: Bearer $TOKEN"
 # Assert: HTTP 404, error.code = {RESOURCE}_NOT_FOUND
 
 # 2. Missing auth → 401
 curl -s -w "\nHTTP_STATUS:%{http_code}" \
-  http://localhost:8080/api/v1/{resource}/{id}
+  {{API_URL}}/api/v1/{resource}/{id}
 # Assert: HTTP 401
 
 # 3. Response envelope structure
@@ -321,7 +321,7 @@ A missing Kafka event is a FAIL — it means the event pipeline is broken even i
 
 Write every result of this attempt (REST and UI ACs, and the mandatory edge cases with `"kind": "EDGE"` and `ac` starting `EDGE:`) to `.plumbline/run/review/{ticket}-qa-results.json`:
 ```json
-{"ticket": "SCRUM-n", "results": [{"ac": "<AC text as in the story>", "kind": "REST|UI|EDGE", "command": "curl ...",
+{"ticket": "{{JIRA_KEY}}-n", "results": [{"ac": "<AC text as in the story>", "kind": "REST|UI|EDGE", "command": "curl ...",
   "expected_status": 200, "http_status": 200, "response": "<full raw body>", "verdict": "PASS|FAIL",
   "screenshot": "frontend/test-results/... (UI only, path from the repo root)"}]}
 ```

@@ -6,10 +6,10 @@ Single pass, read-only. No eval loop.
 ## Usage
 ```
 /plumbline-jira-ping
-/plumbline-jira-ping SCRUM-12      ← also fetch one specific ticket
+/plumbline-jira-ping {{JIRA_KEY}}-12      ← also fetch one specific ticket
 ```
 
-Issue key to fetch (optional): `$ARGUMENTS` — if empty, use `SCRUM-1`.
+Issue key to fetch (optional): `$ARGUMENTS` — if empty, use `{{JIRA_KEY}}-1`.
 
 ---
 
@@ -69,18 +69,18 @@ Call `atlassianUserInfo`. Record the display name only (not email or account ID)
 ## Step 3 — Project visibility
 
 Call `getVisibleJiraProjects` with the `cloudId`.
-Check whether project key `SCRUM` is in the result.
+Check whether project key `{{JIRA_KEY}}` is in the result.
 
 ## Step 4 — Fetch one issue
 
-Call `getJiraIssue` with the `cloudId` and the issue key chosen above (default `SCRUM-1`).
+Call `getJiraIssue` with the `cloudId` and the issue key chosen above (default `{{JIRA_KEY}}-1`).
 Record: key, summary, status, and labels.
 
 ## Step 5 — JQL search
 
 Call `searchJiraIssuesUsingJql` with the `cloudId` and:
 ```
-project = SCRUM ORDER BY updated DESC
+project = {{JIRA_KEY}} ORDER BY updated DESC
 ```
 Limit the results to 5. Record how many issues came back and their keys.
 
@@ -99,7 +99,7 @@ Signed in as: {display name}
   Step 0 Tools present       : {PASS — tool name used: {name} | FAIL}
   Step 1 Resolve cloudId     : {PASS | FAIL — error}
   Step 2 User info           : {PASS | FAIL — error}
-  Step 3 SCRUM visible       : {PASS | FAIL — not in project list}
+  Step 3 {{JIRA_KEY}} visible       : {PASS | FAIL — not in project list}
   Step 4 getJiraIssue {key}  : {PASS — "{summary}" [{status}] | FAIL — error}
   Step 5 JQL search          : {PASS — {n} issues: {keys} | FAIL — error}
 
