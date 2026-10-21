@@ -167,7 +167,7 @@ class Repo:
         out = set(self.tables(None))
         if not self.path:
             return out
-        skip = ("node_modules", "target", ".agentic-sdlc", ".guardrails", ".git", ".plumbline")
+        skip = ("node_modules", "target", ".plumbline", ".agentic-sdlc", ".guardrails", ".git")
         for f in self.path.rglob("*.sql"):
             if not any(x in f.parts for x in skip):
                 for m in re.finditer(r"CREATE\s+(?:OR\s+REPLACE\s+)?(?:TABLE|VIEW)\s+(?:IF\s+NOT\s+EXISTS\s+)?[`\"\[]?(?:\w+[`\"\]]?\.[`\"\[]?)?(\w+)",

@@ -12,8 +12,8 @@ Single pass, read-only. No eval loop.
 
 ## Usage
 ```
-/jira-ping
-/jira-ping SCRUM-12      ← also fetch one specific ticket
+/plumbline-jira-ping
+/plumbline-jira-ping SCRUM-12      ← also fetch one specific ticket
 ```
 
 <!-- @copilot -->

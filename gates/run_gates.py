@@ -158,7 +158,7 @@ def run_struct(repo: Path):
 
 def gate_view(repo: Path):
     """The checks expect backends under services/<name>/. For any other layout (a root app, top-level modules,
-    .agentic-sdlc/project.yaml) build a copy where each backend unit sits at services/<name>/ and everything else
+    .plumbline/project.yaml) build a copy where each backend unit sits at services/<name>/ and everything else
     keeps its path. Returns (view_dir, to_repo_path) — or (repo, identity) when the layout is already standard."""
     units = [u for u in layout.units(repo, config=CONFIG) if u["kind"] == "service"]
     if all(u["path"] == f"services/{u['name']}" for u in units):

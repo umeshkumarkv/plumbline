@@ -13,7 +13,7 @@ On persistent failure after 3 attempts, escalates to human.
 
 ## Usage
 ```
-/qa-eval-loop SCRUM-{n}
+/plumbline-qa SCRUM-{n}
 ```
 <!-- @copilot -->
 
@@ -89,7 +89,7 @@ incompatible UUID domains, RBAC misconfiguration, missing header propagation), t
 
 1. STOP immediately — do not touch any code
 2. Post the failure evidence to JIRA using the four-field format above only
-3. Escalate to human with message: "Design gap found — run /arch-eval-loop SCRUM-{n}"
+3. Escalate to human with message: "Design gap found — run /plumbline-arch SCRUM-{n}"
 4. Do NOT attempt to fix the issue, suggest a workaround, or retry with a code change
 
 A test failure caused by a design problem is not a QA failure. It is an architecture failure.
@@ -137,9 +137,9 @@ gh api repos/{owner}/{repo}/commits/{headRefOid}/status \
   --jq '.statuses[] | select(.context=="plumbline/code-review") | .state'
 ```
 
-- If the `plumbline/code-review` status on the PR's current head is not `success` — STOP: "Run /code-review-eval-loop SCRUM-{n} first."
+- If the `plumbline/code-review` status on the PR's current head is not `success` — STOP: "Run /plumbline-code-review SCRUM-{n} first."
 - If `reviewDecision` is NOT `"APPROVED"` — STOP: "A human CODEOWNER must approve the PR (the bot never approves)."
-- If no PR exists — STOP: "No PR found. Run /dev-eval-loop SCRUM-{n} first."
+- If no PR exists — STOP: "No PR found. Run /plumbline-dev SCRUM-{n} first."
 
 4. Verify required Docker services are running:
 ```bash
@@ -240,8 +240,8 @@ AC CLASSIFICATION — SCRUM-{n}
 `BOTH` ACs are also covered in Step B1 for the API assertion.
 `MUTATING` ACs (REST or BOTH) → also executed in Step C (DB + Kafka).
 
-**Save the plan for the originator** (it cannot read your context). Write `.plumbline/review/{ticket}-story.md` (the
-ticket's summary, description and ACs as fetched) and `.plumbline/review/{ticket}-qa-plan.json`:
+**Save the plan for the originator** (it cannot read your context). Write `.plumbline/run/review/{ticket}-story.md` (the
+ticket's summary, description and ACs as fetched) and `.plumbline/run/review/{ticket}-qa-plan.json`:
 ```json
 {"ticket": "SCRUM-{n}", "acs": [{"id": "AC-1", "text": "…", "layer": "REST", "mutation": "MUTATING"}],
  "urls": {"gateway": "http://localhost:8080", "frontend": "http://localhost:5173"},
@@ -287,10 +287,10 @@ PREVIOUSLY FAILED — watch these specifically this attempt:
 
 ---
 
-<!-- @originator role=qa name={ticket}-qa writable=".plumbline/review/{ticket}-qa-results.json" tools=Read,Grep,Glob,Write,Bash net=local artifact=".plumbline/review/{ticket}-qa-results.json and screenshots under frontend/test-results/" inputs="the story in `.plumbline/review/{ticket}-story.md`; the test plan in `.plumbline/review/{ticket}-qa-plan.json` (AC classification, stack URLs, which of Postgres/Kafka are reachable, the names of the login env vars — never their values)" -->
+<!-- @originator role=qa name={ticket}-qa writable=".plumbline/run/review/{ticket}-qa-results.json" tools=Read,Grep,Glob,Write,Bash net=local artifact=".plumbline/run/review/{ticket}-qa-results.json and screenshots under frontend/test-results/" inputs="the story in `.plumbline/run/review/{ticket}-story.md`; the test plan in `.plumbline/run/review/{ticket}-qa-plan.json` (AC classification, stack URLs, which of Postgres/Kafka are reachable, the names of the login env vars — never their values)" -->
 ### Step B0 — Read the plan and log in
 
-Read `.plumbline/review/{ticket}-qa-plan.json`: it holds the AC classification, the URLs, and whether Postgres and Kafka
+Read `.plumbline/run/review/{ticket}-qa-plan.json`: it holds the AC classification, the URLs, and whether Postgres and Kafka
 are reachable (skip Step C1 / C2 when `available` is false and record why). Get your own token; never print it:
 ```bash
 export TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" \
@@ -510,7 +510,7 @@ Skip a UI edge case if it is not applicable to the story under test (e.g. skip U
 
 Run this step for every AC classified `MUTATING` (from Phase 0b) that passed Steps B1/B2.
 Skip entirely for `READ` ACs and pure `UI` ACs.
-If `db.available` or `kafka.available` is false in `.plumbline/review/{ticket}-qa-plan.json`, log "skipped — infrastructure unavailable" and continue.
+If `db.available` or `kafka.available` is false in `.plumbline/run/review/{ticket}-qa-plan.json`, log "skipped — infrastructure unavailable" and continue.
 
 #### C1 — DB State Verification
 
@@ -582,31 +582,31 @@ A missing Kafka event is a FAIL — it means the event pipeline is broken even i
 
 ### Step E0 — Record the evidence (Stage 1 output)
 
-Write every result of this attempt (REST and UI ACs, and the mandatory edge cases with `"kind": "EDGE"` and `ac` starting `EDGE:`) to `.plumbline/review/{ticket}-qa-results.json`:
+Write every result of this attempt (REST and UI ACs, and the mandatory edge cases with `"kind": "EDGE"` and `ac` starting `EDGE:`) to `.plumbline/run/review/{ticket}-qa-results.json`:
 ```json
 {"ticket": "SCRUM-n", "results": [{"ac": "<AC text as in the story>", "kind": "REST|UI|EDGE", "command": "curl ...",
   "expected_status": 200, "http_status": 200, "response": "<full raw body>", "verdict": "PASS|FAIL",
   "screenshot": "frontend/test-results/... (UI only, path from the repo root)"}]}
 ```
-Never edit the story file `.plumbline/review/{ticket}-story.md`, which the orchestrator saved from JIRA.
+Never edit the story file `.plumbline/run/review/{ticket}-story.md`, which the orchestrator saved from JIRA.
 <!-- @end-originator -->
 
 ### Stage 2 — Benchmark (deterministic, no LLM)
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
-python3 "$G/bench/run.py" qa --results .plumbline/review/{ticket}-qa-results.json --story .plumbline/review/{ticket}-story.md --repo . --replay --name {ticket}-qa
+G=${PLUMBLINE_HOME:-.plumbline}
+python3 "$G/bench/run.py" qa --results .plumbline/run/review/{ticket}-qa-results.json --story .plumbline/run/review/{ticket}-story.md --repo . --replay --name {ticket}-qa
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_failures` as `BENCH:<id> — <detail>`, **skip Stage 3**, go to Step E.
-- **Exit 0 (PASS):** continue to Stage 3; pass `.plumbline/review/{ticket}-qa-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Stage 3; pass `.plumbline/run/review/{ticket}-qa-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: every story AC has a result; every REST result has a command, status and full body; recorded verdicts agree with expected vs actual status; 2xx bodies use the envelope; money is a JSON string; UI screenshots exist; the 4 mandatory edge cases are recorded; recorded GETs reproduce on replay (mutating calls are never replayed).
 
 ### Stage 3 — Judge (isolated critic, rubric `qa evidence`)
 
 <!-- @include shared/isolated-critic.md -->
-Artifact: `.plumbline/review/{ticket}-qa-results.json`. Rubric `qa evidence`:
+Artifact: `.plumbline/run/review/{ticket}-qa-results.json`. Rubric `qa evidence`:
 ```
   [x/] Each AC is proven by an assertion on the field and value the AC names, not only by the status code
   [x/] MUTATING ACs: the DB row and Kafka event shown match what the AC changes (entity id, new state, payload fields)
@@ -798,7 +798,7 @@ Eval Loop    : Passed on attempt {attempt} / {max_attempts}
 Screenshots  : frontend/test-results/qa-scrum-{n}-attempt-{attempt}/
 {if attempt > 1: What changed between attempts: {list}}
 
-Next step  : Merge PR → run /sm-eval-loop to close sprint gate
+Next step  : Merge PR → run /plumbline-sm to close sprint gate
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 <!-- @claude -->

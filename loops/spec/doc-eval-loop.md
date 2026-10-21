@@ -14,8 +14,8 @@ Always raises a docs PR — never commits directly to develop.
 
 ## Usage
 ```
-/doc-eval-loop SCRUM-{n}
-/doc-eval-loop pr:{n}
+/plumbline-doc SCRUM-{n}
+/plumbline-doc pr:{n}
 ```
 
 <!-- @copilot -->
@@ -146,7 +146,7 @@ Story  : SCRUM-{n}
 If `all_gaps` is not empty, they go to the originator through the feedback file (Stage 1, step 2): every gap
 in this doc update must be addressed.
 
-<!-- @originator role=doc name={ticket}-doc tools=Read,Grep,Glob,Write,Edit artifact="services/{service}/openapi.yaml and the unit's CLAUDE.md (src/CLAUDE.md for a root app; root CLAUDE.md only if the architecture changed)" inputs="the merged PR diff in `.plumbline/review/{ticket}-pr.diff`; its title and body in `.plumbline/review/{ticket}-pr.md`" -->
+<!-- @originator role=doc name={ticket}-doc tools=Read,Grep,Glob,Write,Edit artifact="services/{service}/openapi.yaml and the unit's CLAUDE.md (src/CLAUDE.md for a root app; root CLAUDE.md only if the architecture changed)" inputs="the merged PR diff in `.plumbline/run/review/{ticket}-pr.diff`; its title and body in `.plumbline/run/review/{ticket}-pr.md`" -->
 ### Step B — Update openapi.yaml
 
 File: `services/{service}/openapi.yaml`
@@ -198,7 +198,7 @@ openapi.yaml field type rules (non-negotiable):
 
 File: the unit's own CLAUDE.md — `services/{service}/CLAUDE.md`, or `src/CLAUDE.md` for an app at the repository root
 (the root CLAUDE.md is the master file; Step D). Edit only the affected rows: add or correct entries, never rewrite or
-drop sections. Inside an `<!-- agentic-sdlc:begin onboard -->` block, keep its markers.
+drop sections. Inside an `<!-- plumbline:begin onboard -->` block, keep its markers.
 
 Add entries for everything new found in the diff:
 
@@ -232,12 +232,12 @@ If none of the above: leave root `CLAUDE.md` completely unchanged.
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
+G=${PLUMBLINE_HOME:-.plumbline}
 MERGE_SHA=$(gh pr view {pr-number} --json mergeCommit --jq .mergeCommit.oid)
 python3 "$G/bench/run.py" doc --repo . --base "$MERGE_SHA^1" --service {service} --name {ticket}-doc   # touched = what the merged PR changed
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_gaps` as `BENCH:<id> — <detail>`, **skip Step E**, go to Step F.
-- **Exit 0 (PASS):** continue to Step E; pass `.plumbline/review/{ticket}-doc-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Step E; pass `.plumbline/run/review/{ticket}-doc-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: openapi.yaml parses, every endpoint this change added or modified is in openapi.yaml (older gaps are reported as debt), BigDecimal fields are `type: string`, every Kafka topic and env var is in the service CLAUDE.md, new Maven dependencies are documented, relative links resolve.
 
@@ -290,7 +290,7 @@ _If Stage 2 failed, the judge did not run: show every rubric row as `NOT RUN (be
 Print completeness scorecard:
 ```
 DOC COMPLETENESS SCORECARD — Attempt {attempt}
-  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/review/{name}-benchmark.md)
+  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/run/review/{name}-benchmark.md)
   New endpoints documented        : {COMPLETE | GAP — {n} missing}
   New DTO fields in schema        : {COMPLETE | GAP — {n} missing}
   New error codes documented      : {COMPLETE | GAP — {n} missing}
@@ -419,8 +419,8 @@ patterns that need clarification before documentation can be written accurately.
 
 Recommended action:
 1. Review the persistent gaps above
-2. If the merged code changes an existing API contract — run /arch-eval-loop SCRUM-{n}
-3. Re-run /doc-eval-loop SCRUM-{n} after the contract is clarified
+2. If the merged code changes an existing API contract — run /plumbline-arch SCRUM-{n}
+3. Re-run /plumbline-doc SCRUM-{n} after the contract is clarified
 ```
 
 STOP — do not raise a partial docs PR.

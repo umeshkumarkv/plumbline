@@ -2,7 +2,7 @@
 """Plumbline benchmark stage — deterministic checks between the ORIGINATOR (agent) and the JUDGE (isolated critic).
 
   run.py <agent> [--artifact FILE] [--repo DIR] [--base REF] [--story FILE] [--facts FILE] [--results FILE]
-                 [--service NAME] [--branch NAME] [--pr N] [--out-dir .plumbline/review] [--name PREFIX] [--replay]
+                 [--service NAME] [--branch NAME] [--pr N] [--out-dir .plumbline/run/review] [--name PREFIX] [--replay]
 
 agents: pm ba arch dev code-review qa devops sm doc onboard
 Writes <out-dir>/<name>-benchmark.json and -benchmark.md (the judge reads the .md). Exit 0 PASS, 1 FAIL, 2 usage.
@@ -15,6 +15,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "impact"))
+import layout  # noqa: E402
+# The unit layout comes from the framework's own project.yaml (in a code-review worktree: the reviewer's copy, never
+# the PR's). Missing file = auto-detect.
+layout.TRUSTED_CONFIG = str(Path(__file__).resolve().parents[1] / "project.yaml")
 from common import Report, Repo, UsageError, read  # noqa: E402
 
 PACKS = {"pm": "pm", "ba": "ba", "arch": "arch", "dev": "dev", "code-review": "code_review", "qa": "qa",
@@ -42,7 +47,7 @@ def main(argv=None):
     ap.add_argument("--min-coverage", type=float, default=80.0)
     ap.add_argument("--cache")
     ap.add_argument("--replay", action="store_true")
-    ap.add_argument("--out-dir", default=".plumbline/review")
+    ap.add_argument("--out-dir", default=".plumbline/run/review")
     ap.add_argument("--name")
     ap.add_argument("--quiet", action="store_true")
     a = ap.parse_args(argv)

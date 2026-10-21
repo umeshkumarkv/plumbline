@@ -1,4 +1,4 @@
-# .agentic-sdlc/project.yaml — only needed when auto-detection (python3 .agentic-sdlc/impact/layout.py .) gets the
+# .plumbline/project.yaml — only needed when auto-detection (python3 .plumbline/impact/layout.py .) gets the
 # units wrong. Rename to project.yaml. A human edits this file (it is a protected path; agents cannot change it).
 units:
   - {name: shop, path: ., kind: service}        # a Spring app at the repository root (code in ./src)
@@ -6,5 +6,5 @@ units:
 #  - {name: billing, path: modules/billing, kind: service}
 
 # Domain rule pack the judge applies (business rules of THIS domain). `none` for a repo without one.
-# Without project.yaml the broker-dealer pack (.agentic-sdlc/packs/domain-rules/rules.yaml) is used.
+# Without project.yaml the broker-dealer pack (.plumbline/packs/domain-rules/rules.yaml) is used.
 domain_pack: none

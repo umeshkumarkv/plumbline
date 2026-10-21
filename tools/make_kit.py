@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the copyable kit: build/kit/.agentic-sdlc/ — one folder with everything a repository needs.
+"""Build the copyable kit: build/kit/.plumbline/ — one folder with everything a repository needs.
   python3 tools/make_kit.py [--out build/kit]"""
 import shutil
 import sys
@@ -12,7 +12,7 @@ SKIP = shutil.ignore_patterns("__pycache__", "*.pyc", "eval", "scale", "eval_imp
 
 def main():
     out = Path(sys.argv[sys.argv.index("--out") + 1]) if "--out" in sys.argv else ROOT / "build/kit"
-    kit = out / ".agentic-sdlc"
+    kit = out / ".plumbline"
     shutil.rmtree(kit, ignore_errors=True)
     kit.mkdir(parents=True)
     for name in INCLUDE:
@@ -20,6 +20,7 @@ def main():
         (shutil.copytree(src, kit / name, ignore=SKIP) if src.is_dir() else shutil.copy2(src, kit / name))
     shutil.copy2(ROOT / "tools/install.sh", kit / "install.sh")
     shutil.copy2(ROOT / "tools/init.py", kit / "init.py")
+    shutil.copy2(ROOT / "tools/kit.gitignore", kit / ".gitignore")
     shutil.copy2(ROOT / "tools/KIT-README.md", kit / "README.md")
     shutil.copy2(ROOT / "tools/project.yaml.example", kit / "project.yaml.example")
     (kit / "VERSION").write_text((ROOT / "VERSION").read_text())

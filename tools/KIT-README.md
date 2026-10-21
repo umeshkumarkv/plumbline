@@ -1,17 +1,19 @@
-# .agentic-sdlc — Agentic SDLC (Plumbline), copy this folder
+# .plumbline — Agentic SDLC (Plumbline), copy this folder
 
-Everything Plumbline needs lives in this one folder. The only files outside it are the ones Claude Code and Copilot
-require at fixed paths (`.claude/`, `.github/`), and `install.sh` generates those from here.
+Everything Plumbline needs lives in this one folder, including the loop working files (`run/`, ignored by this
+folder's `.gitignore`). Outside it, `init.py` writes only the entry files Claude Code and Copilot require, all named
+`plumbline-*` (`.claude/commands`, `.claude/agents`, `.github/prompts`, `.github/agents`), and CI workflows only with
+`--ci`. `init.py --uninstall --yes` removes everything again (CLAUDE.md files stay).
 
 ## Use in a repository
 ```bash
-cp -R <source>/.agentic-sdlc ./.agentic-sdlc    # or unpack the release tarball here
-python3 .agentic-sdlc/init.py                    # detect, project.yaml, install, baseline, prerequisites, doctor
-git add .agentic-sdlc .claude .github .gitignore && git commit -m "Add Plumbline $(cat .agentic-sdlc/VERSION)"
+cp -R <source>/.plumbline ./.plumbline    # or unpack the release tarball here
+python3 .plumbline/init.py                    # detect, project.yaml, install, baseline, prerequisites, doctor
+git add .plumbline .claude .github && git commit -m "Add Plumbline $(cat .plumbline/VERSION)"
 ```
 `init.py --doctor` reports what the framework sees; `--check` fails CI on drift; `--upgrade <tarball>` updates the
 framework and keeps `project.yaml` and the baseline. `--domain broker-dealer` selects the broker-dealer domain pack.
-Protect it: `.agentic-sdlc/`, `.claude/` and `.github/` are protected paths (agents may not change them; a PR that does
+Protect it: `.plumbline/`, `.claude/` and `.github/` are protected paths (agents may not change them; a PR that does
 fails CI unless a human adds the `plumbline-policy-change` label). Add them to CODEOWNERS.
 
 ## What is inside
@@ -23,17 +25,18 @@ fails CI unless a human adds the `plumbline-policy-change` label). Add them to C
 | `gates/` | Semgrep + structure/domain checks, protected paths, CI templates, baseline | `checks/protected_paths.py` generic; rules and baseline are this repo's |
 | `impact/` | cross-service impact map | Spring REST + Kafka |
 | `packs/` | domain rule pack, governance schema | domain-specific |
-| `selftest/` | self-tests: `python3 .agentic-sdlc/selftest/agents_selftest.py` etc. | |
+| `selftest/` | self-tests: `python3 .plumbline/selftest/agents_selftest.py` etc. | |
 
 **Current fit:** Java/Spring Boot services under `services/<name>/`, React under `frontend/`, Kafka, Postgres, JIRA,
 GitHub. The Semgrep rules, domain pack, `gates/baseline.json` and ArchUnit test are written for broker-dealer: replace
-them for another domain, and regenerate the baseline (`python3 .agentic-sdlc/gates/run_gates.py . --write-baseline`).
+them for another domain, and regenerate the baseline (`python3 .plumbline/gates/run_gates.py . --write-baseline`).
 
 ## Repository layouts
-The checks find each deployable unit with `python3 .agentic-sdlc/impact/layout.py .`. Detected automatically:
+The checks find each deployable unit with `python3 .plumbline/impact/layout.py .`. Detected automatically:
 `services/<name>/` backends, top-level modules with `pom.xml`/`build.gradle` and `src/main/`, **a single app at the
 repository root** (`./src`, the root `CLAUDE.md` is its CLAUDE.md), and frontends (any top-level folder with a
 `package.json`, e.g. `ui/`). Anything else: copy `project.yaml.example` to `project.yaml` here and list the units.
 
 ## Update
-Replace this folder with the new release (keep your `project.yaml`), run `.agentic-sdlc/install.sh`, commit. See `CHANGELOG.md`.
+`python3 .plumbline/init.py --upgrade plumbline-<version>.tar.gz` replaces the framework and keeps `project.yaml`,
+the baseline and `run/`. See `CHANGELOG.md`.

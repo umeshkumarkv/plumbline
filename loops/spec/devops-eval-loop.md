@@ -13,10 +13,10 @@ On persistent failure after 3 attempts, escalates to human with full log evidenc
 
 ## Usage
 ```
-/devops-eval-loop pr:{n}              — fix a failing CI pipeline run
-/devops-eval-loop check-pipeline      — check current pipeline state
-/devops-eval-loop branch:{branch-name} — check a specific branch
-/devops-eval-loop security-report     — sprint-close: Veracode + BlackDuck scan → Confluence
+/plumbline-devops pr:{n}              — fix a failing CI pipeline run
+/plumbline-devops check-pipeline      — check current pipeline state
+/plumbline-devops branch:{branch-name} — check a specific branch
+/plumbline-devops security-report     — sprint-close: Veracode + BlackDuck scan → Confluence
 ```
 
 <!-- @copilot -->
@@ -107,7 +107,7 @@ gh run list --branch {branch} --limit 5 --json databaseId,conclusion \
   | jq '[.[] | select(.conclusion == "failure")] | first'
 
 # Fetch full failure logs
-mkdir -p .plumbline/review && gh run view {run-id} --log-failed > .plumbline/review/{branch-slug}-ci.log   # the originator's input
+mkdir -p .plumbline/run/review && gh run view {run-id} --log-failed > .plumbline/run/review/{branch-slug}-ci.log   # the originator's input
 ```
 
 ---
@@ -145,10 +145,10 @@ PRIOR ATTEMPTS — context for this attempt:
 {numbered list of prior fix attempts and their results}
 ```
 
-<!-- @originator role=devops name={branch-slug}-devops tools=Read,Grep,Glob,Write,Edit,Bash net=build writable=".plumbline/review/{branch-slug}-diagnosis.md" artifact="the fix in the working tree, uncommitted, and `.plumbline/review/{branch-slug}-diagnosis.md`" inputs="the failing CI log in `.plumbline/review/{branch-slug}-ci.log`; earlier attempts and results in the brief" -->
+<!-- @originator role=devops name={branch-slug}-devops tools=Read,Grep,Glob,Write,Edit,Bash net=build writable=".plumbline/run/review/{branch-slug}-diagnosis.md" artifact="the fix in the working tree, uncommitted, and `.plumbline/run/review/{branch-slug}-diagnosis.md`" inputs="the failing CI log in `.plumbline/run/review/{branch-slug}-ci.log`; earlier attempts and results in the brief" -->
 ### Step B — Classify the Failure
 
-Read the failure log `.plumbline/review/{branch-slug}-ci.log` (saved by the orchestrator before Stage 1; from attempt 2 it is the new run's log).
+Read the failure log `.plumbline/run/review/{branch-slug}-ci.log` (saved by the orchestrator before Stage 1; from attempt 2 it is the new run's log).
 
 Classify into exactly one category:
 
@@ -202,7 +202,7 @@ failure_detail   = {exact error: file, line, message}
 4. Stop: the orchestrator commits and pushes (Step C2)
 
 #### Suggest Fix: Docker / Flyway / YAML / Dependency / Environment
-Write a structured diagnosis to `.plumbline/review/{branch-slug}-diagnosis.md`. Do NOT apply the fix: the orchestrator shows it to the user for approval:
+Write a structured diagnosis to `.plumbline/run/review/{branch-slug}-diagnosis.md`. Do NOT apply the fix: the orchestrator shows it to the user for approval:
 ```
 DevOps Eval Loop — {Category} Failure
 Build step : {step name}
@@ -219,10 +219,10 @@ VERIFY WITH
 {verification command}
 ```
 
-Also write `failure_category` and `failure_detail` (Step B) at the top of `.plumbline/review/{branch-slug}-diagnosis.md`.
+Also write `failure_category` and `failure_detail` (Step B) at the top of `.plumbline/run/review/{branch-slug}-diagnosis.md`.
 
 #### Approved suggest-fix (`approved_fix: true` in the brief)
-The user approved the diagnosis. Apply exactly the RECOMMENDED FIX in `.plumbline/review/{branch-slug}-diagnosis.md` and
+The user approved the diagnosis. Apply exactly the RECOMMENDED FIX in `.plumbline/run/review/{branch-slug}-diagnosis.md` and
 nothing else, run its VERIFY WITH command, and add `applied: yes — <files>` at the end of the diagnosis file. Workflow
 files under `.github/` are never yours to change (a GitHub Actions YAML fix ships as a separate human policy PR): if the
 fix is there, write `applied: no — workflow change, human PR` and stop.
@@ -262,7 +262,7 @@ gh run view {new-run-id} --json status,conclusion | jq .
 ```
 
 - If `conclusion = "success"` → CI GREEN — record, then run Stage 2 and Stage 3 below (CI green alone does not pass the loop)
-- If `conclusion = "failure"` → CI STILL FAILING — save the new log (`gh run view {new-run-id} --log-failed > .plumbline/review/{branch-slug}-ci.log`), record findings and continue loop
+- If `conclusion = "failure"` → CI STILL FAILING — save the new log (`gh run view {new-run-id} --log-failed > .plumbline/run/review/{branch-slug}-ci.log`), record findings and continue loop
 - If `status = "in_progress"` → wait up to 5 minutes, re-check
 
 Record:
@@ -274,18 +274,18 @@ fix_result = {CI GREEN | CI STILL FAILING — {new failure category}}
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
+G=${PLUMBLINE_HOME:-.plumbline}
 python3 "$G/bench/run.py" devops --repo . --base {last-green-sha} --branch {branch} --name {branch-slug}-devops
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `fix_findings` as `BENCH:<id> — <detail>`, **skip Stage 3**, go to Step E.
-- **Exit 0 (PASS):** continue to Stage 3; pass `.plumbline/review/{branch-slug}-devops-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Stage 3; pass `.plumbline/run/review/{branch-slug}-devops-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: workflows parse, actions are pinned (not @main) and ideally to a SHA, nothing is piped from curl into a shell, downloads are checksum-verified, `permissions:` is declared, `pull_request_target` never runs PR code, no plaintext secrets, Docker bases are pinned, actionlint is clean (if installed), and the latest CI run on the branch is green.
 
 ### Stage 3 — Judge (isolated critic, rubric `devops fix`)
 
 <!-- @include shared/isolated-critic.md -->
-Artifact: `git diff {last-green-sha}..HEAD` of this fix, written to `.plumbline/review/{branch-slug}-devops.diff`. Rubric `devops fix`:
+Artifact: `git diff {last-green-sha}..HEAD` of this fix, written to `.plumbline/run/review/{branch-slug}-devops.diff`. Rubric `devops fix`:
 ```
   [x/] The fix addresses the classified root cause (diagnosis file), not a symptom
   [x/] No test, gate, coverage threshold or scanner was skipped, disabled or loosened to get green
@@ -373,7 +373,7 @@ Latest error:
 Human action required:
 1. Review the fix history above — the failure may require business logic changes
 2. If business logic change is needed, assign to the relevant dev
-3. Re-run /devops-eval-loop pr:{n} after the fix is applied
+3. Re-run /plumbline-devops pr:{n} after the fix is applied
 ```
 
 STOP — do not push any further commits.
@@ -391,7 +391,7 @@ STOP — do not push any further commits.
 
 ---
 
-## Sprint Security Report — /devops-eval-loop security-report
+## Sprint Security Report — /plumbline-devops security-report
 
 Run at sprint close against the `develop` branch. No eval loop — single pass.
 Produces one Veracode SAST report and one BlackDuck SCA report published to Confluence.
@@ -400,7 +400,7 @@ Produces one Veracode SAST report and one BlackDuck SCA report published to Conf
 ```bash
 mvn package -DskipTests -q
 ```
-If build fails — STOP. Fix with `/devops-eval-loop check-pipeline` first.
+If build fails — STOP. Fix with `/plumbline-devops check-pipeline` first.
 
 ### Step 2 — Run Veracode SAST
 ```bash

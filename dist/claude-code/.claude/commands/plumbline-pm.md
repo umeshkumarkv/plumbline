@@ -6,9 +6,9 @@ On persistent gaps after 3 attempts, escalates to human for PA review.
 
 ## Usage
 ```
-/pm-eval-loop "plain English feature idea"
-/pm-eval-loop roadmap
-/pm-eval-loop epic:{key}
+/plumbline-pm "plain English feature idea"
+/plumbline-pm roadmap
+/plumbline-pm epic:{key}
 ```
 
 ## How It Works
@@ -119,19 +119,19 @@ in this PRD must be addressed.
 ### Stage 1 — Originator: the `plumbline-pm-originator` agent (isolated)
 
 The originator is a separate subagent with its own context. You are the orchestrator: you do **not** write the artifact.
-1. **Inputs as files.** The originator has no JIRA, GitHub, Confluence or network tools, so save everything it needs first: the requirement and any linked documents in `.plumbline/review/{ticket}-input.md`
-2. **Feedback file (attempt 2+).** Write `.plumbline/work/{ticket}-pm/feedback.md`, one line per item from the last attempt:
+1. **Inputs as files.** The originator has no JIRA, GitHub, Confluence or network tools, so save everything it needs first: the requirement and any linked documents in `.plumbline/run/review/{ticket}-input.md`
+2. **Feedback file (attempt 2+).** Write `.plumbline/run/work/{ticket}-pm/feedback.md`, one line per item from the last attempt:
    `<BENCH:id | JUDGE:id | SCOPE:path> — <check or rule> — <location> — <required fix>`. Copy the items; never your opinion.
-3. **Brief.** Write `.plumbline/work/{ticket}-pm/brief.md`: the task in one paragraph, the input file paths, the artifact
-   `.plumbline/review/{ticket}-prd.md`, the rulebook paths, the attempt number and (attempt 2+) the feedback file and the previous artifact.
-   Working files live in `.plumbline/work/`, which the judge never reads.
+3. **Brief.** Write `.plumbline/run/work/{ticket}-pm/brief.md`: the task in one paragraph, the input file paths, the artifact
+   `.plumbline/run/review/{ticket}-prd.md`, the rulebook paths, the attempt number and (attempt 2+) the feedback file and the previous artifact.
+   Working files live in `.plumbline/run/work/`, which the judge never reads.
 4. **Snapshot, call, scope check.**
    ```bash
-   G=${AGENTIC_SDLC:-.agentic-sdlc}
-   python3 "$G/bench/scope_check.py" snapshot --name {ticket}-pm --writable ".plumbline/review/{ticket}-prd.md" --role pm
+   G=${PLUMBLINE_HOME:-.plumbline}
+   python3 "$G/bench/scope_check.py" snapshot --name {ticket}-pm --writable ".plumbline/run/review/{ticket}-prd.md" --role pm
    ```
    It prints `SNAPSHOT <dir> <sha>` and a `CHECK: …` line. Keep that line in your context (never in a file).
-   Call the Agent tool with `subagent_type: plumbline-pm-originator` and the prompt `Brief: .plumbline/work/{ticket}-pm/brief.md`.
+   Call the Agent tool with `subagent_type: plumbline-pm-originator` and the prompt `Brief: .plumbline/run/work/{ticket}-pm/brief.md`.
    Pass nothing else: not your reasoning, not the judge's free text.
    Then run the `CHECK:` command **exactly as printed** (copy it; do not retype the sha). It verifies the sha of the
    snapshot and checker copy with Python (works on macOS and Linux) and runs the check; exit 1 = violations or tampering.
@@ -155,16 +155,16 @@ escalates, and makes every external write (JIRA, GitHub, Confluence) only after 
 | 2. Benchmark | `bench/run.py` (deterministic, no LLM) | measurable facts: PASS / FAIL / WARN per check | the artifact + the repo / CI / supplied facts |
 | 3. Judge | the isolated `plumbline-critic` | what code cannot measure: correctness, completeness, quality | the artifact, the benchmark report, the rubric, the rulebook. **Never** your reasoning or drafts |
 
-**Every run starts at attempt 1.** The attempt counter lives only in this run, never in files. If `.plumbline/work/{name}/`
-exists from an earlier run, move it to `.plumbline/work/{name}/previous-<YYYYMMDD-HHMM>/` before Stage 1 (keep it as history;
-do not read its attempt number). Existing drafts in `.plumbline/review/` are the starting artifact for attempt 1, and the
+**Every run starts at attempt 1.** The attempt counter lives only in this run, never in files. If `.plumbline/run/work/{name}/`
+exists from an earlier run, move it to `.plumbline/run/work/{name}/previous-<YYYYMMDD-HHMM>/` before Stage 1 (keep it as history;
+do not read its attempt number). Existing drafts in `.plumbline/run/review/` are the starting artifact for attempt 1, and the
 last run's open findings (from its escalation or feedback file) go into attempt 1's feedback file.
 
 Rules
 1. **Benchmark first.** Run Stage 2 as soon as the artifact is written. If its verdict is **FAIL**, this attempt
    fails: every FAIL check becomes a gap (`BENCH:<check id> — <detail>`), **skip Stage 3** and go to the Decision
    step. Fixing those needs no LLM opinion, and the judge's time is spent only on artifacts that are measurably sound.
-2. **The judge gets the report as facts.** Pass `.plumbline/review/{name}-benchmark.md` to the critic as `BENCHMARK`.
+2. **The judge gets the report as facts.** Pass `.plumbline/run/review/{name}-benchmark.md` to the critic as `BENCHMARK`.
    The judge does not re-check what the benchmark measured; it judges what it could not. WARN items are for the
    judge to weigh. Checks marked `supplied` depend on data you provided (e.g. JIRA): the judge may question them.
 3. **Both must pass.** The loop passes only if the benchmark verdict is PASS **and** the judge verdict is PASS.
@@ -185,7 +185,7 @@ after attempt 3 without PASS ──► ESCALATE to a human with the full history
 1. **What goes back to the originator:** exactly the failing benchmark checks (`BENCH:<id>`, detail, evidence) and the
    judge's findings (`JUDGE:<id>`, rule, `path:line` + quote or what is missing, required fix). Never the critic's free
    text, and never a verdict to aim for.
-2. **The originator fixes each item** in the artifact and writes `.plumbline/work/{name}/fixlog.md`, one line per item:
+2. **The originator fixes each item** in the artifact and writes `.plumbline/run/work/{name}/fixlog.md`, one line per item:
    `<id> — fixed: <what changed, where>` or `<id> — disputed: <evidence>`. A disputed item stays open. The originator
    may not delete or weaken a rubric item, test or check to close a finding.
 3. **The next attempt re-runs both stages in full.** The benchmark re-runs every check, so a fix that breaks something
@@ -198,11 +198,11 @@ after attempt 3 without PASS ──► ESCALATE to a human with the full history
    the originator changed. It then lists the items still open, disputed items with both sides' evidence, and the
    decision needed from the human. Nothing is written to JIRA, GitHub or Confluence as approved.
 
-Exceptions: `/devops-eval-loop` pushes its fix to the feature branch before Stage 2 because its evidence is a CI run
-(never to `main`/`develop`, nothing merged). `/code-review-eval-loop` has no originator: the PR under review is the
+Exceptions: `/plumbline-devops` pushes its fix to the feature branch before Stage 2 because its evidence is a CI run
+(never to `main`/`develop`, nothing merged). `/plumbline-code-review` has no originator: the PR under review is the
 artifact, so it runs Stages 2 and 3 only.
 
-Set `G=${AGENTIC_SDLC:-.agentic-sdlc}` (absolute path when running inside a review worktree). The base branch is
+Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
 **Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
@@ -211,13 +211,13 @@ module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
 `services/{service}/` below as that unit's path, and `frontend/` as the frontend unit's path (e.g. `ui/`). The benchmark,
 scope check and gates use the same layout. If the unit you need is not listed, STOP: a human declares it in
-`.agentic-sdlc/project.yaml`.
+`.plumbline/project.yaml`.
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
-python3 "$G/bench/run.py" pm --artifact .plumbline/review/{ticket}-prd.md --repo . --name {ticket}-pm
+G=${PLUMBLINE_HOME:-.plumbline}
+python3 "$G/bench/run.py" pm --artifact .plumbline/run/review/{ticket}-prd.md --repo . --name {ticket}-pm
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_gaps` as `BENCH:<id> — <detail>`, **skip Step C**, go to Step D.
-- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/review/{ticket}-pm-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/run/review/{ticket}-pm-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: all 6 sections, named problem owner, gap and impact stated, >= 2 verifiable success criteria, dependency lines, no §18 item in P1–P3, P1 points <= 20, no placeholders.
 
@@ -229,25 +229,25 @@ The checklist in this step is the **rubric**. You (the author) do not mark it. A
 Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stages* above).
 
 1. Write the artifact to a file. For code, include uncommitted and new files:
-   `mkdir -p .plumbline/review && git add -A -N && git diff develop -- . ':!.plumbline' > .plumbline/review/{ticket}-attempt.diff` — then assert the file is non-empty.
+   `mkdir -p .plumbline/run/review && git add -A -N && git diff develop -- . ':!.plumbline' > .plumbline/run/review/{ticket}-attempt.diff` — then assert the file is non-empty.
    (In the code-review loop the artifact is the PR diff from the pinned review worktree — see its Phase 0.)
-   For a design/story/PRD/draft, write the markdown to `.plumbline/review/{ticket}-{artifact}.md`.
+   For a design/story/PRD/draft, write the markdown to `.plumbline/run/review/{ticket}-{artifact}.md`.
    Facts the critic cannot read itself (JIRA blocker status, labels) go into a short `FACTS` header at the top of the artifact file,
    stated as data (ticket keys + statuses), never as conclusions.
    For a code artifact that touches `services/`, also write the **impact bundle** (deterministic; which other
    services consume or call what changed, with the counterpart files):
-   `python3 "${AGENTIC_SDLC:-.agentic-sdlc}/impact/impact.py" --repo . --base develop --cache ~/.cache/plumbline-impact --json .plumbline/review/{ticket}-impact.json --bundle .plumbline/review/{ticket}-impact.md`
+   `python3 "${PLUMBLINE_HOME:-.plumbline}/impact/impact.py" --repo . --base develop --cache ~/.cache/plumbline-impact --json .plumbline/run/review/{ticket}-impact.json --bundle .plumbline/run/review/{ticket}-impact.md`
    (in a working tree with uncommitted changes, commit to a scratch branch first or use `--base-dir`/`--head-dir`).
-   Write this step's checklist to `.plumbline/review/{ticket}-rubric.md`: the item lines only, with any line naming the attempt
+   Write this step's checklist to `.plumbline/run/review/{ticket}-rubric.md`: the item lines only, with any line naming the attempt
    number (e.g. `… — Attempt {attempt}`) removed. This file is the rubric the critic applies.
-2. Invoke the `plumbline-critic` subagent with the Agent tool. Pass **only**: the artifact path, the rubric name, the rubric file path, rulebook paths (root `CLAUDE.md`, the service `CLAUDE.md`, and the domain pack — see *Domain pack* below), the impact bundle path when there is one, the **benchmark report** `.plumbline/review/{name}-benchmark.md` as `BENCHMARK`, and (from attempt 2) the prior finding ids with their locations. Never pass anything from `.plumbline/work/`.
+2. Invoke the `plumbline-critic` subagent with the Agent tool. Pass **only**: the artifact path, the rubric name, the rubric file path, rulebook paths (root `CLAUDE.md`, the service `CLAUDE.md`, and the domain pack — see *Domain pack* below), the impact bundle path when there is one, the **benchmark report** `.plumbline/run/review/{name}-benchmark.md` as `BENCHMARK`, and (from attempt 2) the prior finding ids with their locations. Never pass anything from `.plumbline/run/work/`.
    **Never pass** your reasoning, your earlier drafts, the attempt number, or what you think the verdict should be.
 3. Check the critic's evidence before using it: for each `location` finding, confirm the quoted text exists at that path and line. Drop findings whose quote does not match, and note them as `discarded (evidence mismatch)` in the scorecard.
 4. Use the critic's `items` as this step's PASS/GAP results and its `findings` as the attempt's gaps. Feed the optimizer only the findings (rule, location, fix), never the critic's free-text reasoning.
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
-**Domain pack.** If `.agentic-sdlc/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${AGENTIC_SDLC:-.agentic-sdlc}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+**Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
+Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
 Never apply another domain's rules to this repository.
 Rubric `pm PRD 10-item`: the critic marks [x] PASS or [ ] GAP with specific reason for each GAP.
 
@@ -300,7 +300,7 @@ _If Stage 2 failed, the judge did not run: show every rubric row as `NOT RUN (be
 Print quality scorecard:
 ```
 PRD QUALITY SCORECARD — Attempt {attempt}
-  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/review/{name}-benchmark.md)
+  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/run/review/{name}-benchmark.md)
   Problem owner identified       : {PASS | GAP}
   Gap stated specifically        : {PASS | GAP}
   Business impact stated         : {PASS | GAP}
@@ -341,7 +341,7 @@ PRD QUALITY SCORECARD — Attempt {attempt}
    createJiraIssue(
      issueTypeName: "Epic",
      summary: "{domain}: {outcome in one line}",
-     description: {the approved PRD `.plumbline/review/{ticket}-prd.md`, formatted as Confluence storage format},
+     description: {the approved PRD `.plumbline/run/review/{ticket}-prd.md`, formatted as Confluence storage format},
      labels: ["plumbline-prd-approved"]
    )
    ```
@@ -351,10 +351,10 @@ Post a JIRA comment on the Epic:
 ```
 PM Eval Loop ({date}): PRD approved — passed quality check on attempt {attempt}/{max_attempts}.
 
-{paste the approved PRD from `.plumbline/review/{ticket}-prd.md`}
+{paste the approved PRD from `.plumbline/run/review/{ticket}-prd.md`}
 
 PRD QUALITY: ALL 10 CHECKS PASSED
-Epic is ready for story decomposition. Run: /ba-eval-loop epic:{epic-key}
+Epic is ready for story decomposition. Run: /plumbline-ba epic:{epic-key}
 Prioritization: {P1/P2/P3 summary}
 ```
 
@@ -386,7 +386,7 @@ BACKLOG ORDER
 
 PRD STATUS : APPROVED (label: plumbline-prd-approved)
 
-Next step  : /ba-eval-loop epic:{epic-key}
+Next step  : /plumbline-ba epic:{epic-key}
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 Tokens consumed: {session input + output tokens from the Claude Code usage counter if visible}
@@ -411,7 +411,7 @@ that the PM Agent cannot invent. Human input is required.
 Recommended action:
 1. Clarify the requirement with the business stakeholder
 2. Specifically address: {list of gap areas}
-3. Re-run /pm-eval-loop "{refined requirement}" after clarification
+3. Re-run /plumbline-pm "{refined requirement}" after clarification
 ```
 
 STOP.

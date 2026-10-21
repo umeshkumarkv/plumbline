@@ -18,7 +18,7 @@ import sys
 PROTECTED = [
     # CI, ownership, agent prompts and critic definitions
     ".github/workflows/*", ".github/CODEOWNERS", "CODEOWNERS", ".github/prompts/*", ".github/agents/*",
-    ".claude/*", ".claude/**/*", ".agentic-sdlc/*", ".guardrails/*", ".plumbline/*",
+    ".claude/*", ".claude/**/*", ".plumbline/*", ".agentic-sdlc/*", ".guardrails/*",
     ".github/copilot-instructions.md", ".github/instructions/*", "**/AGENTS.md",
     # anything that can hide code from a scanner or relax a linter
     "**/.semgrepignore", "**/.semgrepignore*", ".semgrep.yml", ".semgrep/*",

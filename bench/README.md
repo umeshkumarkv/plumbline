@@ -12,7 +12,7 @@ The loop passes only if **both** the benchmark and the judge pass. The judge nev
 measured. It spends its effort on what code cannot measure.
 
 ```bash
-python3 bench/run.py <agent> [inputs] --name <prefix>   # writes .plumbline/review/<prefix>-benchmark.{json,md}
+python3 bench/run.py <agent> [inputs] --name <prefix>   # writes .plumbline/run/review/<prefix>-benchmark.{json,md}
 ```
 
 | Agent | Inputs | What the benchmark measures (no LLM) | What the judge keeps |
@@ -33,7 +33,7 @@ Result per check: `PASS`, `FAIL` (fails the stage), `WARN` (for the judge to wei
 
 Exit codes: `0` PASS, `1` FAIL, `2` usage error (wrong command or missing input; not a gap).
 
-`scope_check.py` runs before the benchmark. `snapshot --name N --writable "ARTIFACT…"` records the working tree (including gitignored files and `.plumbline/`) and every git ref, stores the snapshot outside the repository and prints `SNAPSHOT <path> <sha256>`. After the originator returns, `check <role> --snapshot <path> --sha <sha>` fails (exit 1) on: a path outside the role's allowed paths, a protected control file, any `.plumbline/` file other than the artifact and `.plumbline/work/N/fixlog.md`, a moved ref, a test/coverage change in a `pom.xml`, or a tampered snapshot. Each violation is a `SCOPE:` feedback item.
+`scope_check.py` runs before the benchmark. `snapshot --name N --writable "ARTIFACT…"` records the working tree (including gitignored files and `.plumbline/run/`) and every git ref, stores the snapshot outside the repository and prints `SNAPSHOT <path> <sha256>`. After the originator returns, `check <role> --snapshot <path> --sha <sha>` fails (exit 1) on: a path outside the role's allowed paths, a protected control file, any `.plumbline/run/` file other than the artifact and `.plumbline/run/work/N/fixlog.md`, a moved ref, a test/coverage change in a `pom.xml`, or a tampered snapshot. Each violation is a `SCOPE:` feedback item.
 
 Self-test: `python3 selftest/bench_selftest.py`. Each agent has a good and a bad fixture in `selftest/bench-fixture/`.
 The bad fixture must fail on exactly its planted checks.

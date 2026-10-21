@@ -13,9 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-ROLES = {"pm": "pm-eval-loop", "ba": "ba-eval-loop", "arch": "arch-eval-loop", "dev": "dev-eval-loop",
-         "doc": "doc-eval-loop", "onboard": "onboard-eval-loop", "qa": "qa-eval-loop", "devops": "devops-eval-loop",
-         "sm": "sm-eval-loop"}
+ROLES = {r: f"plumbline-{r}" for r in ("pm", "ba", "arch", "dev", "doc", "onboard", "qa", "devops", "sm")}
 BASH_OK = {"dev", "qa", "devops"}
 fails = 0
 
@@ -66,12 +64,12 @@ with tempfile.TemporaryDirectory() as td:
     (r / "services/a/pom.xml").write_text("<project><build><plugins><plugin><artifactId>maven-surefire-plugin</artifactId>"
                                           "</plugin></plugins></build></project>\n")
     (r / "CLAUDE.md").write_text("rules\n")
-    (r / ".gitignore").write_text("*.log\n.plumbline/\n")
+    (r / ".gitignore").write_text("*.log\n.plumbline/run/\n")
     (r / "notes.txt").write_text("user's own work\n")
     g("add", "services", "CLAUDE.md", ".gitignore"); g("commit", "-qm", "base")
     (r / "notes.txt").write_text("user's own work, still uncommitted\n")          # pre-existing dirty file
-    (r / ".plumbline/review").mkdir(parents=True)
-    (r / ".plumbline/review/t-input.md").write_text("the requirement\n")             # an input the originator must not edit
+    (r / ".plumbline/run/review").mkdir(parents=True)
+    (r / ".plumbline/run/review/t-input.md").write_text("the requirement\n")             # an input the originator must not edit
 
     def snap(writable="", role="dev"):
         out = run(r, "snapshot", "--name", "t", "--writable", writable, "--role", role).stdout
@@ -89,21 +87,21 @@ with tempfile.TemporaryDirectory() as td:
         last = res.stdout.strip().splitlines()[-1] if res.stdout.strip() else res.stderr.strip()
         ok(res.returncode == expect_rc, f"scope {label} -> rc {res.returncode} {last}")
         g("checkout", "-q", "--", ".")
-        subprocess.run(["git", "clean", "-qfdx", "-e", "notes.txt", "-e", ".plumbline/review/t-input.md"], cwd=r)
-        (r / ".plumbline/review").mkdir(parents=True, exist_ok=True)
-        (r / ".plumbline/review/t-input.md").write_text("the requirement\n")
+        subprocess.run(["git", "clean", "-qfdx", "-e", "notes.txt", "-e", ".plumbline/run/review/t-input.md"], cwd=r)
+        (r / ".plumbline/run/review").mkdir(parents=True, exist_ok=True)
+        (r / ".plumbline/run/review/t-input.md").write_text("the requirement\n")
 
     w = lambda p, t="x\n": (lambda rr, _s: (rr / p).parent.mkdir(parents=True, exist_ok=True) or (rr / p).write_text(t))
-    case("dev", [w("services/a/src/A.java", "class A { int x; }\n"), w(".plumbline/work/t/fixlog.md")], 0, "dev edits code + fix log")
+    case("dev", [w("services/a/src/A.java", "class A { int x; }\n"), w(".plumbline/run/work/t/fixlog.md")], 0, "dev edits code + fix log")
     case("dev", [w("CLAUDE.md", "relaxed\n")], 1, "dev edits the rulebook")
     case("dev", [w(".github/workflows/ci.yml")], 1, "dev adds a workflow")
     case("pm", [w("services/a/src/B.java")], 1, "pm writes code")
-    case("pm", [w(".plumbline/review/t-prd.md")], 0, "pm writes its PRD", ".plumbline/review/t-prd.md")
-    case("pm", [w(".plumbline/review/t-prd.md")], 1, "pm writes a .plumbline file it was not given", "")
-    case("pm", [w(".plumbline/review/t-input.md", "edited\n")], 1, "pm edits its input file", ".plumbline/review/t-prd.md")
+    case("pm", [w(".plumbline/run/review/t-prd.md")], 0, "pm writes its PRD", ".plumbline/run/review/t-prd.md")
+    case("pm", [w(".plumbline/run/review/t-prd.md")], 1, "pm writes a .plumbline file it was not given", "")
+    case("pm", [w(".plumbline/run/review/t-input.md", "edited\n")], 1, "pm edits its input file", ".plumbline/run/review/t-prd.md")
     case("pm", [w("debug.log")], 1, "pm writes a gitignored file")
     case("doc", [w("CLAUDE.md", "updated\n"), w("services/a/openapi.yaml")], 0, "doc edits CLAUDE.md + openapi")
-    case("qa", [w("test-results/a.png"), w(".plumbline/review/t-qa-results.json")], 0, "qa writes evidence", ".plumbline/review/t-qa-results.json")
+    case("qa", [w("test-results/a.png"), w(".plumbline/run/review/t-qa-results.json")], 0, "qa writes evidence", ".plumbline/run/review/t-qa-results.json")
     case("qa", [w("services/a/src/A.java", "hack\n")], 1, "qa edits production code")
     case("dev", [w("services/a/pom.xml", "<project><properties><skipTests>true</skipTests></properties></project>\n")],
          1, "dev sets skipTests in a pom")
@@ -133,7 +131,7 @@ with tempfile.TemporaryDirectory() as td:
         subprocess.run(["git", "branch", "side"], cwd=rr)
     case("dev", [side_branch], 1, "dev creates a branch")
     g("branch", "-D", "side")
-    # a Bash-capable originator edits the .agentic-sdlc folder (a private copy here, so the real one is untouched)
+    # a Bash-capable originator edits the .plumbline folder (a private copy here, so the real one is untouched)
     import shutil
     gcopy = Path(td + "-g")
     for d in ("bench", "gates/checks", "impact"):
@@ -144,7 +142,7 @@ with tempfile.TemporaryDirectory() as td:
         fh.write("\n# tampered\n")
     res = subprocess.run([sys.executable, "-I", out[1] + "/bench/scope_check.py", "check", "dev", "--snapshot", out[1], "--sha", out[2]],
                          cwd=r, capture_output=True, text=True)
-    ok(res.returncode == 1 and "<agentic-sdlc>" in res.stdout, "dev edits the .agentic-sdlc folder -> rc %d" % res.returncode)
+    ok(res.returncode == 1 and "<plumbline>" in res.stdout, "dev edits the .plumbline folder -> rc %d" % res.returncode)
     shutil.rmtree(gcopy)
     res = run(r, "check", "nope", "--snapshot", "x", "--sha", "y")
     ok(res.returncode == 2, "unknown role exits 2")

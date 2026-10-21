@@ -13,8 +13,8 @@ On persistent violations after 3 rounds, escalates to human.
 
 ## Usage
 ```
-/code-review-eval-loop SCRUM-{n}
-/code-review-eval-loop pr:{n}
+/plumbline-code-review SCRUM-{n}
+/plumbline-code-review pr:{n}
 ```
 <!-- @copilot -->
 
@@ -129,11 +129,13 @@ START_TIME=$(date +%s)
    ```bash
    REVIEWED_SHA=$(gh pr view {pr-number} --json headRefOid --jq .headRefOid)
    BASE=$(gh pr view {pr-number} --json baseRefName --jq .baseRefName)
-   export AGENTIC_SDLC="$(git rev-parse --show-toplevel)/.agentic-sdlc"   # absolute: still valid inside the worktree
+   export PLUMBLINE_HOME="$(git rev-parse --show-toplevel)/.plumbline"   # absolute: still valid inside the worktree
    git fetch origin "$BASE" "pull/{pr-number}/head"
-   git worktree remove --force .plumbline/review/pr-{pr-number} 2>/dev/null || true   # leftover from an earlier round
-   git worktree add --detach .plumbline/review/pr-{pr-number} "$REVIEWED_SHA"
-   cd .plumbline/review/pr-{pr-number}
+   git worktree remove --force .plumbline/run/review/pr-{pr-number} 2>/dev/null || true   # leftover from an earlier round
+   git worktree add --detach .plumbline/run/review/pr-{pr-number} "$REVIEWED_SHA"
+   cd .plumbline/run/review/pr-{pr-number}
+   # From here on, every `.plumbline/run/...` path in this spec means "$PLUMBLINE_HOME/run/..." (absolute): the worktree
+   # has the PR's own .plumbline/ tree, and nothing may be read from or written into it.
    git diff "origin/$BASE...$REVIEWED_SHA" > ../pr-{pr-number}.diff && test -s ../pr-{pr-number}.diff
    ```
 6. List all changed files:
@@ -199,12 +201,12 @@ The PR author's Dev Eval Loop was the originator. This loop is a fresh benchmark
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
-python3 "$G/bench/run.py" code-review --repo . --base "origin/$BASE" --pr {pr-number} --out-dir .. --name pr-{pr-number} \
-  --test-cmd 'M=$(git diff --name-only "origin/'"$BASE"'...HEAD" -- services | cut -d/ -f1-2 | sort -u | paste -sd, -); [ -z "$M" ] || mvn -B -q verify -pl "$M" -am'   # fresh worktree: build + test the changed services (none changed: nothing to run)   # cwd = the review worktree; reports land in .plumbline/review/
+G=${PLUMBLINE_HOME:-.plumbline}
+python3 "$G/bench/run.py" code-review --repo . --base "origin/$BASE" --pr {pr-number} --out-dir "$G/run/review" --name pr-{pr-number} \
+  --test-cmd 'M=$(git diff --name-only "origin/'"$BASE"'...HEAD" -- services | cut -d/ -f1-2 | sort -u | paste -sd, -); [ -z "$M" ] || mvn -B -q verify -pl "$M" -am'   # fresh worktree: build + test the changed services (none changed: nothing to run)   # cwd = the review worktree; reports land in $G/run/review/ (absolute: never inside the PR's own .plumbline/)
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `current_findings` as `BENCH:<id> — <detail>`, **skip the critic**, go to the Decision with verdict REQUEST_CHANGES.
-- **Exit 0 (PASS):** continue to the critic; pass `.plumbline/review/pr-{pr-number}-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to the critic; pass `$G/run/review/pr-{pr-number}-benchmark.md` (absolute) to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: everything the dev benchmark measures (gates, impact, tests, coverage, test classes) at the reviewed SHA, protected paths, and CI check-runs green on that SHA.
 
@@ -312,7 +314,7 @@ _If Stage 2 failed, the judge did not run: show every rubric row as `NOT RUN (be
 Print scorecard:
 ```
 CODE REVIEW SCORECARD — Round {round} / {max_rounds}
-  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/review/{name}-benchmark.md)
+  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/run/review/{name}-benchmark.md)
   Cat 1  Type Rules      : {PASS | FAIL — n violations}
   Cat 2  Naming          : {PASS | FAIL — n violations}
   Cat 3  Lombok          : {PASS | FAIL — n violations}
@@ -380,7 +382,7 @@ Add JIRA comment:
 [plumbline:code-review pr=#{pr-number} round={round}/{max_rounds} verdict=APPROVED]
 Code Review Eval Loop ({date}): PR #{pr-number} APPROVED — Round {round}/{max_rounds}.
 All 12 categories passed. Ready for QA.
-Run: /qa-eval-loop SCRUM-{n}
+Run: /plumbline-qa SCRUM-{n}
 ```
 
 Apply the **JIRA Write Guard**, then add label `plumbline-code-review-approved` to the ticket.
@@ -411,7 +413,7 @@ gh pr review {pr-number} --comment \
 
 ### Decision
 REQUEST CHANGES — {n} violation(s) found. Each is listed above in this review.
-Fix all violations on branch {branch-name} and re-run /code-review-eval-loop SCRUM-{n}.
+Fix all violations on branch {branch-name} and re-run /plumbline-code-review SCRUM-{n}.
 
 This is Round {round} of {max_rounds}. Escalation to human required after Round {max_rounds}."
 ```
@@ -425,7 +427,7 @@ PR #{pr-number} — {n} violation(s) found.
 Violations:
 {numbered list with file:line evidence}
 
-Dev action: Fix violations on branch {branch-name} and re-run /code-review-eval-loop SCRUM-{n}.
+Dev action: Fix violations on branch {branch-name} and re-run /plumbline-code-review SCRUM-{n}.
 ```
 
 Apply the **JIRA Write Guard**, then transition ticket: In Review → **In Progress**
@@ -434,7 +436,7 @@ Apply the **JIRA Write Guard**, then transition ticket: In Review → **In Progr
 
 ## Phase 5 — Summary to User
 
-First return to the repo root and remove the review worktree: `git worktree remove --force .plumbline/review/pr-{pr-number}`.
+First return to the repo root and remove the review worktree: `git worktree remove --force .plumbline/run/review/pr-{pr-number}`.
 
 ```
 CODE REVIEW EVAL LOOP — SCRUM-{n} — Round {round}
@@ -445,7 +447,7 @@ Categories: {n} / 12 passed
 Round    : {round} of {max_rounds}
 {if violations: Top categories with issues: {comma-separated names}}
 
-Next step: {/qa-eval-loop SCRUM-{n} | Fix violations and re-run /code-review-eval-loop SCRUM-{n}}
+Next step: {/plumbline-qa SCRUM-{n} | Fix violations and re-run /plumbline-code-review SCRUM-{n}}
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 <!-- @claude -->
@@ -474,7 +476,7 @@ Human action required:
 1. Review the persistent violations above
 2. Determine if they are genuine violations or if CLAUDE.md needs updating
 3. Either fix manually or update CLAUDE.md to reflect a new approved pattern
-4. A human posts `[plumbline:code-review reset pr=#{pr-number}]` on the ticket (agents never do), then re-run /code-review-eval-loop SCRUM-{n}
+4. A human posts `[plumbline:code-review reset pr=#{pr-number}]` on the ticket (agents never do), then re-run /plumbline-code-review SCRUM-{n}
 ```
 
 Post to JIRA as a comment (informational — no approval needed under the Plumbline write policy; any label or transition that follows still needs the Write Guard):

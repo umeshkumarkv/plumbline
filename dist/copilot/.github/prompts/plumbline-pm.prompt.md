@@ -1,37 +1,39 @@
 ---
 agent: agent
-description: Produce a technical design for a JIRA story with DoR check and retry (Plumbline Architect)
+description: Write a PRD and create a JIRA Epic, with quality check and retry (Plumbline PM)
 ---
 
-# Arch Eval Loop — Plumbline
+# PM Eval Loop — Plumbline
 
-Produce a technical design for a JIRA story with automated DoR validation and retry.
-Runs design → DoR check → retry on gaps — max 3 attempts.
-On persistent gaps after 3 attempts, escalates to BA Agent.
+Own the product roadmap, write PRDs, and produce Epics with automated quality validation and retry.
+Runs PRD authoring → quality check → retry on gaps — max 3 attempts.
+On persistent gaps after 3 attempts, escalates to human for PA review.
 
 ## Usage
 ```
-/arch-eval-loop SCRUM-{n}
+/plumbline-pm "plain English feature idea"
+/plumbline-pm roadmap
+/plumbline-pm epic:{key}
 ```
 
-Target: ${input:target:SCRUM-n}
+Target: ${input:target:plain English feature idea | roadmap | epic:SCRUM-n}
 
 ## How It Works
 
 ```
 Attempt 1..3
-  1 ORIGINATOR  writes / revises the design ◄─────────────────────────┐
+  1 ORIGINATOR  writes / revises the PRD ◄────────────────────────────┐
         ↓                                                             │ feedback: failing checks +
-  2 BENCHMARK   bench/run.py arch ── FAIL ────────────────────────────┤ findings (rule · location · fix)
+  2 BENCHMARK   bench/run.py pm ── FAIL ──────────────────────────────┤ findings (rule · location · fix)
         ↓ PASS                                                        │ originator fixes each, logs it,
-  3 JUDGE       isolated critic · DoR 15-item ── FAIL ────────────────┘ then BOTH stages re-run
+  3 JUDGE       isolated critic · PRD 10-item ── FAIL ────────────────┘ then BOTH stages re-run
         ↓ PASS
-  plumbline-arch-approved + post JIRA
-After attempt 3 without PASS → ESCALATE → BA Agent (full attempt history, open + disputed items)
+  create Epic + post JIRA
+After attempt 3 without PASS → ESCALATE → human (PA review) (full attempt history, open + disputed items)
 ```
 
-Max attempts is 3 — if gaps persist after 3 design iterations the story
-has an underlying BA-level problem, not a design problem.
+Max attempts is 3 — if PRD quality gaps persist after 3 attempts, the requirement
+has a fundamental business-level problem that requires human clarification.
 
 ---
 
@@ -49,25 +51,14 @@ has an underlying BA-level problem, not a design problem.
 
 ## Agent Scope — Absolute Boundaries. No Exceptions.
 
-This agent **OWNS**: producing a complete technical design for the JIRA story — endpoint,
-DB schema, service logic, Kafka/Redis plan, test strategy — posted as a JIRA comment.
+This agent **OWNS**: PRDs, Epic creation, and backlog prioritization.
 
 This agent **NEVER**:
-- Writes production code or modifies any source file
-- Runs tests or builds
-- Invents acceptance criteria — ACs come from the BA Agent's story only
-- Guesses at missing information — missing information is a gap that escalates to BA Agent
+- Writes user stories, acceptance criteria, technical design, or code
+- Creates Story-level tickets (that is the BA Agent's job)
+- Tickets items that are in CLAUDE.md Section 18 (Out of Scope for POC)
 
-### Design Completeness Rule — HARD STOP
-
-The arch design posted to JIRA is the sole contract for the Dev Agent.
-It MUST explicitly cover every field the Dev Agent will need:
-- Exact field names used for ownership/identity checks (e.g. `order.createdBy` not `order.clientId`)
-- Exact UUID domain of each identifier (auth userId vs trading clientId)
-- RBAC rules per role for every endpoint — who is allowed, who is blocked
-- Header names forwarded by the gateway and their payload semantics
-
-If any of these are ambiguous or missing after 2 design attempts, escalate to BA Agent.
+Escalate to human if: requirement contradicts an architectural decision in CLAUDE.md.
 
 ---
 
@@ -78,36 +69,42 @@ If any of these are ambiguous or missing after 2 design attempts, escalate to BA
 > `git push`, `gh pr create`, `gh pr review` (approve / request-changes / overall comment), and any write to a CLAUDE.md file.
 
 Before performing ANY of the following operations, STOP and request explicit user approval:
+- Creating a JIRA issue (Epic or Story)
 - Adding or removing a label on any ticket
 - Transitioning a ticket status
 
 Approval format:
 ```
 JIRA ACTION — AWAITING YOUR APPROVAL
-  Ticket : SCRUM-{n}
-  Action : {add label "plumbline-arch-approved" | add label "plumbline-arch-blocked" | etc.}
+  Ticket : {SCRUM-key or "new Epic"}
+  Action : {create Epic | add label "plumbline-prd-approved" | etc.}
   Reason : {one-line reason}
 
 Proceed? (yes / no)
 ```
 Do NOT execute the JIRA write operation until the user types "yes".
+If the user types "no", skip the action and note it in the final report.
 
 ---
 
-## Phase 0 — Pre-flight
+## Phase 0 — Understand the Product Context
 
 Record the session start time before any work begins:
 ```bash
 START_TIME=$(date +%s)
 ```
 
-1. Fetch the JIRA story: `getJiraIssue(SCRUM-{n})`
-2. Verify the story has label `plumbline-dor-ready` or that ACs exist — if neither, STOP: "Run /ba-eval-loop first."
-3. Read root `CLAUDE.md` fully (all sections)
-4. Identify the service from the ticket
-5. Read `services/{service}/CLAUDE.md` fully
-6. Read `services/{service}/openapi.yaml` — note existing endpoints, schemas, components
-7. Check blocked-by tickets — if any is not Done, STOP and list open blockers
+1. Fetch current roadmap and open Epics:
+   ```
+   searchJiraIssuesUsingJql("project = SCRUM AND issueType = Epic ORDER BY created DESC")
+   ```
+2. Fetch the current sprint to understand capacity:
+   ```
+   searchJiraIssuesUsingJql("project = SCRUM AND sprint in openSprints() ORDER BY status ASC")
+   ```
+3. Read `CLAUDE.md` — Section 3 (service boundaries), Section 18 (Out of Scope):
+   - If the feature request maps to anything in Section 18 — STOP and tell the user it is out of scope for the POC.
+4. Identify which domain the request falls into: Trading, Client, Market, Risk, Execution, Audit, Auth, Infrastructure.
 
 ---
 
@@ -117,7 +114,7 @@ Initialize before the loop:
 ```
 attempt      = 1
 max_attempts = 3
-all_gaps     = []   ← accumulated DoR gaps across attempts
+all_gaps     = []   ← accumulated quality gaps across attempts
 loop_passed  = false
 ```
 
@@ -130,30 +127,30 @@ loop_passed  = false
 Print:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ARCH EVAL LOOP — Attempt {attempt} / {max_attempts}
-Story : SCRUM-{n} — {summary}
+PM EVAL LOOP — Attempt {attempt} / {max_attempts}
+Feature : {feature description}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 If `all_gaps` is not empty, they go to the originator through the feedback file (Stage 1, step 2): every gap
-in this design must be addressed.
+in this PRD must be addressed.
 
-### Stage 1 — Originator: the `plumbline-arch-originator` agent (isolated)
+### Stage 1 — Originator: the `plumbline-pm-originator` agent (isolated)
 
 The originator is a separate subagent with its own context. You are the orchestrator: you do **not** write the artifact.
-1. **Inputs as files.** The originator has no JIRA, GitHub, Confluence or network tools, so save everything it needs first: the story in `.plumbline/review/{ticket}-story.md`; blocker statuses in `.plumbline/review/{ticket}-jira-facts.json`
-2. **Feedback file (attempt 2+).** Write `.plumbline/work/{ticket}-arch/feedback.md`, one line per item from the last attempt:
+1. **Inputs as files.** The originator has no JIRA, GitHub, Confluence or network tools, so save everything it needs first: the requirement and any linked documents in `.plumbline/run/review/{ticket}-input.md`
+2. **Feedback file (attempt 2+).** Write `.plumbline/run/work/{ticket}-pm/feedback.md`, one line per item from the last attempt:
    `<BENCH:id | JUDGE:id | SCOPE:path> — <check or rule> — <location> — <required fix>`. Copy the items; never your opinion.
-3. **Brief.** Write `.plumbline/work/{ticket}-arch/brief.md`: the task in one paragraph, the input file paths, the artifact
-   `.plumbline/review/{ticket}-design.md`, the rulebook paths, the attempt number and (attempt 2+) the feedback file and the previous artifact.
-   Working files live in `.plumbline/work/`, which the judge never reads.
+3. **Brief.** Write `.plumbline/run/work/{ticket}-pm/brief.md`: the task in one paragraph, the input file paths, the artifact
+   `.plumbline/run/review/{ticket}-prd.md`, the rulebook paths, the attempt number and (attempt 2+) the feedback file and the previous artifact.
+   Working files live in `.plumbline/run/work/`, which the judge never reads.
 4. **Snapshot, call, scope check.**
    ```bash
-   G=${AGENTIC_SDLC:-.agentic-sdlc}
-   python3 "$G/bench/scope_check.py" snapshot --name {ticket}-arch --writable ".plumbline/review/{ticket}-design.md" --role arch
+   G=${PLUMBLINE_HOME:-.plumbline}
+   python3 "$G/bench/scope_check.py" snapshot --name {ticket}-pm --writable ".plumbline/run/review/{ticket}-prd.md" --role pm
    ```
    It prints `SNAPSHOT <dir> <sha>` and a `CHECK: …` line. Keep that line in your context (never in a file).
-   Run the **`plumbline-arch-originator`** subagent (`#agent/runSubagent`, agent name `plumbline-arch-originator`, defined in `.github/agents/plumbline-arch-originator.agent.md`) with the prompt `Brief: .plumbline/work/{ticket}-arch/brief.md`. It starts with a clean context and only read, search, edit tools. If this VS Code cannot run subagents, stop and tell the user: update VS Code / enable the Run Subagent tool (never do the originator's work in this chat).
+   Run the **`plumbline-pm-originator`** subagent (`#agent/runSubagent`, agent name `plumbline-pm-originator`, defined in `.github/agents/plumbline-pm-originator.agent.md`) with the prompt `Brief: .plumbline/run/work/{ticket}-pm/brief.md`. It starts with a clean context and only read, search, edit tools. If this VS Code cannot run subagents, stop and tell the user: update VS Code / enable the Run Subagent tool (never do the originator's work in this chat).
    Pass nothing else: not your reasoning, not the judge's free text.
    Then run the `CHECK:` command **exactly as printed** (copy it; do not retype the sha). It verifies the sha of the
    snapshot and checker copy with Python (works on macOS and Linux) and runs the check; exit 1 = violations or tampering.
@@ -177,16 +174,16 @@ escalates, and makes every external write (JIRA, GitHub, Confluence) only after 
 | 2. Benchmark | `bench/run.py` (deterministic, no LLM) | measurable facts: PASS / FAIL / WARN per check | the artifact + the repo / CI / supplied facts |
 | 3. Judge | the isolated `plumbline-critic` | what code cannot measure: correctness, completeness, quality | the artifact, the benchmark report, the rubric, the rulebook. **Never** your reasoning or drafts |
 
-**Every run starts at attempt 1.** The attempt counter lives only in this run, never in files. If `.plumbline/work/{name}/`
-exists from an earlier run, move it to `.plumbline/work/{name}/previous-<YYYYMMDD-HHMM>/` before Stage 1 (keep it as history;
-do not read its attempt number). Existing drafts in `.plumbline/review/` are the starting artifact for attempt 1, and the
+**Every run starts at attempt 1.** The attempt counter lives only in this run, never in files. If `.plumbline/run/work/{name}/`
+exists from an earlier run, move it to `.plumbline/run/work/{name}/previous-<YYYYMMDD-HHMM>/` before Stage 1 (keep it as history;
+do not read its attempt number). Existing drafts in `.plumbline/run/review/` are the starting artifact for attempt 1, and the
 last run's open findings (from its escalation or feedback file) go into attempt 1's feedback file.
 
 Rules
 1. **Benchmark first.** Run Stage 2 as soon as the artifact is written. If its verdict is **FAIL**, this attempt
    fails: every FAIL check becomes a gap (`BENCH:<check id> — <detail>`), **skip Stage 3** and go to the Decision
    step. Fixing those needs no LLM opinion, and the judge's time is spent only on artifacts that are measurably sound.
-2. **The judge gets the report as facts.** Pass `.plumbline/review/{name}-benchmark.md` to the critic as `BENCHMARK`.
+2. **The judge gets the report as facts.** Pass `.plumbline/run/review/{name}-benchmark.md` to the critic as `BENCHMARK`.
    The judge does not re-check what the benchmark measured; it judges what it could not. WARN items are for the
    judge to weigh. Checks marked `supplied` depend on data you provided (e.g. JIRA): the judge may question them.
 3. **Both must pass.** The loop passes only if the benchmark verdict is PASS **and** the judge verdict is PASS.
@@ -207,7 +204,7 @@ after attempt 3 without PASS ──► ESCALATE to a human with the full history
 1. **What goes back to the originator:** exactly the failing benchmark checks (`BENCH:<id>`, detail, evidence) and the
    judge's findings (`JUDGE:<id>`, rule, `path:line` + quote or what is missing, required fix). Never the critic's free
    text, and never a verdict to aim for.
-2. **The originator fixes each item** in the artifact and writes `.plumbline/work/{name}/fixlog.md`, one line per item:
+2. **The originator fixes each item** in the artifact and writes `.plumbline/run/work/{name}/fixlog.md`, one line per item:
    `<id> — fixed: <what changed, where>` or `<id> — disputed: <evidence>`. A disputed item stays open. The originator
    may not delete or weaken a rubric item, test or check to close a finding.
 3. **The next attempt re-runs both stages in full.** The benchmark re-runs every check, so a fix that breaks something
@@ -220,11 +217,11 @@ after attempt 3 without PASS ──► ESCALATE to a human with the full history
    the originator changed. It then lists the items still open, disputed items with both sides' evidence, and the
    decision needed from the human. Nothing is written to JIRA, GitHub or Confluence as approved.
 
-Exceptions: `/devops-eval-loop` pushes its fix to the feature branch before Stage 2 because its evidence is a CI run
-(never to `main`/`develop`, nothing merged). `/code-review-eval-loop` has no originator: the PR under review is the
+Exceptions: `/plumbline-devops` pushes its fix to the feature branch before Stage 2 because its evidence is a CI run
+(never to `main`/`develop`, nothing merged). `/plumbline-code-review` has no originator: the PR under review is the
 artifact, so it runs Stages 2 and 3 only.
 
-Set `G=${AGENTIC_SDLC:-.agentic-sdlc}` (absolute path when running inside a review worktree). The base branch is
+Set `G=${PLUMBLINE_HOME:-.plumbline}` (absolute path when running inside a review worktree). The base branch is
 `base_branch` in `$G/project.yaml` (written by `init.py`); where this spec says `develop`, use that branch.
 
 **Repository layout.** This spec writes service paths as `services/{service}/` (the broker-dealer layout). The real
@@ -233,17 +230,17 @@ module, or an app at the repository root (path `.`, code in `./src/`, its CLAUDE
 the master file: solution and architecture). CLAUDE.md files are merged, never overwritten (`bench/claude_merge.py`). Read every
 `services/{service}/` below as that unit's path, and `frontend/` as the frontend unit's path (e.g. `ui/`). The benchmark,
 scope check and gates use the same layout. If the unit you need is not listed, STOP: a human declares it in
-`.agentic-sdlc/project.yaml`.
+`.plumbline/project.yaml`.
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
-python3 "$G/bench/run.py" arch --artifact .plumbline/review/{ticket}-design.md --story .plumbline/review/{ticket}-story.md --repo . --name {ticket}-arch
+G=${PLUMBLINE_HOME:-.plumbline}
+python3 "$G/bench/run.py" pm --artifact .plumbline/run/review/{ticket}-prd.md --repo . --name {ticket}-pm
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_gaps` as `BENCH:<id> — <detail>`, **skip Step C**, go to Step D.
-- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/review/{ticket}-arch-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/run/review/{ticket}-pm-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
-- Measured here, so the judge takes them as facts: all 9 design blocks, endpoint/service/port vs the code, own schema, gateway route, next free migration version, external calls hit real endpoints, consumed topics have a producer, every AC error status has an error code, >= 3 tests per layer, RBAC roles, forwarded headers, no placeholders.
+- Measured here, so the judge takes them as facts: all 6 sections, named problem owner, gap and impact stated, >= 2 verifiable success criteria, dependency lines, no §18 item in P1–P3, P1 points <= 20, no placeholders.
 
-### Step C — Stage 3 Judge: DoR Validation (15-item checklist, isolated critic)
+### Step C — Stage 3 Judge: PRD Quality Check (10 items, isolated critic)
 
 #### Stage 3 — Judge: isolated critic (the author never grades its own work)
 
@@ -251,23 +248,23 @@ The checklist in this step is the **rubric**. You (the author) do not mark it. A
 Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stages* above).
 
 1. Write the artifact to a file. For code, include uncommitted and new files:
-   `mkdir -p .plumbline/review && git add -A -N && git diff develop -- . ':!.plumbline' > .plumbline/review/{ticket}-attempt.diff` — then assert the file is non-empty.
+   `mkdir -p .plumbline/run/review && git add -A -N && git diff develop -- . ':!.plumbline' > .plumbline/run/review/{ticket}-attempt.diff` — then assert the file is non-empty.
    (In the code-review loop the artifact is the PR diff from the pinned review worktree — see its Phase 0.)
-   For a design/story/PRD/draft, write the markdown to `.plumbline/review/{ticket}-{artifact}.md`.
+   For a design/story/PRD/draft, write the markdown to `.plumbline/run/review/{ticket}-{artifact}.md`.
    Facts the critic cannot read itself (JIRA blocker status, labels) go into a short `FACTS` header at the top of the artifact file,
    stated as data (ticket keys + statuses), never as conclusions.
    For a code artifact that touches `services/`, also write the **impact bundle** (deterministic; which other
    services consume or call what changed, with the counterpart files):
-   `python3 "${AGENTIC_SDLC:-.agentic-sdlc}/impact/impact.py" --repo . --base develop --cache ~/.cache/plumbline-impact --json .plumbline/review/{ticket}-impact.json --bundle .plumbline/review/{ticket}-impact.md`
+   `python3 "${PLUMBLINE_HOME:-.plumbline}/impact/impact.py" --repo . --base develop --cache ~/.cache/plumbline-impact --json .plumbline/run/review/{ticket}-impact.json --bundle .plumbline/run/review/{ticket}-impact.md`
    (in a working tree with uncommitted changes, commit to a scratch branch first or use `--base-dir`/`--head-dir`).
-   Write this step's checklist to `.plumbline/review/{ticket}-rubric.md`: the item lines only, with any line naming the attempt
+   Write this step's checklist to `.plumbline/run/review/{ticket}-rubric.md`: the item lines only, with any line naming the attempt
    number (e.g. `… — Attempt {attempt}`) removed. This file is the rubric the critic applies.
 2. Run the **`plumbline-critic`** subagent (`#agent/runSubagent`, agent name `plumbline-critic`, defined in
    `.github/agents/plumbline-critic.agent.md`: clean context, read and search tools only). Pass **only**: the artifact path,
    the rubric name, the rubric file path, rulebook paths (root `CLAUDE.md`, the service `CLAUDE.md`, and
    the domain pack — see *Domain pack* below), the impact bundle path when there is one, the
-   **benchmark report** `.plumbline/review/{name}-benchmark.md` as `BENCHMARK`, and (from attempt 2) the prior finding ids with
-   their locations. Never pass anything from `.plumbline/work/`, your reasoning, drafts, the attempt number or a verdict to aim for.
+   **benchmark report** `.plumbline/run/review/{name}-benchmark.md` as `BENCHMARK`, and (from attempt 2) the prior finding ids with
+   their locations. Never pass anything from `.plumbline/run/work/`, your reasoning, drafts, the attempt number or a verdict to aim for.
    - **If this VS Code cannot run subagents:** ask the user to open a **new** Copilot chat and run `/plumbline-critic` with
      the same inputs, then paste back its JSON. A review done in this same chat is **self-attested**: label it so in every
      JIRA/PR comment; it cannot satisfy a gate.
@@ -276,59 +273,42 @@ Run this stage only when the Stage 2 benchmark verdict is PASS (see *Three stage
 4. Use the critic's `items` as this step's PASS/GAP results and its `findings` as the attempt's gaps. Feed the optimizer only the findings (rule, location, fix), never the critic's free-text reasoning.
 5. On the final attempt the critic runs again on the final artifact (verifier pass). The loop only passes if that run is PASS.
 
-**Domain pack.** If `.agentic-sdlc/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
-Without a project.yaml, pass `${AGENTIC_SDLC:-.agentic-sdlc}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
+**Domain pack.** If `.plumbline/project.yaml` has `domain_pack:`, pass that path (or no pack when it says `none`).
+Without a project.yaml, pass `${PLUMBLINE_HOME:-.plumbline}/packs/domain-rules/rules.yaml` (the broker-dealer pack).
 Never apply another domain's rules to this repository.
-Rubric `arch DoR 15-item`: the critic marks [x] PASS or [ ] GAP with specific reason for each GAP.
+Rubric `pm PRD 10-item`: the critic marks [x] PASS or [ ] GAP with specific reason for each GAP.
 
 ```
-DEFINITION OF READY CHECKLIST — Attempt {attempt}
+PRD QUALITY CHECKLIST — Attempt {attempt}
 
-  [x/] Story has a clear user story (As a / I want / So that)
+  [x/] Problem owner identified — specific role named (trader | ops | admin | system)
        {gap reason if failed}
 
-  [x/] All acceptance criteria are curl-verifiable (each AC maps to an HTTP assertion)
+  [x/] Gap stated — what the user cannot do today is specific, not vague
        {gap reason if failed}
 
-  [x/] Service boundary is clear — story touches exactly one service
+  [x/] Business impact stated — risk, inefficiency, or compliance consequence named
        {gap reason if failed}
 
-  [x/] No blocked-by tickets are open
+  [x/] Solution summary written — at least one paragraph describing the proposed behaviour
        {gap reason if failed}
 
-  [x/] No dependency on CLAUDE.md Section 18 (Out of Scope)
+  [x/] Success criteria present — at least 2 measurable, curl-verifiable or visually testable items
        {gap reason if failed}
 
-  [x/] Endpoint path and HTTP verb confirmed
+  [x/] Out of scope section present — references CLAUDE.md Section 18 where applicable
        {gap reason if failed}
 
-  [x/] Response shape designed — all fields named and typed
+  [x/] Feature maps to exactly one domain from CLAUDE.md Section 3 — no cross-service ambiguity
        {gap reason if failed}
 
-  [x/] Error codes defined for every failure path in the ACs
+  [x/] Dependencies mapped — blocked-by and enables noted, or explicitly confirmed none
        {gap reason if failed}
 
-  [x/] DB migration scoped — or explicitly confirmed not needed
+  [x/] No Section 18 items in P1, P2, or P3
        {gap reason if failed}
 
-  [x/] External service calls identified — Resilience4j circuit breaker planned
-       {gap reason if failed}
-
-  [x/] Test strategy written — >= 3 unit test cases per layer (service + controller)
-       {gap reason if failed}
-
-  --- Design Completeness Rule (HARD STOP items) ---
-
-  [x/] Ownership/identity fields named exactly (e.g. `order.createdBy`, not `order.clientId`)
-       {gap reason if failed}
-
-  [x/] UUID domain stated for every identifier (auth userId vs trading clientId) and comparisons are same-domain
-       {gap reason if failed}
-
-  [x/] RBAC per role for every endpoint — who is allowed, who is blocked (TRADER / OPERATIONS / ADMIN)
-       {gap reason if failed}
-
-  [x/] Gateway-forwarded header names and payload semantics listed (e.g. X-User-Id, X-User-Role)
+  [x/] P1 story point estimate ≤ 20 (one sprint capacity)
        {gap reason if failed}
 ```
 
@@ -337,39 +317,34 @@ DEFINITION OF READY CHECKLIST — Attempt {attempt}
 Collect this attempt's gaps:
 ```
 attempt_gaps = [every Stage 2 benchmark FAIL check, as BENCH:<id>]
-             + [all DoR items marked as GAP]
+             + [all PRD Quality items marked as GAP]
 ```
 _If Stage 2 failed, the judge did not run: show every rubric row as `NOT RUN (benchmark FAIL)`. The verdict is GAPS._
 
 
-**PASS condition:** `attempt_gaps` is empty (all 15 items checked) **and** the Stage 2 benchmark verdict is PASS
+**PASS condition:** `attempt_gaps` is empty (all 10 items checked) **and** the Stage 2 benchmark verdict is PASS
 
-Print DoR scorecard:
+Print quality scorecard:
 ```
-DoR SCORECARD — Attempt {attempt}
-  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/review/{name}-benchmark.md)
-  User story clear             : {PASS | GAP}
-  ACs curl-verifiable          : {PASS | GAP}
-  Service boundary clear       : {PASS | GAP}
-  No open blockers             : {PASS | GAP}
-  Not out of scope             : {PASS | GAP}
-  Endpoint path + verb         : {PASS | GAP}
-  Response shape designed      : {PASS | GAP}
-  Error codes defined          : {PASS | GAP}
-  DB migration scoped          : {PASS | GAP}
-  External calls + Resilience4j: {PASS | GAP}
-  Test strategy written        : {PASS | GAP}
-  Identity fields exact        : {PASS | GAP}
-  UUID domains consistent      : {PASS | GAP}
-  RBAC per role per endpoint   : {PASS | GAP}
-  Gateway headers specified    : {PASS | GAP}
+PRD QUALITY SCORECARD — Attempt {attempt}
+  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/run/review/{name}-benchmark.md)
+  Problem owner identified       : {PASS | GAP}
+  Gap stated specifically        : {PASS | GAP}
+  Business impact stated         : {PASS | GAP}
+  Solution summary written       : {PASS | GAP}
+  Success criteria present       : {PASS | GAP}
+  Out of scope section present   : {PASS | GAP}
+  Single domain mapping          : {PASS | GAP}
+  Dependencies mapped            : {PASS | GAP}
+  No Section 18 in P1/P2/P3      : {PASS | GAP}
+  P1 points ≤ 20                 : {PASS | GAP}
 
-  VERDICT : {ALL PASSED — design approved | GAPS — {n} items incomplete}
+  VERDICT : {ALL PASSED — PRD approved | GAPS — {n} items incomplete}
 ```
 
 **If ALL PASSED:**
 - Set `loop_passed = true`
-- Exit the loop → go to Phase 1 (JIRA Update)
+- Exit the loop → go to Phase 1 (Epic Creation)
 
 **If GAPS and attempt < max_attempts:**
 - **Feedback loop** (see *Three stages*): write the failing checks and findings to the feedback file and run Stage 1 again (the originator fixes them and writes its fix log), then re-run Stage 2 and a fresh Stage 3 judge with `PRIOR_FINDINGS`
@@ -382,43 +357,63 @@ DoR SCORECARD — Attempt {attempt}
 
 ---
 
-## Phase 1 — JIRA Update (reached only on PASS)
+## Phase 1 — Epic Creation (reached only on PASS)
 
-1. Post full technical design as a JIRA comment on SCRUM-{n}:
+1. Search for an existing Epic that covers this theme:
+   ```
+   searchJiraIssuesUsingJql("project = SCRUM AND issueType = Epic AND summary ~ '{keyword}'")
+   ```
+2. If no matching Epic exists, apply the JIRA Write Guard, then create one:
+   ```
+   createJiraIssue(
+     issueTypeName: "Epic",
+     summary: "{domain}: {outcome in one line}",
+     description: {the approved PRD `.plumbline/run/review/{ticket}-prd.md`, formatted as Confluence storage format},
+     labels: ["plumbline-prd-approved"]
+   )
+   ```
+3. If an Epic already exists and this feature extends it, add a comment with the PRD delta — do NOT create a duplicate Epic.
+
+Post a JIRA comment on the Epic:
 ```
-Arch Eval Loop ({date}): Technical design complete — passed DoR on attempt {attempt}/{max_attempts}.
+PM Eval Loop ({date}): PRD approved — passed quality check on attempt {attempt}/{max_attempts}.
 
-{paste the approved design from `.plumbline/review/{ticket}-design.md`}
+{paste the approved PRD from `.plumbline/run/review/{ticket}-prd.md`}
 
-DEFINITION OF READY: ALL 15 CHECKS PASSED
-Story is ready for development. Run: /dev-eval-loop SCRUM-{n}
+PRD QUALITY: ALL 10 CHECKS PASSED
+Epic is ready for story decomposition. Run: /plumbline-ba epic:{epic-key}
+Prioritization: {P1/P2/P3 summary}
 ```
 
-2. Apply the JIRA Write Guard, then add label `plumbline-arch-approved` to the ticket.
+Apply the JIRA Write Guard, then add label `plumbline-prd-approved` to the Epic.
 
 ---
 
 ## Phase 2 — Summary to User
 
 ```
-ARCH EVAL LOOP — SCRUM-{n} COMPLETE
+PM EVAL LOOP — COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Story      : {summary}
-Service    : {service-name}
+Feature    : {feature description}
+Epic       : {SCRUM-key — new | existing}
 Eval Loop  : Passed on attempt {attempt} / {max_attempts}
 {if attempt > 1: Gaps resolved: {list what changed}}
 
-DESIGN COMPLETE
-  Endpoint   : {METHOD} {path}
-  DB change  : {yes — V{n}__migration.sql | no}
-  Kafka      : {produces X | consumes Y | none}
-  Redis      : {new key | none}
-  Ext calls  : {service list | none}
-  Tests      : {n} unit test cases planned
+PRD COMPLETE
+  Problem  : {one-line summary}
+  Solution : {one-line summary}
+  Success criteria: {n} items
+  Out of scope: {n} items
+  Dependencies: {none | list}
 
-DoR STATUS : APPROVED (label: plumbline-arch-approved)
+BACKLOG ORDER
+  P1: {n} features
+  P2: {n} features
+  P3: {n} features
 
-Next step  : /dev-eval-loop SCRUM-{n}
+PRD STATUS : APPROVED (label: plumbline-prd-approved)
+
+Next step  : /plumbline-ba epic:{epic-key}
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 ```
@@ -428,26 +423,22 @@ Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf
 ## Escalation — reached when all 3 attempts have gaps
 
 ```
-ARCH EVAL LOOP — ESCALATION REQUIRED
+PM EVAL LOOP — ESCALATION REQUIRED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SCRUM-{n} has DoR gaps that could not be resolved in {max_attempts} design attempts.
-This indicates a story-level problem, not a design problem.
+The PRD has quality gaps that could not be resolved in {max_attempts} authoring attempts.
+This indicates the requirement needs human clarification before it can become a valid PRD.
 
 Persistent gaps:
 {numbered list of all_gaps with specific reason for each}
 
-Root cause: The story as written by BA Agent is missing information
-that the Architect cannot invent. A BA Agent revision is required.
+Root cause: The feature request as described is missing information
+that the PM Agent cannot invent. Human input is required.
 
 Recommended action:
-1. Run /ba-eval-loop epic:{epic-key} to revisit the story
+1. Clarify the requirement with the business stakeholder
 2. Specifically address: {list of gap areas}
-3. Re-run /arch-eval-loop SCRUM-{n} after story is updated
+3. Re-run /plumbline-pm "{refined requirement}" after clarification
 ```
-
-Post to JIRA as a comment (informational — no approval needed under the Plumbline write policy; any label or transition that follows still needs the Write Guard):
-- Add comment with the escalation block above
-- Apply JIRA Write Guard, then add label `plumbline-arch-blocked`
 
 STOP.
 
@@ -455,9 +446,8 @@ STOP.
 
 ## Hard Stops — always pause and ask the user
 
-- Story has no acceptance criteria — cannot design without them
-- Blocked-by tickets are not Done
-- Feature requires cross-service database access (violates CLAUDE.md Section 3)
-- Feature requires a new microservice not listed in CLAUDE.md Section 3
-- Feature is in CLAUDE.md Section 18 (Out of Scope for POC)
-- Design requires a new Maven dependency — CLAUDE.md must be updated first
+- Feature request is entirely in CLAUDE.md Section 18 (Out of Scope for POC)
+- Feature would require a new microservice not in CLAUDE.md Section 3
+- Feature contradicts an existing architectural decision in CLAUDE.md
+- Two Epics already exist that partially cover the request — clarify before creating a third
+- P1 story points would exceed 20 (one sprint capacity) after both attempts

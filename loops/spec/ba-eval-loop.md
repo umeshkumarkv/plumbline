@@ -13,9 +13,9 @@ On persistent gaps after 3 attempts, escalates to PM Eval Loop for Epic revision
 
 ## Usage
 ```
-/ba-eval-loop "plain English requirement"
-/ba-eval-loop confluence:{pageId}
-/ba-eval-loop epic:{epicKey}
+/plumbline-ba "plain English requirement"
+/plumbline-ba confluence:{pageId}
+/plumbline-ba epic:{epicKey}
 ```
 <!-- @copilot -->
 
@@ -100,7 +100,7 @@ START_TIME=$(date +%s)
 ```
 
 1. Parse the input — if it is a Confluence page ID, fetch the page content first
-   - Fail fast: locate the parent Epic now (from `epic:{key}`, or search Epics labelled `plumbline-prd-approved` for this theme). None → STOP: "Run /pm-eval-loop first."
+   - Fail fast: locate the parent Epic now (from `epic:{key}`, or search Epics labelled `plumbline-prd-approved` for this theme). None → STOP: "Run /plumbline-pm first."
 2. Read `CLAUDE.md` fully — pay special attention to:
    - Section 2: Tech Stack (what is locked)
    - Section 3: Microservice boundaries (which service owns what)
@@ -146,10 +146,10 @@ Story : {draft summary}
 If `all_gaps` is not empty, they go to the originator through the feedback file (Stage 1, step 2): every gap
 in this story draft must be addressed.
 
-<!-- @originator role=ba name={ticket}-story-{story_index} writable=".plumbline/review/{ticket}-story-{story_index}.md" tools=Read,Grep,Glob,Write,Edit artifact=".plumbline/review/{ticket}-story-{story_index}.md" inputs="the Epic and PRD in `.plumbline/review/{ticket}-epic.md`; the stories already in the Epic in `.plumbline/review/{ticket}-stories.json`" -->
+<!-- @originator role=ba name={ticket}-story-{story_index} writable=".plumbline/run/review/{ticket}-story-{story_index}.md" tools=Read,Grep,Glob,Write,Edit artifact=".plumbline/run/review/{ticket}-story-{story_index}.md" inputs="the Epic and PRD in `.plumbline/run/review/{ticket}-epic.md`; the stories already in the Epic in `.plumbline/run/review/{ticket}-stories.json`" -->
 ### Step B — Stage 1 Originator: Draft the Story
 
-Write the story to `.plumbline/review/{ticket}-story-{story_index}.md`. Produce ALL of the following sections:
+Write the story to `.plumbline/run/review/{ticket}-story-{story_index}.md`. Produce ALL of the following sections:
 
 #### Summary format
 `{Verb} {HTTP method} /api/v1/{resource} — {brief outcome description}`
@@ -210,11 +210,11 @@ Estimate: 1 (trivial) | 2 (simple DB read) | 3 (service call) | 5 (complex logic
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
-python3 "$G/bench/run.py" ba --artifact .plumbline/review/{ticket}-story-{story_index}.md --repo . [--facts .plumbline/review/{ticket}-jira-facts.json] --name {ticket}-story-{story_index}
+G=${PLUMBLINE_HOME:-.plumbline}
+python3 "$G/bench/run.py" ba --artifact .plumbline/run/review/{ticket}-story-{story_index}.md --repo . [--facts .plumbline/run/review/{ticket}-jira-facts.json] --name {ticket}-story-{story_index}
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_gaps` as `BENCH:<id> — <detail>`, **skip Step C**, go to Step D.
-- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/review/{ticket}-story-{story_index}-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/run/review/{ticket}-story-{story_index}-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: summary format, user story role, every AC has method + path + status, happy/404/400 coverage, points in 1/2/3/5/8, tech constraints, the service exists and is the only one named, the port matches the code, AC paths route to the service through the gateway, the seed table exists, no §18 item. `--facts` takes the raw JIRA status of blocked-by tickets.
 
@@ -273,7 +273,7 @@ _If Stage 2 failed, the judge did not run: show every rubric row as `NOT RUN (be
 Print quality scorecard:
 ```
 STORY QUALITY SCORECARD — Story {story_index} — Attempt {attempt}
-  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/review/{name}-benchmark.md)
+  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/run/review/{name}-benchmark.md)
   User story format           : {PASS | GAP}
   ACs curl-verifiable         : {PASS | GAP}
   Single service boundary     : {PASS | GAP}
@@ -307,7 +307,7 @@ STORY QUALITY SCORECARD — Story {story_index} — Attempt {attempt}
 For each story that passed:
 
 1. Resolve the parent Epic. The Epic must already exist and carry label `plumbline-prd-approved` (created by the PM Eval Loop).
-   If the input was plain English or a Confluence page and no approved Epic exists, STOP: "Run /pm-eval-loop first — BA never creates Epics."
+   If the input was plain English or a Confluence page and no approved Epic exists, STOP: "Run /plumbline-pm first — BA never creates Epics."
 2. Apply the JIRA Write Guard, then create the story linked to the Epic:
    `createJiraIssue(issueTypeName: "Story", parent: {epicKey}, ...)`
 3. Set blocked-by links using `createIssueLink` where dependencies exist
@@ -330,7 +330,7 @@ DEFINITION OF READY — SCRUM-{n}
   [x] No out-of-scope items per CLAUDE.md Section 18
   [x] Tech constraints section complete (service, port, branch, PR target)
   [x] Seed data or test data identified
-  [ ] Architect design doc approved (label: plumbline-arch-approved) ← run /arch-eval-loop SCRUM-{n}
+  [ ] Architect design doc approved (label: plumbline-arch-approved) ← run /plumbline-arch SCRUM-{n}
 ```
 
 Apply the JIRA Write Guard, then add label `plumbline-dor-ready` to each story that passed.
@@ -359,7 +359,7 @@ Out of Scope (flagged, not ticketed)
   - {item}: reason per CLAUDE.md Section 18
 
 Next Step
-  Run /arch-eval-loop SCRUM-{n} for each story before development begins.
+  Run /plumbline-arch SCRUM-{n} for each story before development begins.
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 <!-- @claude -->
@@ -384,9 +384,9 @@ Root cause: The story cannot be written correctly because the requirement
 is incomplete or contradictory. The PM Eval Loop must revise the Epic first.
 
 Recommended action:
-1. Run /pm-eval-loop epic:{epic-key} to revisit the PRD
+1. Run /plumbline-pm epic:{epic-key} to revisit the PRD
 2. Specifically address: {list of gap areas}
-3. Re-run /ba-eval-loop epic:{epic-key} after the PRD is updated
+3. Re-run /plumbline-ba epic:{epic-key} after the PRD is updated
 ```
 
 Do NOT create a JIRA ticket for an escalated story. Flag it in the Phase 3 report.

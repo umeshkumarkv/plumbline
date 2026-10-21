@@ -7,15 +7,15 @@ true vertical: a deterministic benchmark first, then an isolated judge, with a h
 ## Install in any repository (one step)
 
 ```bash
-tar -xzf plumbline-<version>.tar.gz          # unpacks .agentic-sdlc/ at the repository root
-python3 .agentic-sdlc/init.py                 # detect → project.yaml → agents/prompts/workflows → baseline → doctor
+tar -xzf plumbline-<version>.tar.gz          # unpacks .plumbline/ at the repository root
+python3 .plumbline/init.py                 # detect → project.yaml → agents/prompts/workflows → baseline → doctor
 ```
 `init.py` detects the units (`services/<name>/`, top-level modules, an app at the root, frontends such as `ui/`), the
-Java version, the frontend framework and the base branch; writes `.agentic-sdlc/project.yaml`; installs the generated
+Java version, the frontend framework and the base branch; writes `.plumbline/project.yaml`; installs the generated
 Claude Code commands/agents and Copilot prompts/agents and the CI workflows; writes this repository's gate baseline;
 checks prerequisites (python3, PyYAML, Semgrep, JDK, node); and prints a **doctor** report of what the framework can
 and cannot see. `--doctor` reports only, `--check` (CI) fails on drift, `--upgrade <tarball>` replaces the framework and
-keeps `project.yaml` and the baseline. Then run `/onboard-eval-loop service:all`.
+keeps `project.yaml` and the baseline. Then run `/plumbline-onboard service:all`.
 
 ## What is inside
 
@@ -34,20 +34,18 @@ keeps `project.yaml` and the baseline. Then run `/onboard-eval-loop service:all`
 
 Results on `broker-dealer` (9 services): see **[eval/RESULTS.md](eval/RESULTS.md)**. Short version: gates own the mechanical rules; a fresh-context critic armed with the rulebook caught 79/80 planted defects with no false alarms on clean controls. Both numbers come with caveats, listed in the results.
 
-## Quick start (on the OMS repo)
+## Footprint in a project
 
-Everything a repository needs ships as **one folder, `.agentic-sdlc/`**, committed in that repository. Only the files
-Claude Code and Copilot require at fixed paths live outside it (`.claude/`, `.github/`), and `install.sh` writes them.
-```bash
-python3 tools/make_kit.py                          # here: builds build/kit/.agentic-sdlc/ (or use the release tarball)
-cp -R build/kit/.agentic-sdlc <repo>/.agentic-sdlc
-cd <repo> && .agentic-sdlc/install.sh                # .claude/, .github/prompts|agents|workflows, .gitignore
-pip install -r .agentic-sdlc/requirements.txt        # python3 >= 3.10, PyYAML, Semgrep
-python3 .agentic-sdlc/gates/run_gates.py . --baseline .agentic-sdlc/gates/baseline.json      # 0 NEW on main
-```
-CI runs the checks from `.agentic-sdlc/` **as committed on the base branch**, so a PR cannot change the checker that
-judges it. See `tools/KIT-README.md` (shipped as `.agentic-sdlc/README.md`) for what is generic and what is
-broker-dealer-specific.
+Everything Plumbline owns lives in **`.plumbline/`**: the framework, `project.yaml`, the gate baseline, and the loop
+working files in `.plumbline/run/` (ignored by `.plumbline/.gitignore`; the root `.gitignore` is not touched).
+Outside it, only the entry files the tools require, all named `plumbline-*`:
+`.claude/commands`, `.claude/agents` (Claude Code), `.github/prompts`, `.github/agents` (Copilot), and
+`.github/workflows` only with `init.py --ci`. `init.py --uninstall --yes` removes all of it; the project's CLAUDE.md
+files stay. Commands: `/plumbline-onboard`, `/plumbline-pm`, `/plumbline-ba`, `/plumbline-arch`, `/plumbline-dev`,
+`/plumbline-code-review`, `/plumbline-qa`, `/plumbline-doc`, `/plumbline-devops`, `/plumbline-sm`.
+
+CI runs the checks from `.plumbline/` **as committed on the base branch**, so a PR cannot change the checker that
+judges it. Building a release here: `python3 tools/make_kit.py` → `build/kit/.plumbline/`.
 Optional: `gates/archunit/OmsArchitectureTest.java` (type-aware layering rules; needs archunit-junit5), `gates/ci/critic.yml` (headless critic for Copilot users), `packs/domain-rules/tests/OrderTransitionPolicyTest.java`.
 
 ## Layout

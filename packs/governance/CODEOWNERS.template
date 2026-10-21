@@ -10,8 +10,7 @@
 /.github/agents/               @platform-governance
 /CODEOWNERS                    @platform-governance
 /.claude/                      @platform-governance
-/.agentic-sdlc/                  @platform-governance
-/.plumbline/                        @platform-governance
+/.plumbline/                  @platform-governance
 /.github/copilot-instructions.md @platform-governance
 /.github/instructions/         @platform-governance
 **/AGENTS.md                   @platform-governance

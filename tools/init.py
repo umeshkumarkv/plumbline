@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Plumbline init — set up (or check, or upgrade) a repository in one step.
 
-  python3 .agentic-sdlc/init.py                    detect → project.yaml → install → baseline → prerequisites → doctor
-  python3 .agentic-sdlc/init.py --domain broker-dealer   same, with the broker-dealer domain pack and all gate packs
-  python3 .agentic-sdlc/init.py --doctor           report only: what the framework can and cannot see (no writes)
-  python3 .agentic-sdlc/init.py --check            CI: exit 1 if generated files, project.yaml or baseline are stale
-  python3 .agentic-sdlc/init.py --upgrade FILE.tar.gz   replace the framework, keep project.yaml and the baseline
+  python3 .plumbline/init.py                    detect → project.yaml → install → baseline → prerequisites → doctor
+  python3 .plumbline/init.py --domain broker-dealer   same, with the broker-dealer domain pack and all gate packs
+  python3 .plumbline/init.py --doctor           report only: what the framework can and cannot see (no writes)
+  python3 .plumbline/init.py --check            CI: exit 1 if generated files, project.yaml or baseline are stale
+  python3 .plumbline/init.py --upgrade FILE.tar.gz   replace the framework, keep project.yaml and the baseline
+  python3 .plumbline/init.py --ci               also install the CI workflows (.github/workflows/plumbline-*.yml)
+  python3 .plumbline/init.py --uninstall --yes  remove every Plumbline file (the project's CLAUDE.md files stay)
 
-Run from anywhere; the repository is the folder that contains .agentic-sdlc/. Nothing outside .agentic-sdlc/,
-.claude/, .github/{prompts,agents,workflows}/ and .gitignore is written. Existing project.yaml is never overwritten.
+Footprint: everything lives in .plumbline/ (framework, project.yaml, baseline, loop working files in run/, ignored by
+.plumbline/.gitignore). Outside it, only the entry files the tools require, all named plumbline-*:
+.claude/commands, .claude/agents, .github/prompts, .github/agents — and .github/workflows only with --ci.
+The root .gitignore is not touched. An existing project.yaml is never overwritten.
 """
 import argparse
 import filecmp
@@ -21,25 +25,29 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-G = Path(__file__).resolve().parent            # the .agentic-sdlc folder
+G = Path(__file__).resolve().parent            # the .plumbline folder
 REPO = G.parent
 sys.path.insert(0, str(G / "impact"))
-import layout  # noqa: E402
+try:
+    import layout  # noqa: E402
+except ImportError:          # only init.py present (first step of an --upgrade from an older layout)
+    layout = None
 
 PROJECT = G / "project.yaml"
 BASELINE = G / "gates" / "baseline.json"
 KEEP_ON_UPGRADE = ("project.yaml", "gates/baseline.json")
-INSTALL = [   # (generated source in .agentic-sdlc, destination in the repo)
+INSTALL = [   # (generated source in .plumbline, destination in the repo)
     ("dist/claude-code/.claude/commands", ".claude/commands"),
     ("dist/claude-code/.claude/agents", ".claude/agents"),
     ("dist/copilot/.github/prompts", ".github/prompts"),
     ("dist/copilot/.github/agents", ".github/agents"),
 ]
-WORKFLOWS = [("gates/ci/guardrails.yml", "guardrails.yml"), ("gates/ci/critic.yml", "plumbline-critic.yml"),
-             ("gates/ci/impact-cache.yml", "impact-cache.yml")]
+WORKFLOWS = [("gates/ci/guardrails.yml", "plumbline-guardrails.yml"), ("gates/ci/critic.yml", "plumbline-critic.yml"),
+             ("gates/ci/impact-cache.yml", "plumbline-impact-cache.yml")]
+LEGACY = REPO / ".agentic-sdlc"                 # the folder name before 1.10
 DOMAINS = {   # domain pack + gate selection
     "none": {"domain_pack": "none", "gates": {"semgrep": ["java-generic.yml"], "checks": ["structure_check"]}},
-    "broker-dealer": {"domain_pack": ".agentic-sdlc/packs/domain-rules/rules.yaml", "gates": None},  # None = all packs
+    "broker-dealer": {"domain_pack": ".plumbline/packs/domain-rules/rules.yaml", "gates": None},  # None = all packs
 }
 
 
@@ -127,7 +135,7 @@ def write_project(units, domain):
               "# Domain rule pack the judge applies; `none` for a repository without one.",
               f"domain_pack: {d['domain_pack']}"]
     if d["gates"]:
-        lines += ["", "# Gate selection: Semgrep packs under .agentic-sdlc/gates/semgrep/, checks under gates/checks/.",
+        lines += ["", "# Gate selection: Semgrep packs under .plumbline/gates/semgrep/, checks under gates/checks/.",
                   "gates:", f"  semgrep: [{', '.join(d['gates']['semgrep'])}]", f"  checks: [{', '.join(d['gates']['checks'])}]"]
     PROJECT.write_text("\n".join(lines) + "\n")
     say("write", f"{PROJECT.relative_to(REPO)} ({len(units)} units, domain {domain})")
@@ -136,50 +144,54 @@ def write_project(units, domain):
 
 # ───────────── install generated files ─────────────
 
-def pairs():
+def ci_installed():
+    return any((REPO / ".github" / "workflows" / name).exists() for _s, name in WORKFLOWS)
+
+
+def pairs(ci=None):
+    ci = ci_installed() if ci is None else ci
     for src, dst in INSTALL:
         for f in sorted((G / src).glob("*.md")):
             yield f, REPO / dst / f.name
-    for src, name in WORKFLOWS:
-        yield G / src, REPO / ".github" / "workflows" / name
+    if ci:
+        for src, name in WORKFLOWS:
+            yield G / src, REPO / ".github" / "workflows" / name
 
 
 GENERATED_DIRS = [".claude/commands", ".claude/agents", ".github/prompts", ".github/agents", ".github/workflows"]
 
 
 def leftovers():
-    """Framework files from older installs that the current version no longer generates (old agent, critic, loop or
-    workflow names)."""
-    expected = {d for _s, d in pairs()}
+    """Plumbline files from older installs that the current version no longer generates (old command, agent or
+    workflow names). Only files that are recognisably ours: plumbline-* names, or old loop/agent names, or
+    workflows that run the framework."""
+    expected = {d for _s, d in pairs(ci=True)}
     out = []
     for gd in GENERATED_DIRS:
         for f in sorted((REPO / gd).glob("*")) if (REPO / gd).is_dir() else []:
-            if f not in expected and re.search(r"-originator(\.agent)?\.md$|-critic(\.agent|\.prompt)?\.(md|yml)$|"
-                                               r"^plumbline-|eval-loop(\.prompt)?\.md$", f.name):
+            if f in expected or not f.is_file():
+                continue
+            text = f.read_text(errors="replace")
+            framework = re.search(r"\.agentic-sdlc|\.guardrails|GUARDRAILS|\.plumbline/|eval loop|ORIGINATOR", text, re.I)
+            ours = f.name.startswith("plumbline-") or (framework and re.search(
+                r"-originator(\.agent)?\.md$|-critic(\.agent|\.prompt)?\.(md|yml)$|eval-loop(\.prompt)?\.md$|"
+                r"^jira-ping(\.prompt)?\.md$|\.ya?ml$", f.name))
+            if ours:
                 out.append(str(f.relative_to(REPO)))
     return out
 
 
-def install():
+def install(ci=False):
     n = 0
-    for s, d in pairs():
+    for s_, d in pairs(ci=ci or None):
         d.parent.mkdir(parents=True, exist_ok=True)
-        if d.exists() and d.parent.name == "workflows" and not filecmp.cmp(s, d, shallow=False) \
-                and "agentic-sdlc" not in d.read_text(errors="replace"):
-            bak = d.with_name(d.name + ".bak")
-            shutil.copyfile(d, bak)
-            say("warn", f"{d.relative_to(REPO)} existed and was not Plumbline's — saved as {bak.name}")
-        if not d.exists() or not filecmp.cmp(s, d, shallow=False):
-            shutil.copyfile(s, d)
+        if not d.exists() or not filecmp.cmp(s_, d, shallow=False):
+            shutil.copyfile(s_, d)
             n += 1
     for f in leftovers():
         say("warn", f"left over from an older install (remove it): git rm {f}")
-    gi = REPO / ".gitignore"
-    text = gi.read_text() if gi.exists() else ""
-    if ".plumbline/" not in text.split():
-        gi.write_text(text + ("" if text.endswith("\n") or not text else "\n") + ".plumbline/\n")
-        say("write", ".gitignore += .plumbline/ (loop working files)")
-    say("write", f"generated agent files: {n} updated, {len(list(pairs())) - n} already current")
+    say("write", f"entry files (plumbline-*): {n} updated, {len(list(pairs())) - n} already current"
+                 + ("" if ci_installed() else "; CI workflows not installed (add with --ci)"))
 
 
 def stale_generated():
@@ -197,12 +209,12 @@ def prerequisites(units):
         import yaml  # noqa: F401
         say("ok", "PyYAML")
     except ImportError:
-        say("MISS", "PyYAML — pip install -r .agentic-sdlc/requirements.txt")
+        say("MISS", "PyYAML — pip install -r .plumbline/requirements.txt")
         probs.append("PyYAML")
     want = re.search(r"semgrep==([\d.]+)", (G / "requirements.txt").read_text())
     rc, out = sh("semgrep", "--version")
     if rc != 0:
-        say("MISS", "Semgrep — gates cannot run (pip install -r .agentic-sdlc/requirements.txt)")
+        say("MISS", "Semgrep — gates cannot run (pip install -r .plumbline/requirements.txt)")
         probs.append("semgrep")
     else:
         say("ok" if not want or want.group(1) in out else "warn", f"semgrep {out.splitlines()[-1]}"
@@ -297,7 +309,7 @@ def doctor(units):
         warn.append(f"{len(unmatched)} frontend call(s) have no matching endpoint (drift or dead code), e.g. {unmatched[:4]}")
     root_cm = REPO / "CLAUDE.md"
     print(f"  root CLAUDE.md (master): {'present' if root_cm.is_file() else 'missing'}"
-          f"{' — has solution block' if root_cm.is_file() and 'agentic-sdlc:begin solution' in root_cm.read_text(errors='replace') else ''}")
+          f"{' — has solution block' if root_cm.is_file() and 'plumbline:begin solution' in root_cm.read_text(errors='replace') else ''}")
     g = (cfg.get("gates") or {})
     print(f"  gates        : semgrep {g.get('semgrep', 'all packs')}  checks {g.get('checks', 'all')}  "
           f"baseline {'broker-dealer default — rebuild: init.py --rebaseline (needs Semgrep)' if foreign_baseline() else ('present' if BASELINE.is_file() else 'missing')}")
@@ -346,11 +358,11 @@ def check():
 
 
 def upgrade(tarball):
-    stage = G.with_name(".agentic-sdlc.new")
+    stage = G.with_name(".plumbline.new")
     shutil.rmtree(stage, ignore_errors=True)
     with tempfile.TemporaryDirectory() as td:
         with tarfile.open(tarball) as tf:
-            members = [m for m in tf.getmembers() if m.name.startswith(".agentic-sdlc/") and ".." not in m.name.split("/")
+            members = [m for m in tf.getmembers() if m.name.startswith(".plumbline/") and ".." not in m.name.split("/")
                        and (m.isreg() or m.isdir())]
             for m in members:                       # plain permissions only (no setuid/setgid/sticky)
                 m.mode = 0o755 if m.isdir() or m.mode & 0o111 else 0o644
@@ -358,9 +370,9 @@ def upgrade(tarball):
                 tf.extractall(td, members=members, filter="data")
             except TypeError:                       # Python without extraction filters: members are already vetted
                 tf.extractall(td, members=members)
-        new = Path(td) / ".agentic-sdlc"
+        new = Path(td) / ".plumbline"
         if not (new / "VERSION").is_file() or not (new / "init.py").is_file():
-            raise SystemExit("upgrade: the tarball has no .agentic-sdlc/VERSION and init.py")
+            raise SystemExit("upgrade: the tarball has no .plumbline/VERSION and init.py")
         for k in KEEP_ON_UPGRADE:                   # the tarball never brings its own project config or baseline
             (new / k).unlink(missing_ok=True)
         shutil.copytree(new, stage)
@@ -368,8 +380,12 @@ def upgrade(tarball):
         if (G / k).is_file():
             (stage / k).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(G / k, stage / k)
+    for d, dst in (("run", "run"), ("review", "run/review"), ("work", "run/work")):   # loop working files survive
+        if (G / d).is_dir() and not (stage / dst).exists():
+            (stage / dst).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(G / d, stage / dst)
     old_v = (G / "VERSION").read_text().strip() if (G / "VERSION").is_file() else "?"
-    retired = G.with_name(".agentic-sdlc.old")
+    retired = G.with_name(".plumbline.old")
     shutil.rmtree(retired, ignore_errors=True)
     G.rename(retired)                               # swap: the old framework stays intact until the new one is in place
     try:
@@ -383,6 +399,60 @@ def upgrade(tarball):
     return subprocess.run([sys.executable, str(G / "init.py"), "--no-baseline"]).returncode
 
 
+def uninstall(yes):
+    files = [d for _s, d in pairs(ci=True) if d.exists()] + [REPO / f for f in leftovers()]
+    files = sorted(set(files))
+    print("Plumbline uninstall would remove:")
+    for f in files:
+        print(f"  {f.relative_to(REPO)}")
+    print(f"  {G.relative_to(REPO)}/  (framework, project.yaml, baseline, loop working files)")
+    print("Kept: the project's CLAUDE.md files (they are project documentation).")
+    if not yes:
+        print("Nothing removed. Re-run with --yes to remove.")
+        return 0
+    for f in files:
+        f.unlink(missing_ok=True)
+    for gd in GENERATED_DIRS:
+        d = REPO / gd
+        if d.is_dir() and not any(d.iterdir()):
+            d.rmdir()
+    shutil.rmtree(G)
+    print("Removed. Commit the deletions.")
+    return 0
+
+
+def migrate_legacy():
+    """1.9 kept the framework in .agentic-sdlc/ and loop files in .plumbline/{review,work}: move them into place."""
+    moved = []
+    for old in ("review", "work"):
+        if (G / old).is_dir():
+            dst = G / "run" / old
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if not dst.exists():
+                (G / old).rename(dst)
+                moved.append(f".plumbline/{old}/ → .plumbline/run/{old}/")
+    if LEGACY.is_dir():
+        for k in KEEP_ON_UPGRADE:
+            if (LEGACY / k).is_file() and not (G / k).is_file():
+                (G / k).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(LEGACY / k, G / k)
+                moved.append(f".agentic-sdlc/{k} → .plumbline/{k}")
+        if PROJECT.is_file():
+            PROJECT.write_text(PROJECT.read_text().replace(".agentic-sdlc/", ".plumbline/"))
+        shutil.rmtree(LEGACY)
+        moved.append("removed .agentic-sdlc/ (replaced by .plumbline/)")
+    gi = REPO / ".gitignore"
+    if gi.is_file():                                # 1.9 added ".plumbline/" to the root .gitignore: it would now hide
+        text = gi.read_text()                       # the framework itself, so take our line out again
+        new = re.sub(r"(?m)^\.plumbline/\s*\n?", "", text)
+        if new != text:
+            gi.write_text(new)
+            moved.append("root .gitignore: removed the '.plumbline/' line an older install added "
+                         "(.plumbline/.gitignore now ignores only run/)")
+    for m in moved:
+        say("move", m)
+
+
 # ───────────── main ─────────────
 
 def main():
@@ -393,29 +463,38 @@ def main():
     ap.add_argument("--upgrade", metavar="TARBALL")
     ap.add_argument("--rebaseline", action="store_true")
     ap.add_argument("--no-baseline", action="store_true")
+    ap.add_argument("--ci", action="store_true", help="also install the CI workflows")
+    ap.add_argument("--uninstall", action="store_true")
+    ap.add_argument("--yes", action="store_true")
     a = ap.parse_args()
     if a.check:
         return check()
     if a.upgrade:
         return upgrade(a.upgrade)
+    if layout is None:
+        raise SystemExit("init: .plumbline/ is incomplete; run: python3 .plumbline/init.py --upgrade <plumbline tarball>")
+    if a.uninstall:
+        return uninstall(a.yes)
     print(f"Plumbline {(G / 'VERSION').read_text().strip()} — {REPO}")
+    if not a.doctor:
+        migrate_legacy()                      # 1.9 layout first: its project.yaml may declare the units
     units = detect()
     if not units:
         say("FAIL", "no units found (services/<name>/, top-level modules, an app at the root, or a frontend). "
-                    "Declare them in .agentic-sdlc/project.yaml — see project.yaml.example")
+                    "Declare them in .plumbline/project.yaml — see project.yaml.example")
         return 1
     if not a.doctor:
         write_project(units, a.domain)
         units = detect()                      # names/paths as declared
-        install()
+        install(a.ci)
     print()
     probs = prerequisites(units)
     if not a.doctor and not a.no_baseline:
         baseline(a.rebaseline)
     doctor(units)
     if not a.doctor:
-        print("Next: commit .agentic-sdlc/ .claude/ .github/ .gitignore, add CODEOWNERS for them, then run "
-              "/onboard-eval-loop service:all in Claude Code or Copilot.")
+        print("Next: commit .plumbline/ and the plumbline-* entry files, add CODEOWNERS for them, then run "
+              "/plumbline-onboard service:all in Claude Code or Copilot.")
     return 1 if probs else 0
 
 

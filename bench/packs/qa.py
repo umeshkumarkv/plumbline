@@ -1,6 +1,6 @@
 """QA benchmark — verifies the QA agent's EVIDENCE, so a PASS cannot be claimed without proof.
 
-Input: --results .plumbline/review/{ticket}-qa-results.json written by the QA originator (Step E):
+Input: --results .plumbline/run/review/{ticket}-qa-results.json written by the QA originator (Step E):
   {"ticket": "SCRUM-n", "results": [
      {"ac": "<AC text or 'EDGE: ...'>", "kind": "REST|UI|EDGE", "command": "curl ...", "expected_status": 200,
       "http_status": 200, "response": "<raw body>", "verdict": "PASS|FAIL", "screenshot": "path (UI)"} ]}
@@ -42,7 +42,7 @@ def as_int(v):
 
 def run(r, ctx):
     if not ctx.results:
-        raise UsageError("pass --results .plumbline/review/{ticket}-qa-results.json")
+        raise UsageError("pass --results .plumbline/run/review/{ticket}-qa-results.json")
     try:
         data = json.loads(read(ctx.results))
         res = data["results"]

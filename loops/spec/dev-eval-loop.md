@@ -13,7 +13,7 @@ On persistent failure after 3 attempts, escalates to human.
 
 ## Usage
 ```
-/dev-eval-loop SCRUM-{n}
+/plumbline-dev SCRUM-{n}
 ```
 <!-- @copilot -->
 
@@ -74,7 +74,7 @@ or any AC cannot be implemented as designed), the Dev Agent MUST:
 
 1. STOP immediately — do not implement a workaround
 2. Post the gap to JIRA with full evidence (which field, which line, why it is wrong)
-3. Escalate to the Arch Agent: "Run /arch-eval-loop SCRUM-{n} — design gap found"
+3. Escalate to the Arch Agent: "Run /plumbline-arch SCRUM-{n} — design gap found"
 4. Do NOT retry with a self-invented fix
 
 A design gap is not a code problem. It is an architecture problem. The Arch Agent
@@ -132,8 +132,8 @@ START_TIME=$(date +%s)
 2. Extract: summary, description, acceptance criteria, tech constraints, blocked-by links, labels
 
 ### Gate 1 — Definition of Ready
-- Must have label `plumbline-dor-ready` — if missing, STOP: "Run /ba-eval-loop first."
-- Must have label `plumbline-arch-approved` — if missing, STOP: "Run /arch-eval-loop SCRUM-{n} first."
+- Must have label `plumbline-dor-ready` — if missing, STOP: "Run /plumbline-ba first."
+- Must have label `plumbline-arch-approved` — if missing, STOP: "Run /plumbline-arch SCRUM-{n} first."
 - Must NOT have label `plumbline-arch-blocked` — if present, STOP and show the blocking comment.
 
 ### Gate 2 — Blockers
@@ -149,8 +149,8 @@ START_TIME=$(date +%s)
 10. Check if branch `ai/SCRUM-{n}-*` already exists: `git branch -a | grep SCRUM-{n}`
     - If exists: `git checkout ai/SCRUM-{n}-{slug}`
     - If not: `git checkout develop && git pull origin develop && git checkout -b ai/SCRUM-{n}-{kebab-slug-of-summary}`
-11. Save the originator's inputs (it has no JIRA access): write `.plumbline/review/{ticket}-story.md` (summary, description,
-    ACs, tech constraints as fetched) and `.plumbline/review/{ticket}-design.md` (the full text of the approved Arch design
+11. Save the originator's inputs (it has no JIRA access): write `.plumbline/run/review/{ticket}-story.md` (summary, description,
+    ACs, tech constraints as fetched) and `.plumbline/run/review/{ticket}-design.md` (the full text of the approved Arch design
     comment on SCRUM-{n}, the one that set `plumbline-arch-approved`). If no such comment exists — Design Gap Rule, STOP.
 
 ---
@@ -182,7 +182,7 @@ Story : SCRUM-{n} — {summary}
 If `all_findings` is not empty, they go to the originator through the feedback file (Stage 1, step 2): every item
 must be resolved before this attempt is evaluated.
 
-<!-- @originator role=dev name={ticket}-dev tools=Read,Grep,Glob,Write,Edit,Bash net=build artifact="code and tests under services/ (and frontend/), uncommitted" inputs="the story in `.plumbline/review/{ticket}-story.md`; the approved design in `.plumbline/review/{ticket}-design.md`" -->
+<!-- @originator role=dev name={ticket}-dev tools=Read,Grep,Glob,Write,Edit,Bash net=build artifact="code and tests under services/ (and frontend/), uncommitted" inputs="the story in `.plumbline/run/review/{ticket}-story.md`; the approved design in `.plumbline/run/review/{ticket}-design.md`" -->
 ### Step B — Stage 1 Originator: Implement (always in this layer order)
 
 1. **Domain** — add fields or new enum to JPA entity if needed
@@ -256,11 +256,11 @@ item for the feedback file (skip to Step E). A compilation error is the Hard Sto
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
+G=${PLUMBLINE_HOME:-.plumbline}
 python3 "$G/bench/run.py" dev --repo . --base develop --name {ticket}-dev
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_findings` as `BENCH:<id> — <detail>`, **skip the critic**, go to Step E.
-- **Exit 0 (PASS):** continue to the critic; pass `.plumbline/review/{ticket}-dev-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to the critic; pass `.plumbline/run/review/{ticket}-dev-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: deterministic gates (Semgrep + structure + domain, 0 NEW against the baseline), the cross-service impact check (no BREAKING), surefire results (0 failures) for every changed service, JaCoCo >= 80%, a *Test for every changed Service/Controller/Consumer/Producer/Rule. The originator runs the tests in Stage 1 to get them green; the reports the benchmark reads come from the orchestrator's own `mvn verify` above.
 
@@ -369,7 +369,7 @@ _If Stage 2 failed, the judge did not run: show every rubric row as `NOT RUN (be
 Print evaluation scorecard:
 ```
 EVAL SCORECARD — Attempt {attempt}
-  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/review/{name}-benchmark.md)
+  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/run/review/{name}-benchmark.md)
   Cat 1 Type Rules      : {PASS | FAIL — n violations}
   Cat 2 Naming          : {PASS | FAIL — n violations}
   Cat 3 Lombok          : {PASS | FAIL — n violations}
@@ -491,7 +491,7 @@ Coverage   : >= 80%
 Eval Loop  : Passed on attempt {attempt} / {max_attempts}
 {if attempt > 1: Fixed between attempts: {list of what changed}}
 
-Next step  : /qa-eval-loop SCRUM-{n}  (after code review approves PR)
+Next step  : /plumbline-qa SCRUM-{n}  (after code review approves PR)
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 <!-- @claude -->
@@ -514,7 +514,7 @@ Persistent violations (across all attempts):
 Human action required:
 1. Review the violations above
 2. Either fix manually or provide clarifying constraints
-3. Re-run /dev-eval-loop SCRUM-{n} after clarification
+3. Re-run /plumbline-dev SCRUM-{n} after clarification
 ```
 
 Post to JIRA as a comment (informational — no approval needed under the Plumbline write policy; any label or transition that follows still needs the Write Guard):

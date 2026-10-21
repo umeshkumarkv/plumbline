@@ -20,7 +20,7 @@ def changed_services(repo: Path, base: str):
     out = subprocess.run(["git", "diff", "--name-only", f"{base}...HEAD"], cwd=repo, capture_output=True, text=True)
     out2 = subprocess.run(["git", "diff", "--name-only", "HEAD"], cwd=repo, capture_output=True, text=True)   # uncommitted
     out3 = subprocess.run(["git", "ls-files", "-o", "--exclude-standard"], cwd=repo, capture_output=True, text=True)  # new files
-    files = set(out.stdout.split()) | set(out2.stdout.split()) | {f for f in out3.stdout.split() if not f.startswith(".plumbline/")}
+    files = set(out.stdout.split()) | set(out2.stdout.split()) | {f for f in out3.stdout.split() if not f.startswith(".plumbline/run/")}
     units = layout.units(repo)
     UNITS.clear()
     for f in files:

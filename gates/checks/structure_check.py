@@ -134,7 +134,7 @@ def check_unscanned_java(root: Path):
     """C5-java-outside-services: gates scan services/ only, so production Java elsewhere would escape them."""
     for f in root.glob("**/src/main/java/**/*.java"):
         rel = f.relative_to(root)
-        if rel.parts[0] not in ("services", "node_modules") and ".agentic-sdlc" not in rel.parts and ".guardrails" not in rel.parts:
+        if rel.parts[0] not in ("services", "node_modules") and not {".plumbline", ".agentic-sdlc", ".guardrails"} & set(rel.parts):
             add("C5-java-outside-services", rel, 1,
                 "production Java outside services/ is not scanned by the gates; move it under services/<svc> (CLAUDE.md §3, §4)")
 

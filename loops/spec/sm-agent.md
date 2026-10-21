@@ -327,8 +327,8 @@ ACTIONS TAKEN
 ## Sprint Close Mode — /sm-agent release-notes
 
 Run at sprint close after:
-1. `/qa-eval-loop sprint` — Test Plan + Test Results published to Confluence
-2. `/devops-eval-loop security-report` — Security Report published to Confluence
+1. `/plumbline-qa sprint` — Test Plan + Test Results published to Confluence
+2. `/plumbline-devops security-report` — Security Report published to Confluence
 
 This command assembles the full release pack for the Go/No-Go meeting and publishes Release Notes to Confluence.
 The Go/No-Go **decision** is made by humans in the meeting — this agent prepares the pack, not the verdict.
@@ -358,8 +358,8 @@ searchConfluenceUsingCql("space = SCRUM AND title ~ 'Sprint Test Results' AND cr
 searchConfluenceUsingCql("space = SCRUM AND title ~ 'Security Report' AND created >= {sprint-start-date}")
 ```
 If any page is missing — warn the user but do not stop:
-- Missing Test Plan/Results → note "Not run — run `/qa-eval-loop sprint`"
-- Missing Security Report → note "Not run — run `/devops-eval-loop security-report`"
+- Missing Test Plan/Results → note "Not run — run `/plumbline-qa sprint`"
+- Missing Security Report → note "Not run — run `/plumbline-devops security-report`"
 
 ### Step 4 — Publish Release Notes to Confluence
 ```
@@ -417,9 +417,9 @@ Date: _______________
 SM Agent ({date}): Sprint close release pack ready.
 
 Release Notes:   {confluence-url}
-Test Plan:       {url or "Not run — run /qa-eval-loop sprint"}
-Test Results:    {url or "Not run — run /qa-eval-loop sprint"}
-Security Report: {url or "Not run — run /devops-eval-loop security-report"}
+Test Plan:       {url or "Not run — run /plumbline-qa sprint"}
+Test Results:    {url or "Not run — run /plumbline-qa sprint"}
+Security Report: {url or "Not run — run /plumbline-devops security-report"}
 
 Go/No-Go checklist is in the Release Notes page.
 Human sign-off required before UAT deployment.

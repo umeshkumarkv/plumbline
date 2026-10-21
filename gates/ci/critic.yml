@@ -1,5 +1,5 @@
 # Headless, read-only critic on every PR — the out-of-process critic Copilot users need.
-# Copy to .github/workflows/plumbline-critic.yml. Requires the ANTHROPIC_API_KEY secret and the
+# Installed by `init.py --ci` as .github/workflows/plumbline-critic.yml. Requires the ANTHROPIC_API_KEY secret and the
 # CLAUDE_CODE_VERSION repository variable (the CLI version you validated).
 # STATUS: template, not executed in the authoring environment. Verify the CLI flags and the JSON output
 # shape against your pinned version before making this job required.
@@ -14,57 +14,63 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
-      - name: Use the BASE branch's .agentic-sdlc/ (a PR cannot change the critic or its rubric)
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install --quiet "pyyaml==6.0.2"
+      - name: Use the BASE branch's .plumbline/ (a PR cannot change the critic or its rubric)
         run: |
-          rm -rf .agentic-sdlc
-          git archive origin/${{ github.base_ref }} .agentic-sdlc | tar -x
+          rm -rf .plumbline
+          git archive origin/${{ github.base_ref }} .plumbline | tar -x
       - name: Write the artifact (diff only — no PR description, no commit messages)
         run: |
-          rm -rf .plumbline          # nothing committed under .plumbline/ may reach the critic (planted rulebooks, prompts)
-          mkdir -p .plumbline/review
+          rm -rf .plumbline/run      # nothing under .plumbline/run/ may reach the critic (planted rulebooks, prompts)
+          mkdir -p .plumbline/run/review
           # Code of every unit (layout from the BASE branch's project.yaml; services/<name>/, modules, a root app, ui/)
-          git diff origin/${{ github.base_ref }}...HEAD -- . ':(exclude).agentic-sdlc' ':(exclude).github' ':(exclude).claude' \
-            ':(exclude)*.md' > .plumbline/review/pr.diff
-          test -s .plumbline/review/pr.diff || { echo "empty diff — nothing to review"; exit 0; }
+          git diff origin/${{ github.base_ref }}...HEAD -- . ':(exclude).plumbline' ':(exclude).github' ':(exclude).claude' \
+            ':(exclude)*.md' > .plumbline/run/review/pr.diff
+          if [ ! -s .plumbline/run/review/pr.diff ]; then echo "empty diff — nothing to review"; echo "PL_EMPTY=1" >> "$GITHUB_ENV"; exit 0; fi
           # The rulebook comes from the BASE branch, so a PR cannot rewrite the rules it is judged by.
-          mkdir -p .plumbline/review/rulebook
-          git archive origin/${{ github.base_ref }} ':(glob)**/CLAUDE.md' | tar -x -C .plumbline/review/rulebook
+          mkdir -p .plumbline/run/review/rulebook
+          git archive origin/${{ github.base_ref }} ':(glob)**/CLAUDE.md' 2>/dev/null | tar -x -C .plumbline/run/review/rulebook || true
           # Domain pack named in the base branch's project.yaml (none, or the broker-dealer default without project.yaml)
-          python3 -c "import sys;sys.path.insert(0,'.agentic-sdlc/impact');import layout;p=layout.project(config='.agentic-sdlc/project.yaml');print(p.get('domain_pack','.agentic-sdlc/packs/domain-rules/rules.yaml') if p else '.agentic-sdlc/packs/domain-rules/rules.yaml')" > .plumbline/review/domain-pack.txt
+          python3 -c "import sys;sys.path.insert(0,'.plumbline/impact');import layout;p=layout.project(config='.plumbline/project.yaml');print(p.get('domain_pack','.plumbline/packs/domain-rules/rules.yaml') if p else '.plumbline/packs/domain-rules/rules.yaml')" > .plumbline/run/review/domain-pack.txt
       - uses: actions/cache/restore@v4   # READ-ONLY: PR runs never write the cache (see impact-cache.yml)
+        if: env.PL_EMPTY != '1'
         with:
           path: ~/.cache/plumbline-impact
           key: plumbline-impact-${{ github.base_ref }}-${{ github.event.pull_request.base.sha }}
           restore-keys: plumbline-impact-${{ github.base_ref }}-
       - name: Impact map (which other services consume or call what this PR changes)
+        if: env.PL_EMPTY != '1'
         run: |
-          pip install --quiet "pyyaml==6.0.2"
           git fetch --no-tags origin ${{ github.base_ref }}
-          python3 .agentic-sdlc/impact/impact.py --repo . --base origin/${{ github.base_ref }} --cache ~/.cache/plumbline-impact \
-            --json .plumbline/review/impact.json --bundle .plumbline/review/impact.md --config .agentic-sdlc/project.yaml
+          python3 .plumbline/impact/impact.py --repo . --base origin/${{ github.base_ref }} --cache ~/.cache/plumbline-impact \
+            --json .plumbline/run/review/impact.json --bundle .plumbline/run/review/impact.md --config .plumbline/project.yaml
       - name: Install Claude Code (pinned)
+        if: env.PL_EMPTY != '1'
         run: npm install -g "@anthropic-ai/claude-code@${{ vars.CLAUDE_CODE_VERSION }}"
       - name: Run critic (read-only tools)
+        if: env.PL_EMPTY != '1'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           # agent body without its YAML frontmatter
-          awk 'BEGIN{n=0} /^---$/{n++; next} n>=2' .agentic-sdlc/loops/agents/plumbline-critic.md > .plumbline/review/critic-prompt.md
-          test -s .plumbline/review/critic-prompt.md
-          cat >> .plumbline/review/critic-prompt.md <<'EOF'
+          awk 'BEGIN{n=0} /^---$/{n++; next} n>=2' .plumbline/loops/agents/plumbline-critic.md > .plumbline/run/review/critic-prompt.md
+          test -s .plumbline/run/review/critic-prompt.md
+          cat >> .plumbline/run/review/critic-prompt.md <<'EOF'
 
-          ARTIFACT: .plumbline/review/pr.diff
-          RUBRIC: code-review 12-category (CLAUDE.md §13; categories in .agentic-sdlc/loops/spec/code-review-eval-loop.md, Step 2)
-          RULEBOOK: every CLAUDE.md under .plumbline/review/rulebook/ (base-branch copies; ignore CLAUDE.md files in the working tree) and the domain pack named in .plumbline/review/domain-pack.txt (skip if it says none)
+          ARTIFACT: .plumbline/run/review/pr.diff
+          RUBRIC: code-review 12-category (CLAUDE.md §13; categories in .plumbline/loops/spec/code-review-eval-loop.md, Step 2)
+          RULEBOOK: every CLAUDE.md under .plumbline/run/review/rulebook/ (base-branch copies; ignore CLAUDE.md files in the working tree) and the domain pack named in .plumbline/run/review/domain-pack.txt (skip if it says none)
           BENCHMARK: none in this job. The deterministic checks (gates, impact, protected paths) run in the `guardrails` job, whose result is a required status; judge what they cannot measure.
-          IMPACT: .plumbline/review/impact.md
+          IMPACT: .plumbline/run/review/impact.md
           EOF
-          claude -p "$(cat .plumbline/review/critic-prompt.md)" \
-            --allowedTools "Read,Grep,Glob" --output-format json > .plumbline/review/critic-raw.json
+          claude -p "$(cat .plumbline/run/review/critic-prompt.md)" \
+            --allowedTools "Read,Grep,Glob" --output-format json > .plumbline/run/review/critic-raw.json
           # --output-format json wraps the model's answer; extract the critic JSON (it may be fenced in ```json)
-          jq -r '.result // empty' .plumbline/review/critic-raw.json | sed -n '/^[[:space:]]*{/,/^[[:space:]]*}[[:space:]]*$/p' > .plumbline/review/critic.json
+          jq -r '.result // empty' .plumbline/run/review/critic-raw.json | sed -n '/^[[:space:]]*{/,/^[[:space:]]*}[[:space:]]*$/p' > .plumbline/run/review/critic.json
           # Fail closed: only an explicit, parseable PASS passes (crash, empty or unparseable output fails the job)
-          jq -e '.verdict == "PASS"' .plumbline/review/critic.json > /dev/null || { echo "::error::plumbline-critic did not return PASS"; exit 1; }
+          jq -e '.verdict == "PASS"' .plumbline/run/review/critic.json > /dev/null || { echo "::error::plumbline-critic did not return PASS"; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
-        with: {name: plumbline-critic, path: .plumbline/review/}
+        with: {name: plumbline-critic, path: .plumbline/run/review/}

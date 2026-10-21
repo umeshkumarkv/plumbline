@@ -15,9 +15,9 @@ Max 3 attempts on the service docs loop. Gate: `plumbline-onboard-approved` labe
 
 ## Usage
 ```
-/onboard-eval-loop SCRUM-{n}           ← JIRA story describes the service to onboard
-/onboard-eval-loop service:{name}      ← direct service name, no JIRA story
-/onboard-eval-loop service:all         ← auto-discover all modules, run per-module CLAUDE.md
+/plumbline-onboard SCRUM-{n}           ← JIRA story describes the service to onboard
+/plumbline-onboard service:{name}      ← direct service name, no JIRA story
+/plumbline-onboard service:all         ← auto-discover all modules, run per-module CLAUDE.md
                                           generation for each, then run global consistency check
 ```
 
@@ -150,8 +150,8 @@ consistent and compliant with root CLAUDE.md standards.
 - **One CLAUDE.md per unit** (`python3 "$G/impact/layout.py" .`): `services/<name>/CLAUDE.md`, `<module>/CLAUDE.md`,
   `ui/CLAUDE.md`; for an app at the repository root it is **`src/CLAUDE.md`** (Claude Code loads it when working in
   `src/`). Never put a unit's document into the root file.
-- **Merge, never overwrite.** Generated content lives between `<!-- agentic-sdlc:begin <id> -->` and
-  `<!-- agentic-sdlc:end <id> -->` (`onboard` in a unit file, `solution` in the root file). Writes go through
+- **Merge, never overwrite.** Generated content lives between `<!-- plumbline:begin <id> -->` and
+  `<!-- plumbline:end <id> -->` (`onboard` in a unit file, `solution` in the root file). Writes go through
   `python3 "$G/bench/claude_merge.py"`, which replaces only that block or appends it, keeps every other line, and prints
   the diff for the Write Guard. Never hand-edit or rewrite a whole CLAUDE.md.
 - Every write, new file or existing, goes through the Write Guard (Phase 1) with the merge diff.
@@ -202,11 +202,11 @@ START_TIME=$(date +%s)
 **Step 0 — Find the unit and its stack (always runs first)**
 
 ```bash
-python3 "${AGENTIC_SDLC:-.agentic-sdlc}/impact/layout.py" .    # every unit: name, path, kind (service|frontend), build
+python3 "${PLUMBLINE_HOME:-.plumbline}/impact/layout.py" .    # every unit: name, path, kind (service|frontend), build
 ```
 Pick the unit named `{name}`. If it is not listed, STOP and show the list: the benchmark can only check a unit the
-layout knows. A repo with another layout declares its units in `.agentic-sdlc/project.yaml` (a human edit; see
-`.agentic-sdlc/README.md`). Set `DIR` to the unit's `path`. **Everywhere below, `services/{name}/` and `{name}/` mean
+layout knows. A repo with another layout declares its units in `.plumbline/project.yaml` (a human edit; see
+`.plumbline/README.md`). Set `DIR` to the unit's `path`. **Everywhere below, `services/{name}/` and `{name}/` mean
 `$DIR/`**: for an app at the repository root `DIR` is `.`, its code is `./src/`, and its own CLAUDE.md is
 `src/CLAUDE.md` (the root `CLAUDE.md` is the master file — see the CLAUDE.md pattern). Then set `STACK`:
 ```bash
@@ -373,7 +373,7 @@ Tech Debt        : {from R6 + R10 + U1 — or "None found"}
 ```
 
 **Save it for the originator.** Write the full Discovery Report, followed by the raw output of every scan you ran
-(J1–J9 or R1–R10, and U1–U3), to `.plumbline/review/{service-name}-discovery.md`. `{service-name}` is the module's
+(J1–J9 or R1–R10, and U1–U3), to `.plumbline/run/review/{service-name}-discovery.md`. `{service-name}` is the module's
 directory name (the same value as `{name}` above, e.g. `order-service` or `frontend`, never a path with `/`).
 The originator drafts only from this file.
 
@@ -406,10 +406,10 @@ step 2): every item must be addressed before any output is produced.
 
 ---
 
-<!-- @originator role=onboard name={service-name}-onboard writable=".plumbline/review/{service-name}-confluence.md .plumbline/review/{service-name}-CLAUDE.md" tools=Read,Grep,Glob,Write artifact=".plumbline/review/{service-name}-confluence.md and .plumbline/review/{service-name}-CLAUDE.md" inputs="the Phase 0 discovery results in `.plumbline/review/{service-name}-discovery.md`" -->
+<!-- @originator role=onboard name={service-name}-onboard writable=".plumbline/run/review/{service-name}-confluence.md .plumbline/run/review/{service-name}-CLAUDE.md" tools=Read,Grep,Glob,Write artifact=".plumbline/run/review/{service-name}-confluence.md and .plumbline/run/review/{service-name}-CLAUDE.md" inputs="the Phase 0 discovery results in `.plumbline/run/review/{service-name}-discovery.md`" -->
 ### Step B — BA Phase: Confluence Page
 
-Write the Confluence page draft to `.plumbline/review/{service-name}-confluence.md` (the orchestrator publishes it in Phase 1, after approval), covering:
+Write the Confluence page draft to `.plumbline/run/review/{service-name}-confluence.md` (the orchestrator publishes it in Phase 1, after approval), covering:
 
 #### 1. Service Overview
 - What this service does in business terms (one paragraph)
@@ -447,7 +447,7 @@ From discovery Phase 0 — flag explicitly, do not hide.
 
 ### Step C — Arch Phase: Service CLAUDE.md (Stage 1 originator)
 
-Write the draft to `.plumbline/review/{service-name}-CLAUDE.md`. Never write `services/{service-name}/CLAUDE.md` before Phase 1 (Write Guard). Stage 2 and the critic review the draft.
+Write the draft to `.plumbline/run/review/{service-name}-CLAUDE.md`. Never write `services/{service-name}/CLAUDE.md` before Phase 1 (Write Guard). Stage 2 and the critic review the draft.
 
 Use the template matching the detected stack.
 
@@ -462,7 +462,7 @@ Use the template matching the detected stack.
 ```markdown
 # CLAUDE.md — {app-name}
 # Part of {project name}
-# Generated by /onboard-eval-loop — Brownfield Onboarding
+# Generated by /plumbline-onboard — Brownfield Onboarding
 
 ---
 
@@ -664,11 +664,11 @@ Flag fields added by later migrations explicitly.
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
-python3 "$G/bench/run.py" onboard --artifact .plumbline/review/{service-name}-CLAUDE.md --repo . --service {service-name} --name {service-name}-onboard
+G=${PLUMBLINE_HOME:-.plumbline}
+python3 "$G/bench/run.py" onboard --artifact .plumbline/run/review/{service-name}-CLAUDE.md --repo . --service {service-name} --name {service-name}-onboard
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_gaps` as `BENCH:<id> — <detail>`, **skip Step D**, go to Step F.
-- **Exit 0 (PASS):** continue to Step D; pass `.plumbline/review/{service-name}-onboard-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Step D; pass `.plumbline/run/review/{service-name}-onboard-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: all 11 sections; port and schema vs the code; endpoints, produced and consumed topics, downstream services, @Entity classes, migration tables and Redis prefixes are both documented (coverage) and real (no invented facts); TODO/FIXME markers are acknowledged.
 
@@ -847,7 +847,7 @@ Never the root CLAUDE.md: that is the master file (Phase 2).
 
 Write exactly the draft that passed Stage 2 and the critic, merged into `TARGET` (never re-generated, never overwrite):
 ```bash
-python3 "$G/bench/claude_merge.py" --target "$TARGET" --block onboard --from .plumbline/review/{service-name}-CLAUDE.md \
+python3 "$G/bench/claude_merge.py" --target "$TARGET" --block onboard --from .plumbline/run/review/{service-name}-CLAUDE.md \
   --title "Service reference — {service-name}"            # prints the diff; nothing is written yet
 ```
 
@@ -898,7 +898,7 @@ Print the drift report (MATCH / DRIFT / MISSING / STALE per section) and patch e
    (`python3 "$G/impact/depmap.py" .`); external systems (e.g. Salesforce, SSO).
 3. **Shared rules and known cross-cutting findings** (security findings, unmatched calls) with links to the unit files.
 ```bash
-python3 "$G/bench/claude_merge.py" --target CLAUDE.md --block solution --from .plumbline/review/solution-CLAUDE.md \
+python3 "$G/bench/claude_merge.py" --target CLAUDE.md --block solution --from .plumbline/run/review/solution-CLAUDE.md \
   --title "Solution and architecture"                     # diff for the Write Guard; --write after "yes"
 ```
 Never remove or rewrite what is outside the block (runbooks, conventions, human notes).
@@ -933,7 +933,7 @@ Known Tech Debt Documented
   {list — or "None"}
 
 Next Step
-  Run /ba-eval-loop SCRUM-{n} to begin story decomposition now that the service is documented.
+  Run /plumbline-ba SCRUM-{n} to begin story decomposition now that the service is documented.
 
 Execution time : {elapsed}
 ```
@@ -942,21 +942,21 @@ Execution time : {elapsed}
 
 ## service:all mode — Full Onboarding for All Modules + Global Consistency Check
 
-Triggered when called as `/onboard-eval-loop service:all`.
+Triggered when called as `/plumbline-onboard service:all`.
 
 ### Step 0 — Auto-Discover All Modules
 
 ```bash
-python3 "${AGENTIC_SDLC:-.agentic-sdlc}/impact/layout.py" .
+python3 "${PLUMBLINE_HOME:-.plumbline}/impact/layout.py" .
 ```
 `MODULE_LIST` is every unit this prints, backends and frontends: `services/<name>/`, top-level modules, **an app at the
 repository root** (path `.`) and frontends such as `ui/`. These are exactly the units the benchmark, scope check and gates
 can check. If a module you expect is missing, STOP and show the list: a human declares it in
-`.agentic-sdlc/project.yaml`. Onboard backends before the frontends that call them, so the frontend's API section can be
+`.plumbline/project.yaml`. Onboard backends before the frontends that call them, so the frontend's API section can be
 checked against a documented backend.
 
 **Polyrepo note:** `service:all` only works within a single git repository root. For polyrepo
-architectures (each service in its own repo), run `/onboard-eval-loop service:{name}` from
+architectures (each service in its own repo), run `/plumbline-onboard service:{name}` from
 within each repo root instead.
 
 If `MODULE_LIST` is empty, stop and report to user.
@@ -1110,7 +1110,7 @@ Critic findings not resolved:
 Recommended action:
 1. Review the persistent gaps above manually
 2. Update the service code or root CLAUDE.md as needed
-3. Re-run /onboard-eval-loop after the underlying issue is resolved
+3. Re-run /plumbline-onboard after the underlying issue is resolved
 
 Do NOT apply plumbline-onboard-approved label. Post this escalation as a JIRA comment.
 ```

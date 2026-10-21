@@ -4,7 +4,7 @@
   python3 impact/layout.py [REPO] [--ref REF]       prints the units as JSON: [{"name", "path", "kind", "build"}]
 
 Supported layouts (detected in this order; a unit is listed once):
-  1. `.agentic-sdlc/project.yaml` with `units: [{name, path, kind: service|frontend}]` — explicit, always wins
+  1. `.plumbline/project.yaml` with `units: [{name, path, kind: service|frontend}]` — explicit, always wins
   2. `services/<name>/`                            a backend service per folder (the broker-dealer layout)
   3. `<dir>/` with pom.xml / build.gradle(.kts) and src/main/  a backend module at the top level
   4. the repository root, with pom.xml / build.gradle(.kts) and src/main/  a single app at the root (path ".")
@@ -71,7 +71,7 @@ def _build(t, rel):
 def declared(t, config=None):
     """Units from project.yaml. `config` (a path) overrides the repository's own file — the gates pass the trusted
     copy (the base branch's), so a pull request cannot redeclare units to hide code."""
-    text = Path(config).read_text() if config and Path(config).is_file() else ("" if config else t.read(".agentic-sdlc/project.yaml"))
+    text = Path(config).read_text() if config and Path(config).is_file() else ("" if config else t.read(".plumbline/project.yaml"))
     if not text.strip():
         return None
     import yaml
@@ -164,7 +164,7 @@ def code_globs(all_units):
 
 def project(repo=None, config=None):
     """The whole project.yaml (units, domain_pack, gates, base_branch, ...) or {}."""
-    path = Path(config) if config else Path(repo or ".") / ".agentic-sdlc" / "project.yaml"
+    path = Path(config) if config else Path(repo or ".") / ".plumbline" / "project.yaml"
     if not path.is_file():
         return {}
     import yaml

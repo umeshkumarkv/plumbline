@@ -13,9 +13,9 @@ On persistent gaps after 3 attempts, escalates to human for PA review.
 
 ## Usage
 ```
-/pm-eval-loop "plain English feature idea"
-/pm-eval-loop roadmap
-/pm-eval-loop epic:{key}
+/plumbline-pm "plain English feature idea"
+/plumbline-pm roadmap
+/plumbline-pm epic:{key}
 ```
 <!-- @copilot -->
 
@@ -138,10 +138,10 @@ Feature : {feature description}
 If `all_gaps` is not empty, they go to the originator through the feedback file (Stage 1, step 2): every gap
 in this PRD must be addressed.
 
-<!-- @originator role=pm name={ticket}-pm writable=".plumbline/review/{ticket}-prd.md" tools=Read,Grep,Glob,Write,Edit artifact=".plumbline/review/{ticket}-prd.md" inputs="the requirement and any linked documents in `.plumbline/review/{ticket}-input.md`" -->
+<!-- @originator role=pm name={ticket}-pm writable=".plumbline/run/review/{ticket}-prd.md" tools=Read,Grep,Glob,Write,Edit artifact=".plumbline/run/review/{ticket}-prd.md" inputs="the requirement and any linked documents in `.plumbline/run/review/{ticket}-input.md`" -->
 ### Step B — Stage 1 Originator: Write PRD
 
-Write the PRD to `.plumbline/review/{ticket}-prd.md` ({ticket} = the epic key, or a feature slug before it exists), with these sections:
+Write the PRD to `.plumbline/run/review/{ticket}-prd.md` ({ticket} = the epic key, or a feature slug before it exists), with these sections:
 
 #### 1. Problem Statement
 ```
@@ -204,11 +204,11 @@ Rules:
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
-python3 "$G/bench/run.py" pm --artifact .plumbline/review/{ticket}-prd.md --repo . --name {ticket}-pm
+G=${PLUMBLINE_HOME:-.plumbline}
+python3 "$G/bench/run.py" pm --artifact .plumbline/run/review/{ticket}-prd.md --repo . --name {ticket}-pm
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_gaps` as `BENCH:<id> — <detail>`, **skip Step C**, go to Step D.
-- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/review/{ticket}-pm-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/run/review/{ticket}-pm-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: all 6 sections, named problem owner, gap and impact stated, >= 2 verifiable success criteria, dependency lines, no §18 item in P1–P3, P1 points <= 20, no placeholders.
 
@@ -266,7 +266,7 @@ _If Stage 2 failed, the judge did not run: show every rubric row as `NOT RUN (be
 Print quality scorecard:
 ```
 PRD QUALITY SCORECARD — Attempt {attempt}
-  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/review/{name}-benchmark.md)
+  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/run/review/{name}-benchmark.md)
   Problem owner identified       : {PASS | GAP}
   Gap stated specifically        : {PASS | GAP}
   Business impact stated         : {PASS | GAP}
@@ -307,7 +307,7 @@ PRD QUALITY SCORECARD — Attempt {attempt}
    createJiraIssue(
      issueTypeName: "Epic",
      summary: "{domain}: {outcome in one line}",
-     description: {the approved PRD `.plumbline/review/{ticket}-prd.md`, formatted as Confluence storage format},
+     description: {the approved PRD `.plumbline/run/review/{ticket}-prd.md`, formatted as Confluence storage format},
      labels: ["plumbline-prd-approved"]
    )
    ```
@@ -317,10 +317,10 @@ Post a JIRA comment on the Epic:
 ```
 PM Eval Loop ({date}): PRD approved — passed quality check on attempt {attempt}/{max_attempts}.
 
-{paste the approved PRD from `.plumbline/review/{ticket}-prd.md`}
+{paste the approved PRD from `.plumbline/run/review/{ticket}-prd.md`}
 
 PRD QUALITY: ALL 10 CHECKS PASSED
-Epic is ready for story decomposition. Run: /ba-eval-loop epic:{epic-key}
+Epic is ready for story decomposition. Run: /plumbline-ba epic:{epic-key}
 Prioritization: {P1/P2/P3 summary}
 ```
 
@@ -352,7 +352,7 @@ BACKLOG ORDER
 
 PRD STATUS : APPROVED (label: plumbline-prd-approved)
 
-Next step  : /ba-eval-loop epic:{epic-key}
+Next step  : /plumbline-ba epic:{epic-key}
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 <!-- @claude -->
@@ -379,7 +379,7 @@ that the PM Agent cannot invent. Human input is required.
 Recommended action:
 1. Clarify the requirement with the business stakeholder
 2. Specifically address: {list of gap areas}
-3. Re-run /pm-eval-loop "{refined requirement}" after clarification
+3. Re-run /plumbline-pm "{refined requirement}" after clarification
 ```
 
 STOP.

@@ -1,7 +1,7 @@
 """SM benchmark — recomputes every flag in the standup report from the sprint data, so the report cannot drift
 from the facts. Replaces the in-agent "report completeness" self-check.
 
-Input: --facts .plumbline/review/sprint-facts.json, the RAW JIRA data saved by the SM originator in Phase 0:
+Input: --facts .plumbline/run/review/sprint-facts.json, the RAW JIRA data saved by the SM originator in Phase 0:
   {"today": "YYYY-MM-DD", "previous_done": 7, "issues": {"SCRUM-1": {"status": "In Progress", "assignee": "x"|null,
    "updated": "YYYY-MM-DD", "points": 3, "has_ac": true, "blocked_by": ["SCRUM-0"], "pr": 42}}}
 Artifact: the standup report markdown. Checks marked `supplied` depend on that JIRA export.

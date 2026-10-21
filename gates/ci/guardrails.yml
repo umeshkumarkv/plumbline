@@ -1,10 +1,10 @@
-# Copy to .github/workflows/guardrails.yml in the OMS repo. Make the `gates` job a required status check, and require
+# Installed by `init.py --ci` as .github/workflows/plumbline-guardrails.yml. Make the `gates` job a required status check, and require
 # CODEOWNERS review on .github/, .claude/, CODEOWNERS and lint/test config (branch protection).
 #
 # Why pull_request_target: it runs THIS workflow as it exists on the base branch, so a PR cannot weaken the check by
 # editing or deleting this file. Security: the PR head is checked out as DATA only — nothing from the PR is executed.
-# The checks come from .agentic-sdlc/ as committed on the BASE branch (never the PR's copy), so a PR cannot change the
-# checker that judges it. They only read files. First adoption: the PR that adds .agentic-sdlc/ is the bootstrap PR.
+# The checks come from .plumbline/ as committed on the BASE branch (never the PR's copy), so a PR cannot change the
+# checker that judges it. They only read files. First adoption: the PR that adds .plumbline/ is the bootstrap PR.
 name: guardrails
 on:
   pull_request_target:
@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
           path: pr
           persist-credentials: false
-      - name: Check out the BASE branch — its .agentic-sdlc/ judges this PR
+      - name: Check out the BASE branch — its .plumbline/ judges this PR
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.base.sha }}
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - name: Install pinned Semgrep
-        run: pip install -r base/.agentic-sdlc/requirements.txt
+        run: pip install -r base/.plumbline/requirements.txt
       - name: The PR may not touch the controls that judge it
         working-directory: pr
         env:
@@ -40,10 +40,10 @@ jobs:
           PLUMBLINE_POLICY_PR: ${{ contains(github.event.pull_request.labels.*.name, 'plumbline-policy-change') && '1' || '0' }}
         run: |
           git fetch --no-tags origin ${{ github.event.pull_request.base.ref }}
-          python3 ../base/.agentic-sdlc/gates/checks/protected_paths.py origin/${{ github.event.pull_request.base.ref }} HEAD
+          python3 ../base/.plumbline/gates/checks/protected_paths.py origin/${{ github.event.pull_request.base.ref }} HEAD
       - name: Deterministic gates (Semgrep + structure + domain), nosemgrep ignored
         # Large monorepo: add `--changed-from origin/<base>` to scan only the services this PR touches.
-        run: python3 base/.agentic-sdlc/gates/run_gates.py pr --baseline base/.agentic-sdlc/gates/baseline.json
+        run: python3 base/.plumbline/gates/run_gates.py pr --baseline base/.plumbline/gates/baseline.json
       - uses: actions/cache/restore@v4   # READ-ONLY: PR runs never write the cache (see impact-cache.yml)
         with:
           path: ~/.cache/plumbline-impact
@@ -53,7 +53,7 @@ jobs:
         working-directory: pr
         run: |
           pip install "pyyaml==6.0.2"
-          python3 ../base/.agentic-sdlc/impact/impact.py --repo . --base origin/${{ github.event.pull_request.base.ref }} \
+          python3 ../base/.plumbline/impact/impact.py --repo . --base origin/${{ github.event.pull_request.base.ref }} \
             --cache ~/.cache/plumbline-impact --json ../impact.json --fail-on-breaking \
-            --config ../base/.agentic-sdlc/project.yaml
+            --config ../base/.plumbline/project.yaml
       # ArchUnit runs inside the normal `mvn verify` once OmsArchitectureTest is added to each service.

@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.10.0 — 2026-10-21
+
+### One folder in the project: `.plumbline/`
+- **Everything Plumbline owns is in `.plumbline/`:** the framework (was `.agentic-sdlc/`), `project.yaml`, the gate
+  baseline, and the loop working files in `.plumbline/run/` (were `.plumbline/review|work` at the root), ignored by
+  `.plumbline/.gitignore`. The root `.gitignore` is no longer touched. Override variable: `PLUMBLINE_HOME`.
+- **Entry files are all `plumbline-*`:** commands `/plumbline-onboard`, `/plumbline-pm`, `/plumbline-ba`,
+  `/plumbline-arch`, `/plumbline-dev`, `/plumbline-code-review`, `/plumbline-qa`, `/plumbline-doc`, `/plumbline-devops`,
+  `/plumbline-sm`, `/plumbline-jira-ping` (were `/<role>-eval-loop`); agents `plumbline-*`; workflows
+  `plumbline-guardrails.yml`, `plumbline-critic.yml`, `plumbline-impact-cache.yml`.
+- **CI is opt-in:** `init.py --ci` installs the workflows; plain `init.py` leaves `.github/workflows` alone.
+- **`init.py --uninstall [--yes]`** lists, then removes, every Plumbline file; the project's CLAUDE.md files stay.
+- **Migration from 1.9** (`init.py --upgrade`): moves `project.yaml` and the baseline from `.agentic-sdlc/`, keeps the
+  loop drafts (`run/`), removes `.agentic-sdlc/`, takes the `.plumbline/` line out of the root `.gitignore`, and lists
+  old entry files to `git rm`. Bootstrap: `tar -xzf plumbline-<v>.tar.gz .plumbline/init.py` then `--upgrade`.
+- **CLAUDE.md markers** are `<!-- plumbline:begin|end <id> -->`; `claude_merge.py` adopts and renames the older ones.
+- **Fixes found in this pass:** the critic workflow deleted the base framework it had just unpacked
+  (`rm -rf .plumbline` → `rm -rf .plumbline/run`); the scope check's framework hash now excludes `run/`; a nested
+  f-string in `claude_merge.py` that Python 3.10 cannot parse.
+- `selftest/init_selftest.py` 23/23 (adds footprint, `--ci`, `--uninstall`, 1.9 migration).
+
 ## 1.9.0 — 2026-10-21
 
 ### Plumbline: its own repository, one-step install

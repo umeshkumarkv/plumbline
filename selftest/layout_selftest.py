@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Self-test for repository layouts (impact/layout.py): a single Spring app at the repo root + a frontend in ui/,
-and the same repo declared through .agentic-sdlc/project.yaml. Checks that units, the dependency map (working tree
+and the same repo declared through .plumbline/project.yaml. Checks that units, the dependency map (working tree
 and git ref), the benchmark, the scope check and the gates all see the root app."""
 import json
 import shutil
@@ -57,14 +57,14 @@ with tempfile.TemporaryDirectory() as td:
         ok("ui" in dm["services"] and dm["services"]["ui"]["kind"] == "frontend", f"depmap ({ref or 'working tree'}): ui is a frontend")
 
     # benchmark: onboard pack on the root app
-    w(r, ".plumbline/review/shop-CLAUDE.md", "# CLAUDE.md — shop\n## 1. Service Purpose\nOrders.\n## 2. Port\n8081\n"
+    w(r, ".plumbline/run/review/shop-CLAUDE.md", "# CLAUDE.md — shop\n## 1. Service Purpose\nOrders.\n## 2. Port\n8081\n"
       "## 3. Database Schema\nnone\n## 4. Kafka Topics Produced\nnone\n## 5. Kafka Topics Consumed\nnone\n"
       "## 6. Redis Cache Keys Owned\nnone\n## 7. REST Endpoints Exposed\n- GET /api/orders/{id}\n"
       "## 8. REST Endpoints Called\nnone\n## 9. Entities Owned\nnone\n## 10. What This Service Must NEVER Do\n- x\n"
       "## 11. Key Business Rules\n- y\n")
-    b = subprocess.run([sys.executable, str(ROOT / "bench/run.py"), "onboard", "--artifact", ".plumbline/review/shop-CLAUDE.md",
+    b = subprocess.run([sys.executable, str(ROOT / "bench/run.py"), "onboard", "--artifact", ".plumbline/run/review/shop-CLAUDE.md",
                         "--repo", ".", "--service", "shop", "--name", "shop-onboard"], cwd=r, capture_output=True, text=True)
-    rep = json.loads((r / ".plumbline/review/shop-onboard-benchmark.json").read_text()) if b.returncode in (0, 1) else {}
+    rep = json.loads((r / ".plumbline/run/review/shop-onboard-benchmark.json").read_text()) if b.returncode in (0, 1) else {}
     chk = {c["id"]: c["result"] for c in rep.get("checks", [])}
     ok(b.returncode in (0, 1) and chk.get("OB-2") == "PASS" and chk.get("OB-4") == "PASS" and chk.get("OB-5") == "PASS",
        f"bench onboard on the root app: rc {b.returncode}, port/endpoints {chk.get('OB-2')}/{chk.get('OB-4')}/{chk.get('OB-5')}"
@@ -99,23 +99,23 @@ with tempfile.TemporaryDirectory() as td:
 
     # claude_merge: keeps human content, replaces only its block, refuses broken markers
     CM = [sys.executable, str(ROOT / "bench/claude_merge.py")]
-    w(r, ".plumbline/review/d1.md", "# CLAUDE.md — shop\n## 1. Service Purpose\nv1\n")
-    w(r, ".plumbline/review/d2.md", "# CLAUDE.md — shop\n## 1. Service Purpose\nv2\n")
+    w(r, ".plumbline/run/review/d1.md", "# CLAUDE.md — shop\n## 1. Service Purpose\nv1\n")
+    w(r, ".plumbline/run/review/d2.md", "# CLAUDE.md — shop\n## 1. Service Purpose\nv2\n")
     human = "# Runbook\nrun: ./mvnw spring-boot:run\n"
     w(r, "CLAUDE.md", human)
-    subprocess.run(CM + ["--target", "CLAUDE.md", "--block", "solution", "--from", ".plumbline/review/d1.md", "--write"], cwd=r,
+    subprocess.run(CM + ["--target", "CLAUDE.md", "--block", "solution", "--from", ".plumbline/run/review/d1.md", "--write"], cwd=r,
                    capture_output=True)
-    subprocess.run(CM + ["--target", "CLAUDE.md", "--block", "solution", "--from", ".plumbline/review/d2.md", "--write"], cwd=r,
+    subprocess.run(CM + ["--target", "CLAUDE.md", "--block", "solution", "--from", ".plumbline/run/review/d2.md", "--write"], cwd=r,
                    capture_output=True)
     m = (r / "CLAUDE.md").read_text()
-    ok(m.startswith(human) and "v2" in m and "v1" not in m and m.count("agentic-sdlc:begin solution") == 1,
+    ok(m.startswith(human) and "v2" in m and "v1" not in m and m.count("plumbline:begin solution") == 1,
        "claude_merge: human runbook kept, block replaced (not duplicated)")
-    dry = subprocess.run(CM + ["--target", "src/CLAUDE.md", "--block", "onboard", "--from", ".plumbline/review/d1.md"], cwd=r,
+    dry = subprocess.run(CM + ["--target", "src/CLAUDE.md", "--block", "onboard", "--from", ".plumbline/run/review/d1.md"], cwd=r,
                          capture_output=True, text=True)
     ok(dry.returncode == 0 and not (r / "src/CLAUDE.md").exists() and "+## 1. Service Purpose" in dry.stdout,
        "claude_merge: without --write it only prints the diff")
-    w(r, "CLAUDE.md", human + "<!-- agentic-sdlc:begin solution -->\nbroken\n")
-    bad = subprocess.run(CM + ["--target", "CLAUDE.md", "--block", "solution", "--from", ".plumbline/review/d1.md", "--write"],
+    w(r, "CLAUDE.md", human + "<!-- plumbline:begin solution -->\nbroken\n")
+    bad = subprocess.run(CM + ["--target", "CLAUDE.md", "--block", "solution", "--from", ".plumbline/run/review/d1.md", "--write"],
                          cwd=r, capture_output=True, text=True)
     ok(bad.returncode == 2 and "broken" in (r / "CLAUDE.md").read_text(), "claude_merge: unbalanced markers refused, file untouched")
     g("checkout", "-q", "--", "."); subprocess.run(["git", "clean", "-qfd", "-e", ".plumbline"], cwd=r)
@@ -143,14 +143,14 @@ with tempfile.TemporaryDirectory() as td:
     import importlib
     for bad in ('[{name: "../../x", path: ., kind: service}]', '[{name: a, path: ../up, kind: service}]',
                 '[{name: a, path: ., kind: service}, {name: a, path: ui, kind: frontend}]'):
-        w(r, ".agentic-sdlc/project.yaml", "units: " + bad + "\n")
+        w(r, ".plumbline/project.yaml", "units: " + bad + "\n")
         try:
             layout.units(r); refused = False
         except SystemExit:
             refused = True
         ok(refused, f"project.yaml refused: {bad}")
     # explicit layout wins
-    w(r, ".agentic-sdlc/project.yaml", "units:\n  - {name: backend, path: ., kind: service}\n  - {name: web, path: ui, kind: frontend}\n")
+    w(r, ".plumbline/project.yaml", "units:\n  - {name: backend, path: ., kind: service}\n  - {name: web, path: ui, kind: frontend}\n")
     u2 = layout.units(r)
     ok([(x["name"], x["path"]) for x in u2] == [("backend", "."), ("web", "ui")], f"project.yaml overrides detection -> {u2}")
 

@@ -13,7 +13,7 @@ On persistent gaps after 3 attempts, escalates to BA Agent.
 
 ## Usage
 ```
-/arch-eval-loop SCRUM-{n}
+/plumbline-arch SCRUM-{n}
 ```
 <!-- @copilot -->
 
@@ -105,7 +105,7 @@ START_TIME=$(date +%s)
 ```
 
 1. Fetch the JIRA story: `getJiraIssue(SCRUM-{n})`
-2. Verify the story has label `plumbline-dor-ready` or that ACs exist — if neither, STOP: "Run /ba-eval-loop first."
+2. Verify the story has label `plumbline-dor-ready` or that ACs exist — if neither, STOP: "Run /plumbline-ba first."
 3. Read root `CLAUDE.md` fully (all sections)
 4. Identify the service from the ticket
 5. Read `services/{service}/CLAUDE.md` fully
@@ -141,10 +141,10 @@ Story : SCRUM-{n} — {summary}
 If `all_gaps` is not empty, they go to the originator through the feedback file (Stage 1, step 2): every gap
 in this design must be addressed.
 
-<!-- @originator role=arch name={ticket}-arch writable=".plumbline/review/{ticket}-design.md" tools=Read,Grep,Glob,Write,Edit artifact=".plumbline/review/{ticket}-design.md" inputs="the story in `.plumbline/review/{ticket}-story.md`; blocker statuses in `.plumbline/review/{ticket}-jira-facts.json`" -->
+<!-- @originator role=arch name={ticket}-arch writable=".plumbline/run/review/{ticket}-design.md" tools=Read,Grep,Glob,Write,Edit artifact=".plumbline/run/review/{ticket}-design.md" inputs="the story in `.plumbline/run/review/{ticket}-story.md`; blocker statuses in `.plumbline/run/review/{ticket}-jira-facts.json`" -->
 ### Step B — Stage 1 Originator: Write Technical Design
 
-Write the design to `.plumbline/review/{ticket}-design.md`. The story is in `.plumbline/review/{ticket}-story.md` (saved by the orchestrator). Cover every layer the story touches.
+Write the design to `.plumbline/run/review/{ticket}-design.md`. The story is in `.plumbline/run/review/{ticket}-story.md` (saved by the orchestrator). Cover every layer the story touches.
 
 #### 1. Service and Endpoint Design
 ```
@@ -274,11 +274,11 @@ OPENAPI DELTA
 
 <!-- @include shared/three-stage.md -->
 ```bash
-G=${AGENTIC_SDLC:-.agentic-sdlc}
-python3 "$G/bench/run.py" arch --artifact .plumbline/review/{ticket}-design.md --story .plumbline/review/{ticket}-story.md --repo . --name {ticket}-arch
+G=${PLUMBLINE_HOME:-.plumbline}
+python3 "$G/bench/run.py" arch --artifact .plumbline/run/review/{ticket}-design.md --story .plumbline/run/review/{ticket}-story.md --repo . --name {ticket}-arch
 ```
 - **Exit 1 (FAIL):** add every FAIL check to `attempt_gaps` as `BENCH:<id> — <detail>`, **skip Step C**, go to Step D.
-- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/review/{ticket}-arch-benchmark.md` to the critic as `BENCHMARK`.
+- **Exit 0 (PASS):** continue to Step C; pass `.plumbline/run/review/{ticket}-arch-benchmark.md` to the critic as `BENCHMARK`.
 - **Exit 2:** your command or input file is wrong. Fix it and re-run; it is not a gap.
 - Measured here, so the judge takes them as facts: all 9 design blocks, endpoint/service/port vs the code, own schema, gateway route, next free migration version, external calls hit real endpoints, consumed topics have a producer, every AC error status has an error code, >= 3 tests per layer, RBAC roles, forwarded headers, no placeholders.
 
@@ -353,7 +353,7 @@ _If Stage 2 failed, the judge did not run: show every rubric row as `NOT RUN (be
 Print DoR scorecard:
 ```
 DoR SCORECARD — Attempt {attempt}
-  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/review/{name}-benchmark.md)
+  Stage 2 benchmark   : {PASS | FAIL — n checks}   (.plumbline/run/review/{name}-benchmark.md)
   User story clear             : {PASS | GAP}
   ACs curl-verifiable          : {PASS | GAP}
   Service boundary clear       : {PASS | GAP}
@@ -394,10 +394,10 @@ DoR SCORECARD — Attempt {attempt}
 ```
 Arch Eval Loop ({date}): Technical design complete — passed DoR on attempt {attempt}/{max_attempts}.
 
-{paste the approved design from `.plumbline/review/{ticket}-design.md`}
+{paste the approved design from `.plumbline/run/review/{ticket}-design.md`}
 
 DEFINITION OF READY: ALL 15 CHECKS PASSED
-Story is ready for development. Run: /dev-eval-loop SCRUM-{n}
+Story is ready for development. Run: /plumbline-dev SCRUM-{n}
 ```
 
 2. Apply the JIRA Write Guard, then add label `plumbline-arch-approved` to the ticket.
@@ -424,7 +424,7 @@ DESIGN COMPLETE
 
 DoR STATUS : APPROVED (label: plumbline-arch-approved)
 
-Next step  : /dev-eval-loop SCRUM-{n}
+Next step  : /plumbline-dev SCRUM-{n}
 
 Execution time : {END_TIME=$(date +%s); elapsed=$((END_TIME-START_TIME)); printf '%dm %ds' $((elapsed/60)) $((elapsed%60))}
 <!-- @claude -->
@@ -449,9 +449,9 @@ Root cause: The story as written by BA Agent is missing information
 that the Architect cannot invent. A BA Agent revision is required.
 
 Recommended action:
-1. Run /ba-eval-loop epic:{epic-key} to revisit the story
+1. Run /plumbline-ba epic:{epic-key} to revisit the story
 2. Specifically address: {list of gap areas}
-3. Re-run /arch-eval-loop SCRUM-{n} after story is updated
+3. Re-run /plumbline-arch SCRUM-{n} after story is updated
 ```
 
 Post to JIRA as a comment (informational — no approval needed under the Plumbline write policy; any label or transition that follows still needs the Write Guard):
