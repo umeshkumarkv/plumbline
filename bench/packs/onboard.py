@@ -50,8 +50,18 @@ def run_frontend(r, ctx, u):
         r.add("OBF-5", "Token storage in localStorage is recorded under Compliance Notes", True, "none in code")
 
 
+MAX_KB = 30   # a unit CLAUDE.md is loaded into every agent's context: past this, summarise and point instead
+
+
+def size_check(r, t):
+    kb = len(t.encode()) // 1024
+    r.add("OB-14", f"CLAUDE.md stays concise (≤ {MAX_KB} KB; counts and pointers, not inventories)", kb <= MAX_KB,
+          f"{kb} KB", warn=True)
+
+
 def run(r, ctx):
     t, repo, svc = ctx.text, ctx.repo, ctx.service
+    size_check(r, t)
     if repo.path and svc and (repo.unit(svc) or {}).get("kind") == "frontend":
         return run_frontend(r, ctx, repo.unit(svc))
     body = {k: section(t, *v) for k, v in SECTIONS.items()}
@@ -143,10 +153,10 @@ def run(r, ctx):
     tables = sorted(repo.tables(svc))
     und = [x for x in tables if not re.search(r"\b" + re.escape(x) + r"\b", (body["schema"] + body["entities"]).lower())]
     r.add("OB-10", "Every table created by migrations is documented (schema/entities sections)", not und, f"{len(tables)} tables", und)
-    claimed_tab = set(re.findall(r"`([a-z][a-z0-9_]+)`", body["schema"])) | set(re.findall(r"\btable\s+`([a-z][a-z0-9_]+)`", body["schema"], re.I))
+    claimed_tab = claimed_tables(body["schema"])
     all_tables = repo.known_tables()
-    inv = sorted(x for x in claimed_tab if "_" in x or x.endswith("s")) 
-    inv = [x for x in inv if x not in all_tables and x != (u.get("schema") or "")]
+    not_tables = repo.known_columns() | repo.file_stems()   # a column or a script named in the schema text is no table claim
+    inv = sorted(x for x in claimed_tab if x not in all_tables and x not in not_tables and x != (u.get("schema") or ""))
     r.add("OB-10b", "No documented table that the repository does not define (migrations, SQL scripts, @Table)", not inv,
           f"{len(inv)} invented", inv)
 
@@ -176,3 +186,25 @@ def run(r, ctx):
     sec12 = section(t, "tech debt")
     r.add("OB-12", "TODO/FIXME/HACK markers acknowledged in a tech-debt section", debt == 0 or bool(sec12.strip()),
           f"{debt} markers in code; tech-debt section {'present' if sec12.strip() else 'absent'}", warn=True)
+
+def claimed_tables(text):
+    """Table names the document presents AS tables: `x` table / table `x`, a heading naming one identifier, the first
+    column of a markdown table whose header says Table, and CREATE TABLE. Column names, values and file names that
+    merely appear in backticks in the schema section are not table claims."""
+    ident = r"[a-z][a-z0-9_]+"
+    out = set(re.findall(rf"\btable\s+`({ident})`", text, re.I)) | set(re.findall(rf"`({ident})`\s+table\b", text, re.I))
+    out |= set(re.findall(rf"^#{{2,6}}\s+(?:\d+[.)]\s*)?`?({ident})`?\s*(?:\(.*\))?\s*$", text, re.M))
+    out |= {m.lower() for m in re.findall(r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`\"]?(?:\w+\.)?(\w+)", text, re.I)}
+    rows = [l.strip() for l in text.splitlines()]
+    in_table = False
+    for i, l in enumerate(rows):
+        if not l.startswith("|"):
+            in_table = False
+            continue
+        cells = [c.strip(" `*") for c in l.strip("|").split("|")]
+        if i + 1 < len(rows) and re.fullmatch(r"\|?[\s:|-]+\|?", rows[i + 1] or "x") and not in_table:
+            in_table = bool(cells) and "table" in cells[0].lower()
+            continue
+        if in_table and cells and re.fullmatch(ident, cells[0]):
+            out.add(cells[0])
+    return {x.lower() for x in out}

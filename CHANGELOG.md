@@ -23,6 +23,19 @@
 - `run_gates.py --baseline` with a missing file exits 2 with the command to create it (was: a traceback).
 - The dev benchmark's baseline override (`PLUMBLINE_BASELINE`, self-tests) must point inside the framework folder.
 
+### Onboarding: from the candidate-review-system run (both units escalated)
+- **OB-10b false positive:** column names (`created_at`, `is_edited`), values and script names
+  (`panel_management_script`) in the schema section were counted as invented tables. Tables are now read only where
+  the document presents them as tables (`table \`x\``, a heading, a Table column, CREATE TABLE), and known columns
+  and script names are excluded. A genuinely invented table is still caught (self-test).
+- **The judge asked for inventories, not accuracy:** the rubric demanded "zero `any`, flag every occurrence" (480 in
+  the UI), every entity *field*, and a full schema-evolution diff, so the critic failed truthful documents and the
+  drafts ballooned (47 KB). Onboarding now judges whether the document states the truth at the level asked: debt is
+  recorded as counts plus the top locations, entities with their key fields, schema changes that alter meaning.
+  Critic rules 8–9: ask for the detail the item names, no more; an item that does not apply is N/A; recording a
+  pre-existing problem truthfully passes.
+- **OB-14 (warning):** a unit CLAUDE.md over 30 KB — it is loaded into every agent's context.
+
 ## 1.10.1 — 2026-10-21
 
 - **Install from the repository:** `git clone https://github.com/umeshkumarkv/plumbline ~/plumbline`, then

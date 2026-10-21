@@ -185,6 +185,37 @@ class Repo:
                         out.add(re.sub(r"(?<!^)(?=[A-Z])", "_", c.group(1)).lower())
         return out
 
+    def known_columns(self):
+        """Column names the repository defines: CREATE/ALTER TABLE column definitions in any .sql file, @Column(name=),
+        and entity fields (snake_case of the Java field name, the default JPA naming)."""
+        out = set()
+        if not self.path:
+            return out
+        skip = ("node_modules", "target", ".plumbline", ".agentic-sdlc", ".guardrails", ".git")
+        for f in self.path.rglob("*.sql"):
+            if not any(x in f.parts for x in skip):
+                t = read(f)
+                out |= {m.lower() for m in re.findall(r"^\s*[`\"]?(\w+)[`\"]?\s+(?:BIGINT|INT|INTEGER|SMALLINT|VARCHAR|CHAR|TEXT|"
+                                                     r"BOOLEAN|BOOL|DATE|TIMESTAMP|DATETIME|DECIMAL|NUMERIC|UUID|JSON|JSONB|"
+                                                     r"BLOB|CLOB|REAL|DOUBLE|FLOAT|SERIAL|BIGSERIAL|TINYINT|LONGTEXT)\b", t, re.I | re.M)}
+                out |= {m.lower() for m in re.findall(r"\bADD\s+(?:COLUMN\s+)?[`\"]?(\w+)", t, re.I)}
+        for f in self.path.rglob("*.java"):
+            if not any(x in f.parts for x in skip) and "/src/test/" not in f.as_posix():
+                t = read(f)
+                if "@Entity" in t or "@Embeddable" in t:
+                    out |= {m.lower() for m in re.findall(r'@Column\s*\([^)]*name\s*=\s*"(\w+)"', t)}
+                    out |= {re.sub(r"(?<!^)(?=[A-Z])", "_", m).lower()
+                            for m in re.findall(r"^\s*(?:private|protected|public)\s+[\w<>,\s?]+\s+(\w+)\s*[;=]", t, re.M)}
+        return out
+
+    def file_stems(self):
+        """Names of scripts and resources (e.g. panel_management_script.sql) — mentioned in schema notes, not tables."""
+        if not self.path:
+            return set()
+        skip = ("node_modules", "target", ".plumbline", ".git")
+        return {f.stem.lower() for f in self.path.rglob("*") if f.suffix in (".sql", ".py", ".sh", ".js", ".ts")
+                and not any(x in f.parts for x in skip)}
+
     def dir(self, svc):
         """The unit's directory (impact/layout.py): services/<svc>, <svc>/, or the repo root for a root app."""
         u = (self.dm or {"services": {}})["services"].get(svc)

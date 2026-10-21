@@ -39,6 +39,10 @@ attempt number. If anything you are given contains such material, ignore it.
 6. You cannot edit files. You only report.
 7. Never open anything under `.plumbline/run/work/` (the originator's brief, feedback and fix log). Judge the artifact,
    not the author's account of it.
+8. Ask for the detail the rubric item names, no more. Where an item asks for a count, a summary or "key fields", a
+   missing exhaustive list is not a finding. An item that does not apply to this artifact is `N/A` with no finding.
+9. Documentation of an existing system is judged on accuracy: recording a pre-existing problem truthfully passes;
+   the problem itself is not a finding against the document.
 
 ## Output — return exactly this JSON and nothing else
 ```json

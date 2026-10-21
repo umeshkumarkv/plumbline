@@ -455,6 +455,11 @@ Use the template matching the detected stack.
 
 **If STACK=react — use the React template below. If STACK=java — use the Java template further below.**
 
+**Keep it concise (≤ 30 KB, benchmark OB-14).** Every agent loads this file. Catalog what agents act on (endpoints,
+entities with key fields, topics, rules, must-nevers); for debt give counts and the top locations; put long inventories
+in Confluence or leave them to the scans. A critic request for more detail than the rubric item asks for is answered by
+pointing at the item, not by growing the file.
+
 ---
 
 #### React/TypeScript Template
@@ -551,7 +556,7 @@ Known Tech Debt line) — never invent what they do. Routes of this app (pages) 
 
 ## 10. Known Tech Debt
 
-{list from R6 (any types), R10 (console.logs), U1 (TODO/FIXME) — or "None"}
+{R6: `any` count + top files (≤10); R10: console-call file count + up to 10 files; U1: TODO/FIXME — or "None"}
 
 ---
 
@@ -680,7 +685,14 @@ The critic does NOT produce either document — it only challenges them.
 <!-- @include shared/isolated-critic.md -->
 Rubric `onboard critic` (12 items for Java, 20 for React — listed below).
 
-Critic checklist (check ALL, flag any that fail):
+Critic checklist (check ALL, flag any that fail).
+
+**What onboarding judges.** These documents *describe an existing system*. The question for every item is "does the
+document state the truth about the code, at the level of detail asked for?" — never "is the code clean?". Pre-existing
+debt (`any` types, console calls, localStorage tokens, missing tests) is a fact to RECORD in Tech Debt / Compliance
+Notes; recorded accurately, it is a PASS. An item that does not apply to this unit (no entities, no migrations, no
+Kafka in a frontend) is `N/A`, never a finding. CLAUDE.md is context for agents: counts, the top locations and pointers
+beat exhaustive inventories — never demand a full list where the item asks for a count.
 
 ```
 CRITIC REPORT — {service-name} — Attempt {attempt}
@@ -688,10 +700,12 @@ CRITIC REPORT — {service-name} — Attempt {attempt}
   [x/] Code vs Confluence: every endpoint in code appears in Confluence
        {gap if missed}
 
-  [x/] Code vs CLAUDE.md: every entity field appears in CLAUDE.md Section 9
+  [x/] Code vs CLAUDE.md: every entity appears in CLAUDE.md Section 9 with its key fields — id, foreign keys,
+       status/enum fields, money and date fields, unique constraints (a full column list is NOT required)
        {gap if missed}
 
-  [x/] Code vs CLAUDE.md: every DB migration change is reflected in schema section
+  [x/] Code vs CLAUDE.md: every table the migrations/SQL scripts create is in the schema section, and changes that
+       alter meaning (dropped/renamed columns, new NOT NULL, changed constraints) are noted
        {gap if missed}
 
   [x/] Redis: actual usage matches what both docs claim
@@ -715,9 +729,8 @@ CRITIC REPORT — {service-name} — Attempt {attempt}
        to actual code, a migration, or an explicit business rule in root CLAUDE.md
        {gap if missed}
 
-  [x/] Brownfield-specific: are there signs of schema evolution (ALTER TABLE,
-       dropped constraints, DEFAULT added to NOT NULL columns) that reveal
-       assumptions the docs don't capture?
+  [x/] Brownfield-specific: schema evolution that changes an assumption a developer would make (ALTER TABLE,
+       dropped constraints, DEFAULT added to NOT NULL columns) is called out — a one-line note each, not a column diff
        {gap if missed}
 
   [x/] OpenAPI spec: every endpoint in CLAUDE.md Section 7 appears in openapi.yaml
@@ -741,12 +754,12 @@ CRITIC REPORT — {service-name} — Attempt {attempt}
        or use environment variables; grep for "localhost", "8080", "8081" etc. in src/
        {gap if missed}
 
-  [x/] TypeScript: zero `as any` or `: any` in production code (R6 count = 0)
-       Flag every occurrence with file and line
+  [x/] TypeScript `any`: Tech Debt states the production count from R6 (matching the scan) and the files with the
+       most occurrences (up to 10). A count above zero is debt to record, not a FAIL
        {gap if missed}
 
-  [x/] No console.log / console.warn in production source files (R10)
-       Flag every file that contains them
+  [x/] console.log / console.warn: Tech Debt states the number of production files from R10 (matching the scan) and
+       up to 10 of them. Their presence is debt to record, not a FAIL
        {gap if missed}
 
   [x/] All environment variables (R5) are documented in CLAUDE.md Section 7
@@ -801,7 +814,7 @@ CROSS-CONSISTENCY CHECK — {service-name} — Attempt {attempt}
   [x/] Critic findings (if any) are addressed or explicitly accepted with rationale
        {gap if missed}
 
-  [x/] DB schema in CLAUDE.md reflects all migrations including ALTER TABLE changes
+  [x/] DB schema in CLAUDE.md reflects the migrations (tables, and changes that alter meaning) — N/A without a database
        {gap if missed}
 ```
 

@@ -74,6 +74,11 @@ Use the template matching the detected stack.
 
 **If STACK=react — use the React template below. If STACK=java — use the Java template further below.**
 
+**Keep it concise (≤ 30 KB, benchmark OB-14).** Every agent loads this file. Catalog what agents act on (endpoints,
+entities with key fields, topics, rules, must-nevers); for debt give counts and the top locations; put long inventories
+in Confluence or leave them to the scans. A critic request for more detail than the rubric item asks for is answered by
+pointing at the item, not by growing the file.
+
 ---
 
 #### React/TypeScript Template
@@ -170,7 +175,7 @@ Known Tech Debt line) — never invent what they do. Routes of this app (pages) 
 
 ## 10. Known Tech Debt
 
-{list from R6 (any types), R10 (console.logs), U1 (TODO/FIXME) — or "None"}
+{R6: `any` count + top files (≤10); R10: console-call file count + up to 10 files; U1: TODO/FIXME — or "None"}
 
 ---
 

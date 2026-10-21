@@ -202,7 +202,17 @@ def main():
             ok = "DEV-4" in f
             fails += not ok
             print(f"{'ok ' if ok else 'FAIL'} attack: stale surefire reports -> {sorted(f)}")
-    total = len(CASES) + 9
+    # OB-10b: columns, values and script names in the schema section are not table claims (candidate-review-system)
+    sys.path.insert(0, str(ROOT / "bench")); sys.path.insert(0, str(ROOT / "bench/packs"))
+    import onboard
+    doc = ("### `client`\n| Column | Type |\n|---|---|\n| `client_tech_lead` | varchar |\n| `created_at` | ts |\n"
+           "The `panel_management_script` sets `is_edited`.\n| Table | Purpose |\n|---|---|\n| `ghost_ledger` | x |\n"
+           "ALTER on table `report` adds `edited_report_json`.\n")
+    got = onboard.claimed_tables(doc)
+    ok = got == {"client", "ghost_ledger", "report"}
+    fails += not ok
+    print(f"{'ok ' if ok else 'FAIL'} OB-10b reads tables only where the document presents them as tables: {sorted(got)}")
+    total = len(CASES) + 10
     print(f"bench selftest: {total - fails}/{total}")
     return 1 if fails else 0
 
