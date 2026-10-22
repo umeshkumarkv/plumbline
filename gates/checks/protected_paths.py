@@ -14,6 +14,10 @@ import os
 import re
 import subprocess
 import sys
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 PROTECTED = [
     # CI, ownership, agent prompts and critic definitions

@@ -13,6 +13,10 @@ import importlib
 import json
 import sys
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "impact"))

@@ -25,6 +25,10 @@ import sys
 import tarfile
 import tempfile
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 G = Path(__file__).resolve().parent            # the .plumbline folder
 REPO = G.parent
@@ -140,7 +144,7 @@ def detect():
 
 def write_project(units, domain):
     if PROJECT.is_file():
-        say("keep", f"{PROJECT.relative_to(REPO)} exists — not changed")
+        say("keep", f"{PROJECT.relative_to(REPO).as_posix()} exists — not changed")
         return False
     d = DOMAINS[domain]
     lines = ["# Plumbline project configuration — written by init.py, edited by people (protected path).",
@@ -152,8 +156,8 @@ def write_project(units, domain):
               f"domain_pack: {d['domain_pack']}"]
     lines += ["", "# Gate selection: Semgrep packs under .plumbline/gates/semgrep/, checks under gates/checks/.",
               "gates:", f"  semgrep: [{', '.join(d['gates']['semgrep'])}]", f"  checks: [{', '.join(d['gates']['checks'])}]"]
-    PROJECT.write_text("\n".join(lines) + "\n")
-    say("write", f"{PROJECT.relative_to(REPO)} ({len(units)} units, domain {domain})")
+    PROJECT.write_text("\n".join(lines) + "\n", newline="\n")
+    say("write", f"{PROJECT.relative_to(REPO).as_posix()} ({len(units)} units, domain {domain})")
     return True
 
 
@@ -207,8 +211,8 @@ def ensure_settings(units, jira=None, confluence=None):
         for k in missing:
             add.append(f"{k}: {dflt[k]}{' ' * max(1, 34 - len(k) - len(str(dflt[k])))}# {SETTINGS[k][1]}")
     if add or changed:
-        PROJECT.write_text(text.rstrip("\n") + "\n" + ("\n".join(add) + "\n" if add else ""))
-        say("write", f"{PROJECT.relative_to(REPO)}: " + ", ".join(
+        PROJECT.write_text(text.rstrip("\n") + "\n" + ("\n".join(add) + "\n" if add else ""), newline="\n")
+        say("write", f"{PROJECT.relative_to(REPO).as_posix()}: " + ", ".join(
             (["gate selection"] if "gates" not in cfg else []) + [f"{k}" for k in missing] + changed) + " added/updated")
 
 
@@ -226,7 +230,8 @@ def render(src):
 
 
 def same(src, dst):
-    return dst.exists() and dst.read_text(errors="replace") == render(src)
+    # compare without line endings: a Windows checkout (core.autocrlf) has CRLF where the framework has LF
+    return dst.exists() and dst.read_bytes().decode("utf-8", "replace").replace("\r", "") == render(src).replace("\r", "")
 
 
 # ───────────── install generated files ─────────────
@@ -264,7 +269,7 @@ def leftovers():
                 r"-originator(\.agent)?\.md$|-critic(\.agent|\.prompt)?\.(md|yml)$|eval-loop(\.prompt)?\.md$|"
                 r"^jira-ping(\.prompt)?\.md$|\.ya?ml$", f.name))
             if ours:
-                out.append(str(f.relative_to(REPO)))
+                out.append(f.relative_to(REPO).as_posix())
     return out
 
 
@@ -273,7 +278,7 @@ def install(ci=False):
     for s_, d in pairs(ci=ci or None):
         d.parent.mkdir(parents=True, exist_ok=True)
         if not same(s_, d):
-            d.write_text(render(s_))
+            d.write_text(render(s_), newline="\n")
             n += 1
     for f in leftovers():
         say("warn", f"left over from an older install (remove it): git rm {f}")
@@ -282,7 +287,7 @@ def install(ci=False):
 
 
 def stale_generated():
-    return [str(d.relative_to(REPO)) for s, d in pairs() if not same(s, d)]
+    return [d.relative_to(REPO).as_posix() for s, d in pairs() if not same(s, d)]
 
 
 # ───────────── prerequisites ─────────────
@@ -292,6 +297,14 @@ def prerequisites(units):
     say("ok" if sys.version_info >= (3, 10) else "MISS", f"python {sys.version.split()[0]} (>= 3.10)")
     if sys.version_info < (3, 10):
         probs.append("python3 >= 3.10")
+    if sys.platform == "win32":                    # the agents run bash commands that call python3
+        if not shutil.which("bash"):
+            say("MISS", "bash — install Git for Windows and use Git Bash as the agent terminal (or work in WSL)")
+            probs.append("bash")
+        if not shutil.which("python3"):
+            say("MISS", "python3 not on PATH — in Git Bash run: "
+                        "cp \"$(command -v python)\" \"$(dirname \"$(command -v python)\")/python3.exe\"")
+            probs.append("python3")
     try:
         import yaml  # noqa: F401
         say("ok", "PyYAML")
@@ -347,7 +360,7 @@ def foreign_baseline():
 def baseline(force=False):
     foreign = foreign_baseline()
     if BASELINE.is_file() and not (force or foreign):
-        say("keep", f"{BASELINE.relative_to(REPO)} exists — not changed (--rebaseline to rebuild)")
+        say("keep", f"{BASELINE.relative_to(REPO).as_posix()} exists — not changed (--rebaseline to rebuild)")
         return
     if sh("semgrep", "--version", timeout=60)[0] != 0:
         if foreign:
@@ -500,8 +513,8 @@ def uninstall(yes):
     files = sorted(set(files))
     print("Plumbline uninstall would remove:")
     for f in files:
-        print(f"  {f.relative_to(REPO)}")
-    print(f"  {G.relative_to(REPO)}/  (framework, project.yaml, baseline, loop working files)")
+        print(f"  {f.relative_to(REPO).as_posix()}")
+    print(f"  {G.relative_to(REPO).as_posix()}/  (framework, project.yaml, baseline, loop working files)")
     print("Kept: the project's CLAUDE.md files (they are project documentation).")
     if not yes:
         print("Nothing removed. Re-run with --yes to remove.")
@@ -534,7 +547,7 @@ def migrate_legacy():
                 shutil.copyfile(LEGACY / k, G / k)
                 moved.append(f".agentic-sdlc/{k} → .plumbline/{k}")
         if PROJECT.is_file():
-            PROJECT.write_text(PROJECT.read_text().replace(".agentic-sdlc/", ".plumbline/"))
+            PROJECT.write_text(PROJECT.read_text().replace(".agentic-sdlc/", ".plumbline/"), newline="\n")
         shutil.rmtree(LEGACY)
         moved.append("removed .agentic-sdlc/ (replaced by .plumbline/)")
     gi = REPO / ".gitignore"
@@ -542,7 +555,7 @@ def migrate_legacy():
         text = gi.read_text()                       # the framework itself, so take our line out again
         new = re.sub(r"(?m)^\.plumbline/\s*\n?", "", text)
         if new != text:
-            gi.write_text(new)
+            gi.write_text(new, newline="\n")
             moved.append("root .gitignore: removed the '.plumbline/' line an older install added "
                          "(.plumbline/.gitignore now ignores only run/)")
     for m in moved:

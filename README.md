@@ -6,25 +6,52 @@ true vertical: a deterministic benchmark first, then an isolated judge, with a h
 
 ## Quickstart
 
+### macOS / Linux
 ```bash
+brew install semgrep && python3 -m pip install --user pyyaml        # once per machine (Linux: pipx install semgrep)
 git clone https://github.com/umeshkumarkv/plumbline ~/plumbline      # once per machine
 cd <your-project>                                                    # any git repository
 ~/plumbline/install.sh --jira <KEY>                                  # install (or upgrade); KEY = your JIRA project
 ```
-Then open the project in **Claude Code** or **VS Code Copilot (Agent mode)** and run:
+
+### Windows
+The agents run bash commands, so on Windows they need **Git Bash** (Claude Code uses it already).
+**WSL2** is the zero-friction alternative: open Ubuntu and follow the macOS/Linux steps.
+
+Once per machine, in **PowerShell**:
+```powershell
+winget install --id Git.Git -e
+winget install --id Python.Python.3.12 -e
+```
+Then, in **Git Bash** (Start menu → Git Bash):
+```bash
+cp "$(command -v python)" "$(dirname "$(command -v python)")/python3.exe"   # the agents call python3
+python3 -m pip install pyyaml semgrep         # Semgrep on Windows is newer; if it fails, everything else runs
+git clone https://github.com/umeshkumarkv/plumbline ~/plumbline
+cd /c/path/to/your-project
+python3 ~/plumbline/install.py --jira <KEY>
+```
+If `python --version` opens the Microsoft Store, turn off *App execution aliases* for python in Windows Settings and
+reopen Git Bash.
+
+**VS Code + Copilot:** make Git Bash the agent's terminal — Settings → `terminal.integrated.defaultProfile.windows` →
+**Git Bash** — then restart VS Code. (Plain PowerShell cannot run the agents' commands.)
+
+### Then
+Open the project in **Claude Code** or **VS Code Copilot (Agent mode)** and run:
 ```
 /plumbline-onboard service:all
 ```
 That's it. Everything lands in `.plumbline/` plus `plumbline-*` entry files in `.claude/` and `.github/`; commit them
-and open a PR to share with your team.
+and open a PR to share with your team. `python3 .plumbline/init.py --doctor` shows what is missing on your machine.
 
-- **Needs:** Python 3.10+ with PyYAML (`python3 -m pip install --user pyyaml`); Semgrep recommended
-  (`brew install semgrep` — without it only the Semgrep checks are skipped); your project's own JDK / node.
+- **Needs:** Python 3.10+ with PyYAML; Semgrep recommended (without it only the Semgrep checks are skipped — CI
+  still runs them); your project's own JDK / node.
 - **Options** (passed through to `init.py`): `--jira KEY` / `--confluence SPACE` (default: the JIRA key),
   `--ci` (also install GitHub workflows), `--domain broker-dealer` (example OMS rule pack; default `none` = generic).
 - **Settings** live in `.plumbline/project.yaml` (JIRA key, Confluence space, API/frontend URLs, QA login path — URLs
-  detected from the code); edit and re-run `install.sh` to re-render the agents.
-- **Update:** `git -C ~/plumbline pull && ~/plumbline/install.sh` — keeps your `project.yaml` and gate baseline.
+  detected from the code); edit and re-run the install to re-render the agents.
+- **Update:** `git -C ~/plumbline pull`, then the install command again — keeps `project.yaml` and the gate baseline.
 - **Check:** `python3 .plumbline/init.py --doctor` (what it sees) · `--check` (CI: fails on drift).
 - **Remove:** `python3 .plumbline/init.py --uninstall --yes` (your CLAUDE.md files stay).
 - **Trying it without touching your branch:** `git worktree add ../trial -b plumbline-trial && cd ../trial` first.
@@ -34,7 +61,7 @@ loop (originator → deterministic benchmark → isolated judge, up to 3 attempt
 paths. Every external write (JIRA, PR, push) waits for your approval. CLAUDE.md files are merged between
 `plumbline:begin/end` markers, never overwritten: one master at the root, one per unit.
 
-**What `init.py` does:** detects the units (`services/<name>/`, top-level modules, an app at the root, frontends such as `ui/`), the Java version, the frontend framework and the base branch; writes `.plumbline/project.yaml`; installs the generated Claude Code commands/agents and Copilot prompts/agents (and the CI workflows with `--ci`); writes the gate baseline; checks prerequisites; prints a **doctor** report. `--doctor` reports only, `--check` (CI) fails on drift, `--upgrade <tarball>` (used by `install.sh`) replaces the framework and keeps `project.yaml` and the baseline.
+**What `init.py` does:** detects the units (`services/<name>/`, top-level modules, an app at the root, frontends such as `ui/`), the Java version, the frontend framework and the base branch; writes `.plumbline/project.yaml`; installs the generated Claude Code commands/agents and Copilot prompts/agents (and the CI workflows with `--ci`); writes the gate baseline; checks prerequisites; prints a **doctor** report. `--doctor` reports only, `--check` (CI) fails on drift, `--upgrade <tarball>` (used by `install.py`) replaces the framework and keeps `project.yaml` and the baseline.
 
 ## What is inside
 

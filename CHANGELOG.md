@@ -36,6 +36,18 @@
   pre-existing problem truthfully passes.
 - **OB-14 (warning):** a unit CLAUDE.md over 30 KB — it is loaded into every agent's context.
 
+### Windows
+- **`install.py`** — the installer in Python (macOS, Linux, Windows); `install.sh` now calls it.
+- **UTF-8 everywhere:** Windows Python reads files as cp1252, so the framework crashed on its own UTF-8 files. Every
+  entry script re-runs itself in UTF-8 mode on Windows; the scope-check `CHECK:` line passes `-X utf8` (and prints
+  `python` and forward-slash paths on Windows).
+- **Same paths and bytes on every OS:** gate findings, baselines, impact files and the depmap cache key use `/`
+  paths (a baseline written on Windows matched nothing on Linux CI); committed files are written with LF;
+  `--check` ignores CRLF from a Windows checkout; `.gitattributes` keeps LF in the Plumbline repo and in `.plumbline/`.
+  Path containment checks no longer assume `/`.
+- **Doctor on Windows** flags a missing `bash` (Git Bash) and a missing `python3`, with the one-line fix.
+- README: Windows steps (Git Bash or WSL2; VS Code's agent terminal set to Git Bash).
+
 ## 1.10.1 — 2026-10-21
 
 - **Install from the repository:** `git clone https://github.com/umeshkumarkv/plumbline ~/plumbline`, then

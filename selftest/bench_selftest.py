@@ -8,6 +8,10 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 ROOT = Path(__file__).resolve().parents[1]
 FX = ROOT / "selftest/bench-fixture"

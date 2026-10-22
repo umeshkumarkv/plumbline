@@ -22,7 +22,7 @@ def run(r, ctx):
     wfs = sorted((repo / ".github/workflows").glob("*.y*ml"))
     bad_yaml, unpinned, floating, no_perm, pipe_sh, unverified, prt = [], [], [], [], [], [], []
     for f in wfs:
-        rel = str(f.relative_to(repo))
+        rel = f.relative_to(repo).as_posix()
         try:
             doc = yaml.safe_load(read(f)) or {}
         except yaml.YAMLError as e:
@@ -71,7 +71,7 @@ def run(r, ctx):
                 continue
             for i, l in enumerate(read(f).splitlines(), 1):
                 if SECRET.search(l) and "secrets." not in l:
-                    rel = str(f.relative_to(repo))
+                    rel = f.relative_to(repo).as_posix()
                     (leaks if touched is None or i in touched.get(rel, set()) else old_leaks).append(f"{rel}:{i}")
     scope = "on lines this change adds" if touched is not None else "in the repo (pass --base to judge only this change)"
     r.add("DO-8", f"No plaintext secrets {scope}", not leaks, f"{len(leaks)} suspicious lines", leaks)
@@ -87,7 +87,7 @@ def run(r, ctx):
             m = re.match(r"\s*FROM\s+(\S+)", l, re.I)
             if m and m.group(1).lower() != "scratch" and (":" not in m.group(1).split("/")[-1] or m.group(1).endswith(":latest")) \
                     and "@sha256:" not in m.group(1) and not m.group(1).startswith("$"):
-                latest.append(f"{f.relative_to(repo)}: FROM {m.group(1)}")
+                latest.append(f"{f.relative_to(repo).as_posix()}: FROM {m.group(1)}")
     r.add("DO-9", "Docker base images pinned (no :latest / no tag)", not latest, f"{len(latest)} floating", latest)
 
     if shutil.which("actionlint"):

@@ -18,6 +18,10 @@ import difflib
 import re
 import sys
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 
 def merged(old: str, block_id: str, body: str, title: str | None) -> str:
@@ -65,7 +69,7 @@ def main():
           f"{len(old.splitlines())} → {len(new.splitlines())} lines")
     if a.write:
         t.parent.mkdir(parents=True, exist_ok=True)
-        t.write_text(new)
+        t.write_text(new, newline="\n")
     return 0
 
 

@@ -12,6 +12,10 @@ import json
 import re
 import sys
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 # CLAUDE.md §5 — valid transitions only
 LEGAL = {
@@ -36,7 +40,7 @@ findings = []
 
 
 def add(rule, path, line, msg):
-    findings.append({"rule": rule, "path": str(path), "line": line, "message": msg})
+    findings.append({"rule": rule, "path": Path(path).as_posix(), "line": line, "message": msg})
 
 
 def lineno(text, idx):

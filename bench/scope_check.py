@@ -29,6 +29,10 @@ import sys
 import shutil
 import tempfile
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "gates" / "checks"))
@@ -150,7 +154,7 @@ def main():
         shutil.copy2(ROOT / "bench" / "scope_check.py", d / "bench" / "scope_check.py")
         shutil.copy2(ROOT / "gates" / "checks" / "protected_paths.py", d / "gates" / "checks" / "protected_paths.py")
         sha_ = bundle_sha(d)
-        print(f"SNAPSHOT {d} {sha_}")
+        print(f"SNAPSHOT {Path(d).as_posix()} {sha_}")
         if a.check_role:
             # One portable line (no sha256sum/shasum differences between Linux and macOS): python -I verifies the sha of
             # the three files, then runs the private checker. Copy it as printed; never retype the sha.
@@ -160,7 +164,8 @@ def main():
                     "h==s or sys.exit('SCOPE:<checker> - snapshot or checker copy was modified');"
                     "sys.argv=[d+'/bench/scope_check.py','check',r,'--snapshot',d,'--sha',s];"
                     "runpy.run_path(sys.argv[0],run_name='__main__')")
-            print(f'CHECK: python3 -I -c "{code}" {d} {sha_} {a.check_role}')
+            py = "python" if sys.platform == "win32" else "python3"   # Windows installs python.exe, not python3
+            print(f'CHECK: {py} -X utf8 -I -c "{code}" {Path(d).as_posix()} {sha_} {a.check_role}')
         return 0
     if a.role not in ROLES:
         print(f"scope_check: unknown role {a.role!r} (known: {', '.join(sorted(ROLES))})", file=sys.stderr)

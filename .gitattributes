@@ -1,0 +1,5 @@
+# Same bytes on every OS: scripts must keep LF (bash and the scope-check hashes), Markdown and YAML too.
+* text=auto eol=lf
+*.png binary
+*.gz binary
+*.bundle binary

@@ -24,6 +24,8 @@ def main():
     shutil.copy2(ROOT / "tools/KIT-README.md", kit / "README.md")
     shutil.copy2(ROOT / "tools/project.yaml.example", kit / "project.yaml.example")
     (kit / "VERSION").write_text((ROOT / "VERSION").read_text())
+    # Same bytes on every OS inside the project too (a Windows clone with core.autocrlf would otherwise get CRLF)
+    (kit / ".gitattributes").write_text("* text=auto eol=lf\n*.gz binary\n", newline="\n")
     print(f"kit: {kit}  ({sum(f.stat().st_size for f in kit.rglob('*') if f.is_file()) // 1024} KB)")
 
 

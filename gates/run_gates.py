@@ -19,6 +19,10 @@ import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "impact"))
@@ -88,7 +92,7 @@ def run_semgrep(repo: Path, units=None):
     # 1 MB size limit (--max-target-bytes 0). Fails closed if Semgrep does not complete.
     import os
     import tempfile
-    links = sorted(str(f.relative_to(repo)) for f in (repo / "services").rglob("*") if f.is_symlink())
+    links = sorted(f.relative_to(repo).as_posix() for f in (repo / "services").rglob("*") if f.is_symlink())
     if links:   # a symlink could point source code at an unscanned file; no legitimate need for one under services/
         raise SystemExit(f"symlinks under services/ are not allowed (gate cannot vouch for their target): {links[:3]}")
     roots = [repo / "services" / u for u in units] if units else [repo / "services"]
@@ -102,10 +106,10 @@ def run_semgrep(repo: Path, units=None):
             try:
                 raw.decode("utf-8")
             except UnicodeDecodeError:
-                bad.append(str(f.relative_to(repo)))
+                bad.append(f.relative_to(repo).as_posix())
                 continue
             if b"\0" in raw:
-                bad.append(str(f.relative_to(repo)))
+                bad.append(f.relative_to(repo).as_posix())
     if bad:
         raise SystemExit(f"source files that are not plain UTF-8 text cannot be gated: {bad[:3]} — failing closed")
     back = {}
@@ -113,7 +117,7 @@ def run_semgrep(repo: Path, units=None):
         for f in files:
             rel = f.relative_to(repo)
             dst = neutral_path(rel)
-            back[dst] = str(rel)
+            back[dst] = rel.as_posix()
             (Path(td) / dst).parent.mkdir(parents=True, exist_ok=True)
             (Path(td) / dst).write_bytes(f.read_bytes())
         out = subprocess.run(
@@ -190,7 +194,7 @@ def gate_view(repo: Path):
         else:
             dst = rel
         target = (view / dst).resolve()
-        if not str(target).startswith(str(view.resolve()) + "/"):
+        if not target.is_relative_to(view.resolve()) or target == view.resolve():
             raise SystemExit(f"gate view: {rel} maps outside the scan copy ({dst}) — failing closed")
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(f, target)
@@ -259,7 +263,7 @@ def main():
         counts = Counter(f["fingerprint"] for f in findings)
         Path(a.write_baseline).write_text(json.dumps(
             {"fingerprints": dict(sorted(counts.items())),
-             "findings": [{k: f[k] for k in ("rule", "path", "line")} for f in findings]}, indent=1))
+             "findings": [{k: f[k] for k in ("rule", "path", "line")} for f in findings]}, indent=1), newline="\n")
         print(f"baseline written: {len(findings)} findings")
         return 0
 

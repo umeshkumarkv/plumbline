@@ -17,6 +17,10 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 BUILD_FILES = ("pom.xml", "build.gradle", "build.gradle.kts")
 NAME = re.compile(r"[A-Za-z0-9][\w.-]*")

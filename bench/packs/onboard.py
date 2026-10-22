@@ -41,7 +41,7 @@ def run_frontend(r, ctx, u):
     r.add("OBF-4", "Calls that no backend endpoint serves are marked as such (no invented behaviour)", not missing,
           f"{len(unmatched)} unmatched calls, {len(missing)} not marked", missing, warn=True)
     src = [f for f in repo.dir(name).rglob("src/**/*.ts") if "node_modules" not in f.parts and ".spec." not in f.name]
-    ls = [f"{f.relative_to(repo.path)}:{i}" for f in src for i, l in enumerate(read(f).splitlines(), 1)
+    ls = [f"{f.relative_to(repo.path).as_posix()}:{i}" for f in src for i, l in enumerate(read(f).splitlines(), 1)
           if re.search(r"LocalStorage\b|localStorage\.setItem\([^)]*(token|auth|jwt)", l, re.I)]
     if ls:
         ok = re.search(r"localStorage|LocalStorage", body["compliance"]) is not None

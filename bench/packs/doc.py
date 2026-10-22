@@ -21,7 +21,7 @@ def run(r, ctx):
     oa_path = ctx.repo.dir(svc) / "openapi.yaml"
     try:
         oa = yaml.safe_load(read(oa_path)) or {}
-        r.add("DOC-1", "openapi.yaml parses", True, str(oa_path.relative_to(repo)))
+        r.add("DOC-1", "openapi.yaml parses", True, oa_path.relative_to(repo).as_posix())
     except yaml.YAMLError as e:
         r.add("DOC-1", "openapi.yaml parses", False, str(e).splitlines()[0])
         oa = {}
@@ -78,5 +78,5 @@ def run(r, ctx):
         for m in re.finditer(r"\]\(([^)#\s]+)(?:#[^)]*)?\)", read(f)):
             tgt = m.group(1)
             if not re.match(r"[a-z]+:", tgt) and not (f.parent / tgt).exists():
-                broken.append(f"{f.relative_to(repo)} -> {tgt}")
+                broken.append(f"{f.relative_to(repo).as_posix()} -> {tgt}")
     r.add("DOC-8", "Relative links in CLAUDE.md files resolve", not broken, f"{len(broken)} broken", broken)

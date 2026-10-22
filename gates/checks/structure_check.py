@@ -18,6 +18,10 @@ import json
 import re
 import sys
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 SUFFIX_BY_PACKAGE = {
     "controller": ("Controller",),
@@ -52,7 +56,7 @@ findings = []
 
 
 def add(rule, path, line, message):
-    findings.append({"rule": rule, "path": str(path), "line": line, "message": message})
+    findings.append({"rule": rule, "path": Path(path).as_posix(), "line": line, "message": message})
 
 
 def service_of(path: Path):
@@ -69,7 +73,7 @@ def check_java(root: Path):
     for f in root.glob("services/*/src/**/*.java"):
         rel = f.relative_to(root)
         text = f.read_text(errors="ignore")
-        if "/src/test/" in str(rel):
+        if "/src/test/" in rel.as_posix():
             test_classes.add((service_of(rel), f.stem))
             continue
         pkg_dir = f.parent.name

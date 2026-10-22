@@ -25,6 +25,10 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+if sys.platform == "win32" and not sys.flags.utf8_mode and __name__ == "__main__":   # Windows: UTF-8 like macOS/Linux
+    import subprocess as _sp
+    sys.exit(_sp.call([sys.executable, "-X", "utf8", *(["-I"] if sys.flags.isolated else []), *sys.argv],
+                      env={**__import__("os").environ, "PYTHONUTF8": "1"}))
 
 import yaml
 
@@ -231,7 +235,7 @@ def unit_files(d: Path, exts, root_unit=False):
 def dir_hash(files, root: Path) -> str:
     h = hashlib.sha256()
     for f in files:
-        h.update(str(f.relative_to(root)).encode())
+        h.update(f.relative_to(root).as_posix().encode())
         h.update(f.read_bytes())
     return h.hexdigest()[:16]
 
@@ -819,7 +823,7 @@ def materialise_raw(repo: Path, ref: str, path: str, root: Path):
         blob = data[nl + 1:nl + 1 + size]
         pos = nl + 1 + size + 1
         dst = (root / p).resolve()
-        if not str(dst).startswith(str(root.resolve()) + "/"):
+        if not dst.is_relative_to(root.resolve()) or dst == root.resolve():
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_bytes(blob)
