@@ -1,0 +1,55 @@
+# Plumbline checks on every pull request. Runs in GitHub Actions (Linux) — nothing to install on laptops.
+#   1. protected-files: a PR may not change Plumbline's agents, prompts or this workflow unless a human adds the
+#      `plumbline-policy-change` label (agents must not edit the rules that judge them).
+#   2. semgrep: generic Java/Spring rules on the lines this PR changes only — existing code never blocks a PR.
+# Delete this file if you do not want the checks.
+name: plumbline-checks
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+permissions:
+  contents: read
+jobs:
+  protected-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Plumbline files unchanged (or approved with the plumbline-policy-change label)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'plumbline-policy-change') }}
+        run: |
+          changed=$(git diff --name-only "$BASE"...HEAD -- \
+            '.claude/commands/plumbline-*' '.claude/agents/plumbline-*' \
+            '.github/prompts/plumbline-*' '.github/agents/plumbline-*' \
+            '.github/plumbline/' '.github/workflows/plumbline-checks.yml')
+          if [ -z "$changed" ]; then echo "No Plumbline files changed."; exit 0; fi
+          echo "Plumbline files changed:"; echo "$changed"
+          if [ "$APPROVED" = "true" ]; then echo "Approved by the plumbline-policy-change label."; exit 0; fi
+          echo "::error::This PR changes Plumbline's agents or checks. A maintainer must review it and add the plumbline-policy-change label."
+          exit 1
+
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Any Java in this repository?
+        id: java
+        run: |
+          if git ls-files '*.java' | grep -q .; then echo "yes=1" >> "$GITHUB_OUTPUT"; else echo "No Java files — skipping."; fi
+      - uses: actions/setup-python@v5
+        if: steps.java.outputs.yes == '1'
+        with: {python-version: "3.12"}
+      - name: Semgrep on the changed lines
+        if: steps.java.outputs.yes == '1'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          pip install --quiet "semgrep==1.180.0"
+          # The rules come from the BASE branch, so a PR cannot weaken the rules it is checked by.
+          git show "$BASE:.github/plumbline/semgrep-java.yml" > "$RUNNER_TEMP/rules.yml" 2>/dev/null \
+            || cp .github/plumbline/semgrep-java.yml "$RUNNER_TEMP/rules.yml"
+          semgrep scan --config "$RUNNER_TEMP/rules.yml" --baseline-commit "$BASE" \
+            --error --metrics=off --disable-version-check

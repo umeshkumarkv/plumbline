@@ -1,4 +1,0 @@
-# Plumbline: loop working files and caches are never committed
-/run/
-__pycache__/
-*.pyc

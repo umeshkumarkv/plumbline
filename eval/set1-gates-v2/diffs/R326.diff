@@ -1,8 +1,0 @@
---- a/services/risk-service/src/main/resources/db/migration/V15__add_risk_flag_to_orders.sql
-+++ b/services/risk-service/src/main/resources/db/migration/V15__add_risk_flag_to_orders.sql
-@@ -0,0 +1,5 @@
-+-- risk-service V15 — flag orders that triggered a WARN-level rule
-+ALTER TABLE order_schema.orders
-+    ADD COLUMN IF NOT EXISTS risk_flag VARCHAR(20);
-+
-+CREATE INDEX IF NOT EXISTS idx_orders_risk_flag ON order_schema.orders (risk_flag);
