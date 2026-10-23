@@ -13,10 +13,12 @@ Story: $ARGUMENTS
 
 ## How subagents are started
 - **Claude Code:** the Agent tool with `subagent_type: plumbline-dev-writer` or `plumbline-judge`.
-- **GitHub Copilot:** `#runSubagent` with agent `plumbline-dev-writer` or `plumbline-judge` (`.github/agents/`).
+- **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with agent `plumbline-dev-writer` or `plumbline-judge` (`.github/agents/`).
   If subagents are not available in this chat, stop and say so.
 
-Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge.
+Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
+only `git` and the project's build/test command yourself (they work in bash, PowerShell and cmd alike); find and read
+files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 
 ## Step 1 — The story
 - A JIRA key: fetch the issue with the connected JIRA/Atlassian tools (summary, description, acceptance criteria). If
@@ -29,11 +31,16 @@ Never do the writer's or the judge's work yourself, and never pass the writer's 
    CLAUDE.md files. No CLAUDE.md yet → suggest `/plumbline-onboard` first, then continue if the user agrees.
 2. Build/test command: from the units' CLAUDE.md "Build & run" (on Windows use the `.cmd` wrapper, e.g. `mvnw.cmd`).
 3. `git status` must be clean. Create the branch: `git switch -c ai/<KEY>-<short-slug> <base branch>`.
+4. **Baseline:** run the build/test command once before any change and keep the result. If it already fails, note
+   which tests or which step fail — those are pre-existing and do not count against the story. If the test runner
+   cannot run at all, tell the user now and continue: the story's tests are still written, and the judge checks them by
+   reading.
 
 ## Step 3 — Attempts (1, 2, 3)
 1. **Writer** — start `plumbline-dev-writer` with: the story, the branch, the units and their CLAUDE.md paths, the
    build/test command; on attempts 2–3 also the previous findings and build output.
-2. **Build/tests** — run the build/test command yourself. Failing → that is the finding; next attempt.
+2. **Build/tests** — run the build/test command yourself. A failure that is not in the baseline → that is the finding;
+   next attempt. Pre-existing failures do not count; say so in the hand-over.
 3. **Scope check** — run `git diff --name-only <base branch>` and `git status --porcelain`. Fail if anything under
    `.claude/`, `.github/`, any `CLAUDE.md`/`AGENTS.md`, or CI/build settings that skip tests changed, or if an
    existing test was deleted. → next attempt with that as the finding.

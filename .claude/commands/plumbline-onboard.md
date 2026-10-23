@@ -13,12 +13,12 @@ Target: $ARGUMENTS (empty = every unit)
 
 ## How subagents are started
 - **Claude Code:** the Agent tool with `subagent_type: plumbline-onboard-writer` or `plumbline-judge`.
-- **GitHub Copilot:** `#runSubagent` with agent `plumbline-onboard-writer` or `plumbline-judge`
+- **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with agent `plumbline-onboard-writer` or `plumbline-judge`
   (`.github/agents/`). If subagents are not available in this chat, stop and say so.
 
 Each subagent starts with a clean context. Never do the writer's or the judge's work yourself, and never pass the
-writer's reasoning or your own opinion to the judge. Use only file read/search tools and read-only `git` commands
-yourself — no other shell commands.
+writer's reasoning or your own opinion to the judge. **Shell:** run only `git` commands yourself (they work in bash,
+PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. If it has no **Plumbline settings** (JIRA project, Confluence space, base
@@ -26,7 +26,7 @@ branch), ask the user for them once (base branch: suggest the repository's defau
 the root file in Step 4.
 
 ## Step 2 — Find the units
-Search for build files: `pom.xml`, `build.gradle`, `build.gradle.kts`, `package.json` (ignore `node_modules`,
+Use `git ls-files` or your file search tool to find build files: `pom.xml`, `build.gradle`, `build.gradle.kts`, `package.json` (ignore `node_modules`,
 `target`, `build`, `dist`), plus other stacks' build files if present. A folder with its own build file and source is a
 unit; a parent build file that only lists modules is not. For each unit decide its CLAUDE.md:
 - a unit in a folder → `<folder>/CLAUDE.md`;
@@ -34,7 +34,7 @@ unit; a parent build file that only lists modules is not. For each unit decide i
 
 Show the user the list (name, folder, kind, CLAUDE.md) in one table and continue.
 
-## Step 3 — Each unit (one at a time)
+## Step 3 — Each unit (units may run in parallel)
 For attempt = 1, 2, 3:
 1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md path, and on attempts 2–3
    the judge's findings from the previous attempt (verbatim JSON).

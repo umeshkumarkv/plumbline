@@ -12,10 +12,11 @@ Target: $ARGUMENTS (empty = the current branch)
 
 ## How the judge is started
 - **Claude Code:** the Agent tool with `subagent_type: plumbline-judge`.
-- **GitHub Copilot:** `#runSubagent` with agent `plumbline-judge` (`.github/agents/`). If subagents are not available
+- **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with agent `plumbline-judge` (`.github/agents/`). If subagents are not available
   in this chat, stop and say so.
 
-Do not review the change yourself first and do not pass your opinion to the judge.
+Do not review the change yourself first and do not pass your opinion to the judge. **Shell:** run only `git` (and
+`gh` if present) yourself; read files with your file read/search tools.
 
 ## Step 1 — What to review
 - Base branch: from the root `CLAUDE.md` Plumbline settings (else the repository's default branch).

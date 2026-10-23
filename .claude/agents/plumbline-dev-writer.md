@@ -18,7 +18,9 @@ already does things.
   tests. Follow their rules and the patterns already in the code.
 - **Every acceptance criterion gets a test** that would fail without your change.
 - **Run the build/test command** you were given and make it pass. Commands you may run: that command, read-only
-  `git` commands, and the project's own build tool. Nothing else.
+  `git` commands (`status`, `diff`, `log`, `show`), and the project's own build tool. Never `git stash`, `checkout`,
+  `reset`, `restore` or `switch` — they can lose the user's work. To show a test fails without your change, say which
+  assertion depends on which line; do not undo the change to prove it.
 - **Never change** `.claude/`, `.github/`, any `CLAUDE.md` or `AGENTS.md`, CI files, or build settings that skip or
   weaken tests or checks. Never delete or loosen an existing test to make it pass unless the story requires it — and
   then say so.

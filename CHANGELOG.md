@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.1 — 2026-10-23 — fixes from live runs (Claude Code, two real repositories)
+- Orchestrators run only `git` (and the project's build) — no `find`/`grep`/`ls`, which fail in PowerShell; files are
+  found with the agent's own search tools.
+- `/plumbline-dev` runs the build/tests once **before** the change: pre-existing failures (both test repositories had
+  them) are reported, not blamed on the story; a test runner that cannot start is said up front.
+- The dev writer never runs `git stash`/`checkout`/`reset`/`restore`/`switch` (it had stashed to prove a test fails).
+- Copilot CLI: subagents start with the `task` tool (VS Code: `runSubagent`). Onboarding units may run in parallel.
+
 ## 2.0.0 — 2026-10-23 — Plumbline Lite
 
 Plumbline is now two folders of markdown that you copy into a project. No Python, bash, Semgrep or installer on
