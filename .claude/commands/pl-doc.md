@@ -43,7 +43,8 @@ library arrived without the root CLAUDE.md allowing it.
    request and response schema, and error responses.
 2. Every new or changed response field is in the spec's schema with the right type (money as string where the
    CLAUDE.md files say so, ids with their format, timestamps as date-time).
-3. Every new error code is documented.
+3. Every new error code is documented, and every documented status/error code is what the code really returns — trace
+   each thrown exception to its handler (an unhandled exception is a 500, not a 400).
 4. Every new event/topic, cache key and environment variable is in the touched unit's CLAUDE.md.
 5. New libraries and migrations are noted in the unit's CLAUDE.md.
 6. Edits are in place: existing sections updated, nothing unrelated rewritten or removed; plumbline markers kept.
