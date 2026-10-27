@@ -3,7 +3,7 @@ description: Plumbline — independent review of a branch or pull request agains
 argument-hint: "<PR number, branch name, or empty for the current branch>"
 ---
 
-# /plumbline-code-review
+# /pl-code-review
 
 Review a change with an independent **judge** subagent that never saw how the change was written. Read-only: the
 review is posted only if the user says yes.

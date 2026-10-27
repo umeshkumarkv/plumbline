@@ -21,8 +21,8 @@ jobs:
           APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'plumbline-policy-change') }}
         run: |
           changed=$(git diff --name-only "$BASE"...HEAD -- \
-            '.claude/commands/plumbline-*' '.claude/agents/plumbline-*' \
-            '.github/prompts/plumbline-*' '.github/agents/plumbline-*' \
+            '.claude/commands/pl-*' '.claude/agents/plumbline-*' \
+            '.github/prompts/pl-*' '.github/agents/plumbline-*' \
             '.github/plumbline/' '.github/workflows/plumbline-checks.yml')
           if [ -z "$changed" ]; then echo "No Plumbline files changed."; exit 0; fi
           echo "Plumbline files changed:"; echo "$changed"

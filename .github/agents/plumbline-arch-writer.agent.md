@@ -1,6 +1,6 @@
 ---
 name: plumbline-arch-writer
-description: Drafts the technical design for one story from the story, the code and the CLAUDE.md files. Started by /plumbline-arch.
+description: Drafts the technical design for one story from the story, the code and the CLAUDE.md files. Started by /pl-arch.
 tools: ['read/readFile', 'search', 'edit']
 user-invocable: false
 ---

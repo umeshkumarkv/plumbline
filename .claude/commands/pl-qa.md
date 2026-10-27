@@ -3,7 +3,7 @@ description: Plumbline — run a story's acceptance criteria against the running
 argument-hint: "<story key, e.g. CRS-12>"
 ---
 
-# /plumbline-qa
+# /pl-qa
 
 Test one story's acceptance criteria against the **running** system — API calls and, for UI criteria, Playwright — and
 record the evidence. A **runner** subagent executes the tests; an independent **judge** checks the evidence actually
@@ -27,7 +27,7 @@ Evidence goes in `.plumbline-drafts/<KEY>/qa/`. Make sure the line
 ## Step 1 — Setup
 1. Fetch the story and its acceptance criteria (JIRA tools, or ask the user to paste them). Save them as
    `.plumbline-drafts/<KEY>/story.md`.
-2. **Gate:** the change should be reviewed first — the PR for this story has a passing `/plumbline-code-review` or a
+2. **Gate:** the change should be reviewed first — the PR for this story has a passing `/pl-code-review` or a
    human approval. If not, tell the user and ask whether to continue.
 3. URLs from the root `CLAUDE.md` Plumbline settings (API URL, frontend URL); ask if missing. The system must be
    running: ask the user to start it if the API URL does not answer.
@@ -59,5 +59,5 @@ Evidence goes in `.plumbline-drafts/<KEY>/qa/`. Make sure the line
 ## Step 3 — Hand over
 Show: criterion · type · result. For each failure, exactly four fields: request/steps · expected · actual · response
 body. If a failure looks like a design problem (wrong owner field, role, missing header), say "design gap — run
-`/plumbline-arch <KEY>`" and nothing more. Ask before posting the report as a JIRA comment or moving the ticket — show
+`/pl-arch <KEY>`" and nothing more. Ask before posting the report as a JIRA comment or moving the ticket — show
 the exact text first and wait for a yes.

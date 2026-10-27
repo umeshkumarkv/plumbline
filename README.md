@@ -7,16 +7,16 @@ pushed or posted without your yes.
 
 | Command | What it does | Writes to |
 |---|---|---|
-| `/plumbline-onboard` | Documents the codebase: one `CLAUDE.md` per service/frontend + a master `CLAUDE.md` | CLAUDE.md files |
-| `/plumbline-pm "idea"` | Feature idea → PRD (problem, solution, success criteria, scope, backlog) | JIRA epic* |
-| `/plumbline-ba CRS-40` | Epic → stories with testable acceptance criteria | JIRA stories* |
-| `/plumbline-arch CRS-12` | Story → technical design (API, data, logic, access, tests) | JIRA comment* |
-| `/plumbline-dev CRS-12` | Implements the story with tests on a new branch | branch* |
-| `/plumbline-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules | PR comment* |
-| `/plumbline-qa CRS-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
-| `/plumbline-doc 42` | After merge: updates the API spec and CLAUDE.md files to match the code | docs PR* |
-| `/plumbline-devops 42` | Fixes a red CI run (code/tests/coverage) or proposes the fix (pipeline/config) | branch* |
-| `/plumbline-sm` | Daily sprint health: stuck, blocked, Definition of Done, velocity | JIRA comments* |
+| `/pl-onboard` | Documents the codebase: one `CLAUDE.md` per service/frontend + a master `CLAUDE.md` | CLAUDE.md files |
+| `/pl-pm "idea"` | Feature idea → PRD (problem, solution, success criteria, scope, backlog) | JIRA epic* |
+| `/pl-ba CRS-40` | Epic → stories with testable acceptance criteria | JIRA stories* |
+| `/pl-arch CRS-12` | Story → technical design (API, data, logic, access, tests) | JIRA comment* |
+| `/pl-dev CRS-12` | Implements the story with tests on a new branch | branch* |
+| `/pl-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules | PR comment* |
+| `/pl-qa CRS-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
+| `/pl-doc 42` | After merge: updates the API spec and CLAUDE.md files to match the code | docs PR* |
+| `/pl-devops 42` | Fixes a red CI run (code/tests/coverage) or proposes the fix (pipeline/config) | branch* |
+| `/pl-sm` | Daily sprint health: stuck, blocked, Definition of Done, velocity | JIRA comments* |
 
 \* only after you say yes — you see the exact content first.
 
@@ -30,7 +30,7 @@ an optional CI check). Same on Windows, macOS and Linux.
 
 Get Plumbline once: `git clone https://github.com/umeshkumarkv/plumbline` — or on GitHub: **Code → Download ZIP** and
 unzip. Then copy its `.claude` and `.github` folders into your project's root (they merge with folders you already
-have; Plumbline's files are all named `plumbline-*`).
+have; Plumbline's commands are named `pl-*` and its agents `plumbline-*`, so they don't clash with yours).
 
 **Windows (PowerShell), from your project folder:**
 ```powershell
@@ -45,11 +45,11 @@ Commit them. Done.
 
 ## Use
 
-**Claude Code:** type `/plumbline-onboard`.
+**Claude Code:** type `/pl-onboard`.
 **VS Code + Copilot:** open Chat in **Agent** mode, make sure the **runSubagent** tool is enabled in the tools picker,
-then type `/plumbline-onboard`.
+then type `/pl-onboard`.
 
-Start with `/plumbline-onboard` — the other commands read the `CLAUDE.md` files it writes. The first run asks for your
+Start with `/pl-onboard` — the other commands read the `CLAUDE.md` files it writes. The first run asks for your
 JIRA project and Confluence space and stores them in the root `CLAUDE.md` under *Plumbline settings*. Review what it
 wrote with `git diff`, then commit on a branch and open a PR.
 
@@ -81,10 +81,15 @@ space (PRDs, stories, designs, QA evidence, CI logs) use `.plumbline-drafts/`, w
 so it never shows in `git status`.
 
 ## Remove
-Delete the `plumbline-*` files from `.claude/` and `.github/`, and `.github/plumbline/`. Your CLAUDE.md files stay.
+Delete the `pl-*` and `plumbline-*` files from `.claude/` and `.github/`, and `.github/plumbline/`. Your CLAUDE.md files
+stay.
+
+## Upgrading from 2.0 / 2.1
+Commands were renamed from `/plumbline-<role>` to `/pl-<role>` in 2.2. Delete the old `.claude/commands/plumbline-*.md`
+and `.github/prompts/plumbline-*.prompt.md`, then copy the two folders again.
 
 ## Upgrading from 1.x
 1.x installed a `.plumbline/` folder and needed Python. Remove it, then install as above:
-`python3 .plumbline/init.py --uninstall --yes` (or delete `.plumbline/` and the `plumbline-*` files by hand).
+`python3 .plumbline/init.py --uninstall --yes` (or delete `.plumbline/` and the old `plumbline-*` command files by hand).
 The full 1.x framework — ten roles, local benchmarks, impact maps — is kept at tag
 [`v1.11.0`](https://github.com/umeshkumarkv/plumbline/tree/v1.11.0).

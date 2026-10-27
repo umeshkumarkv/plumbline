@@ -1,6 +1,6 @@
 ---
 name: plumbline-doc-writer
-description: Updates the API spec and CLAUDE.md files so they match a merged code change. Started by /plumbline-doc.
+description: Updates the API spec and CLAUDE.md files so they match a merged code change. Started by /pl-doc.
 tools: ['read/readFile', 'search', 'edit', 'execute/runInTerminal', 'execute/getTerminalOutput']
 user-invocable: false
 ---

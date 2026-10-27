@@ -1,6 +1,6 @@
 ---
 name: plumbline-devops-fixer
-description: Classifies a CI failure, fixes code/test/coverage failures, and writes a diagnosis for pipeline, container, migration, dependency or secret failures. Started by /plumbline-devops.
+description: Classifies a CI failure, fixes code/test/coverage failures, and writes a diagnosis for pipeline, container, migration, dependency or secret failures. Started by /pl-devops.
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

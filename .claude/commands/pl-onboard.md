@@ -3,7 +3,7 @@ description: Plumbline — document an existing codebase into CLAUDE.md files (o
 argument-hint: "[unit name, or empty for all]"
 ---
 
-# /plumbline-onboard
+# /pl-onboard
 
 Document this repository for people and AI agents: one CLAUDE.md per unit (backend service, frontend) and one master
 CLAUDE.md at the root that describes the whole solution. Each file is written by a **writer** subagent and checked by

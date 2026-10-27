@@ -1,6 +1,6 @@
 ---
 name: plumbline-dev-writer
-description: Implements one story with tests, following the project's CLAUDE.md rules. Started by /plumbline-dev.
+description: Implements one story with tests, following the project's CLAUDE.md rules. Started by /pl-dev.
 tools: ['read/readFile', 'search', 'edit', 'execute/runInTerminal', 'execute/getTerminalOutput']
 user-invocable: false
 ---

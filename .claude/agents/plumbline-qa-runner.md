@@ -1,6 +1,6 @@
 ---
 name: plumbline-qa-runner
-description: Executes a story's acceptance tests against the running system (API calls, Playwright for UI) and records the evidence. Started by /plumbline-qa.
+description: Executes a story's acceptance tests against the running system (API calls, Playwright for UI) and records the evidence. Started by /pl-qa.
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

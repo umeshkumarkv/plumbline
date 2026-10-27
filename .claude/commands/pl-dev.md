@@ -3,7 +3,7 @@ description: Plumbline — implement a story with tests; checked by the build, a
 argument-hint: "<JIRA key, e.g. CRS-12, or a short story description>"
 ---
 
-# /plumbline-dev
+# /pl-dev
 
 Implement one story on a new branch. A **writer** subagent makes the change; then three checks: the project's
 **build/tests**, a **scope check** (only allowed files changed), and an independent **judge**. Up to 3 attempts, then
@@ -28,7 +28,7 @@ files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 
 ## Step 2 — Prepare
 1. Read the root `CLAUDE.md` (Plumbline settings: base branch) and pick the units the story touches; read their
-   CLAUDE.md files. No CLAUDE.md yet → suggest `/plumbline-onboard` first, then continue if the user agrees.
+   CLAUDE.md files. No CLAUDE.md yet → suggest `/pl-onboard` first, then continue if the user agrees.
 2. Build/test command: from the units' CLAUDE.md "Build & run" (on Windows use the `.cmd` wrapper, e.g. `mvnw.cmd`).
 3. `git status` must be clean. Create the branch: `git switch -c ai/<KEY>-<short-slug> <base branch>`.
 4. **Baseline:** run the build/test command once before any change and keep the result. If it already fails, note

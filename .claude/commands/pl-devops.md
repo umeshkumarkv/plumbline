@@ -3,7 +3,7 @@ description: Plumbline — diagnose a failing CI run and fix it (code, tests, co
 argument-hint: "<PR number or branch with a failing CI run>"
 ---
 
-# /plumbline-devops
+# /pl-devops
 
 Get a failing CI run green the honest way. A **fixer** subagent classifies the failure and either fixes it (compile
 error, failing test, coverage) or writes a diagnosis for you to approve (pipeline, container, migration, dependency,

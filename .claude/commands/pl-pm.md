@@ -3,7 +3,7 @@ description: Plumbline — turn a feature idea into a PRD (and, with your yes, a
 argument-hint: "<feature idea in plain English>"
 ---
 
-# /plumbline-pm
+# /pl-pm
 
 Turn a feature idea into a PRD: problem, solution, success criteria, scope, dependencies, prioritised backlog. A
 **writer** subagent drafts it; an independent **judge** checks it. Up to 3 attempts, then it is handed to the user.

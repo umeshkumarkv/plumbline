@@ -3,7 +3,7 @@ description: Plumbline — daily sprint health report (stuck, blocked, unassigne
 argument-hint: "[empty for the daily report, or a story key for one ticket]"
 ---
 
-# /plumbline-sm
+# /pl-sm
 
 The daily sprint check: what is done, in review, in progress, blocked, at risk or unassigned; whether in-review
 tickets meet the Definition of Done; velocity. A **writer** subagent writes the report from the sprint data; an
@@ -21,11 +21,12 @@ Never do the writer's or the judge's work yourself. **Shell:** run only `git` an
 writer's/runner's and the judge's job; you route, check scope and hand over.
 
 ## Step 1 — Sprint data
-Needs the connected JIRA/Atlassian tools; without them, stop and say so.
+With the connected JIRA/Atlassian tools, fetch the data as below. Without them, ask the user for an export of the
+sprint's issues (JIRA "Export → CSV" or JSON, plus last sprint's Done count) and use that as the source instead.
 1. JIRA project from the root `CLAUDE.md` Plumbline settings. Fetch the active sprint's issues (JQL
    `project = <KEY> AND sprint in openSprints()`): key, summary, status, assignee, updated, story points, labels,
    blocked-by links, whether the description has acceptance criteria. Also the previous sprint's Done count.
-2. For each In Review ticket, its PR state: human approval, `/plumbline-code-review` result, CI status, merged
+2. For each In Review ticket, its PR state: human approval, `/pl-code-review` result, CI status, merged
    (`gh pr list --search <KEY>` or the connected GitHub tools).
 3. Write all of it, **unedited**, with today's date, to `.plumbline-drafts/sprint-<name>/facts.md` (make sure
    `.plumbline-drafts/` is in `.git/info/exclude`). This file is the single source of truth.

@@ -3,7 +3,7 @@ description: Plumbline — split an epic or requirement into ready-to-build stor
 argument-hint: "<epic key, e.g. CRS-40, or a requirement in plain English>"
 ---
 
-# /plumbline-ba
+# /pl-ba
 
 Turn an approved epic (or a requirement) into user stories that a developer — human or agent — can build without
 guessing: user story, testable acceptance criteria, scope, constraints, test data, points. A **writer** subagent drafts
@@ -29,7 +29,7 @@ your edit tool if missing).
 - An epic key: fetch it (and its PRD, from the description or a linked Confluence page) with the connected
   JIRA/Atlassian tools. The epic should carry `plumbline-prd-approved`; if not, tell the user and ask whether to go on.
 - Plain English: use it and continue. BA never creates epics: the stories are created without a parent unless the
-  user names an epic at the hand-over (suggest `/plumbline-pm` for a new epic).
+  user names an epic at the hand-over (suggest `/pl-pm` for a new epic).
 - No JIRA tools: ask the user to paste the epic/PRD.
 
 Read the root `CLAUDE.md` and the CLAUDE.md of each unit involved. Split the work into stories, each inside **one

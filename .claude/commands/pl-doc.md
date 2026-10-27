@@ -3,7 +3,7 @@ description: Plumbline — after a change is merged, update the API spec and CLA
 argument-hint: "<PR number, story key, or branch>"
 ---
 
-# /plumbline-doc
+# /pl-doc
 
 After a change lands, bring the documentation in line with the code: the API spec (e.g. `openapi.yaml`) and the
 CLAUDE.md files of the units it touched. A **writer** subagent edits the docs; an independent **judge** checks every

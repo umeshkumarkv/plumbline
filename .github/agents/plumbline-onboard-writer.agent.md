@@ -1,6 +1,6 @@
 ---
 name: plumbline-onboard-writer
-description: Writes or updates one unit's CLAUDE.md (or the root master CLAUDE.md) from the code. Started by /plumbline-onboard.
+description: Writes or updates one unit's CLAUDE.md (or the root master CLAUDE.md) from the code. Started by /pl-onboard.
 tools: ['read/readFile', 'search', 'edit']
 user-invocable: false
 ---

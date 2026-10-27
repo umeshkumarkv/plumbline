@@ -1,6 +1,6 @@
 ---
 name: plumbline-sm-writer
-description: Writes the daily sprint health report from a facts file of JIRA and PR data. Started by /plumbline-sm.
+description: Writes the daily sprint health report from a facts file of JIRA and PR data. Started by /pl-sm.
 tools: Read, Grep, Glob, Edit, Write
 ---
 

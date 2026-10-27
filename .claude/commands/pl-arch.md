@@ -3,9 +3,9 @@ description: Plumbline — technical design for one story (API, data, logic, int
 argument-hint: "<story key, e.g. CRS-12, or a pasted story>"
 ---
 
-# /plumbline-arch
+# /pl-arch
 
-Write the technical design a developer (or `/plumbline-dev`) builds from: endpoint, data changes, service logic,
+Write the technical design a developer (or `/pl-dev`) builds from: endpoint, data changes, service logic,
 calls and events, security, tests, API-spec delta. A **writer** subagent drafts it; an independent **judge** checks it
 against the story and the code. Up to 3 attempts, then it is handed to the user. Nothing is posted without a yes.
 
@@ -59,4 +59,4 @@ After 3 failed attempts: stop, show the last findings, and hand over (usually th
 
 ## Step 3 — Hand over
 Show the design. Ask before posting it as a comment on the story with label `plumbline-arch-approved` — show the exact
-content first and wait for a yes. Next step: `/plumbline-dev <KEY>`.
+content first and wait for a yes. Next step: `/pl-dev <KEY>`.
