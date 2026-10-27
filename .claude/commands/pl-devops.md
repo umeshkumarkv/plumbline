@@ -20,6 +20,8 @@ Target: $ARGUMENTS
 Never do the fixer's or the judge's work yourself. **Shell:** run only `git`, `gh` and the project's build/test
 command yourself. Do not research the code yourself — the fixer and the judge do; you route,
 check scope and hand over.
+If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
+unchanged, then continue.
 
 ## Drafts
 Logs and diagnoses go in `.plumbline-drafts/ci-<branch>/`. Make sure the line

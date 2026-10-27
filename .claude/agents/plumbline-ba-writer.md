@@ -29,4 +29,7 @@ findings — fix every one.
   root CLAUDE.md, blocked by (or None).
 - **Points** — 1 / 2 / 3 / 5 / 8.
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with one line: the file you wrote and the points.

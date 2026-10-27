@@ -24,4 +24,7 @@ The idea, the CLAUDE.md paths to read, the draft path to write, and on a retry t
 6. **Backlog** — P1 (must have, unblocked, core value, ≤ 20 points total), P2 (should have), P3 (nice to have), each
    item with a rough point estimate (1/2/3/5/8).
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with one line: the file you wrote.

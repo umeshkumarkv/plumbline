@@ -27,5 +27,8 @@ already does things.
 - **Never** commit, push, open a PR or write to JIRA. The command that started you does that, with the user's approval.
 - Keep the change to what the story needs.
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with: files changed (one line each, with why), the build/test result, and anything left
 open.

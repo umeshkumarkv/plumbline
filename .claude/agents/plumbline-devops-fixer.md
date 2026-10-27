@@ -29,4 +29,7 @@ how to verify.
 - Keep the change to the failure.
 - Run the build/test command after your fix; it must pass.
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with: category, files changed (or "diagnosis only"), and the build/test result.

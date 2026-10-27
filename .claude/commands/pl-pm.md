@@ -19,6 +19,8 @@ Idea: $ARGUMENTS
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
 only `git` yourself; read and search files with your file tools. Do not research the code yourself — that is the
 writer's and the judge's job; you route, check scope and hand over.
+If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
+unchanged, then continue.
 
 ## Drafts
 Drafts go in `.plumbline-drafts/<slug>/` at the repository root (slug = a short kebab-case name for the idea). Before

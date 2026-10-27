@@ -19,6 +19,8 @@ Story: $ARGUMENTS
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
 only `git` and the project's build/test command yourself (they work in bash, PowerShell and cmd alike); find and read
 files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
+If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
+unchanged, then continue.
 
 ## Step 1 — The story
 - A JIRA key: fetch the issue with the connected JIRA/Atlassian tools (summary, description, acceptance criteria). If

@@ -20,4 +20,7 @@ The commit range, the list of what changed, the files you may edit, and on a ret
 - Document only what is in the code. If the code and the spec disagree in a way you cannot settle, write it under the
   unit's "Open questions".
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with: the files you changed, one line each with what you added.

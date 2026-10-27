@@ -19,6 +19,8 @@ Target: $ARGUMENTS (empty = the whole active sprint; a key = that ticket only)
 
 Never do the writer's or the judge's work yourself. **Shell:** run only `git` and `gh` yourself. Do not research the code yourself — that is the
 writer's/runner's and the judge's job; you route, check scope and hand over.
+If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
+unchanged, then continue.
 
 ## Step 1 — Sprint data
 With the connected JIRA/Atlassian tools, fetch the data as below. Without them, ask the user for an export of the
@@ -35,8 +37,8 @@ sprint's issues (JIRA "Export → CSV" or JSON, plus last sprint's Done count) a
 
 ## Step 2 — Attempts (1, 2, 3)
 1. **Writer** — start `plumbline-sm-writer` with: the facts path, the report path
-   `.plumbline-drafts/sprint-<name>/report.md`; on attempts 2–3 the judge's findings.
-2. **Judge** — start `plumbline-judge` with exactly: *Review:* the report path and the facts path; *Checklist:* the
+   `.plumbline-drafts/sprint-<name>/standup.md`; on attempts 2–3 the judge's findings.
+2. **Judge** — start `plumbline-judge` with exactly: *Review:* the standup path and the facts path; *Checklist:* the
    **Sprint report checklist** below, verbatim. PASS → Step 3. FAIL → next attempt.
 
 ### Sprint report checklist

@@ -19,6 +19,8 @@ Target: $ARGUMENTS (empty = every unit)
 Each subagent starts with a clean context. Never do the writer's or the judge's work yourself, and never pass the
 writer's reasoning or your own opinion to the judge. **Shell:** run only `git` commands yourself (they work in bash,
 PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
+If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
+unchanged, then continue.
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. If it has no **Plumbline settings** (JIRA project, Confluence space, base

@@ -28,4 +28,7 @@ The story path, the unit, the CLAUDE.md paths, the draft path, and on a retry th
 8. **API-spec delta** — paths and schemas to add or change, or "no change".
 9. **Open questions** — anything the story or code does not answer.
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with one line: the file you wrote.

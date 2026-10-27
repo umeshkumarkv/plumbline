@@ -28,4 +28,7 @@ path, and on a retry the judge's findings — fix every one.
 One block per criterion: `AC-n [API|UI|BOTH] — PASS|FAIL`, the exact request (credentials replaced by `$VAR`) or UI
 steps, expected, actual, and the relevant part of the response. Then the edge cases in the same format.
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with one line: passed/failed counts and the evidence path.

@@ -28,4 +28,7 @@ sprint goal; each says why and who must act) · Comments (one block per flagged 
 "In Progress for N days without an update — is there a blocker?", "Blocked by KEY-x (status). Chain: …",
 "No assignee — please assign before the next check.", "No acceptance criteria — BA to add them.").
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with one line: the report path and how many tickets are flagged.

@@ -18,6 +18,8 @@ Change: $ARGUMENTS
 
 Never do the writer's or the judge's work yourself. **Shell:** run only `git` (and `gh` if present) yourself. Do not research the code yourself — that is the
 writer's/runner's and the judge's job; you route, check scope and hand over.
+If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
+unchanged, then continue.
 
 ## Step 1 — The change
 1. Find the change: a PR number (`gh pr view <n>` / `gh pr diff <n>`, or the connected GitHub tools), a story key

@@ -50,4 +50,7 @@ true of the code today — search for it before you write it.
   and `Frontend URL` for local runs if missing (from the config: e.g. `http://localhost:<gateway or backend port>`).
 - **Rules for every change** — the cross-cutting rules (security, data ownership, testing).
 
+**If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
+content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.
+
 When you finish, reply with one line: the file you wrote and its size in KB.

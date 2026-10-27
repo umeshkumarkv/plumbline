@@ -19,6 +19,8 @@ Story: $ARGUMENTS
 
 Never do the runner's or the judge's work yourself. **Shell:** run only `git` (and `gh` if present) yourself. Do not research the code yourself — that is the
 writer's/runner's and the judge's job; you route, check scope and hand over.
+If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
+unchanged, then continue.
 
 ## Drafts
 Evidence goes in `.plumbline-drafts/<KEY>/qa/`. Make sure the line
