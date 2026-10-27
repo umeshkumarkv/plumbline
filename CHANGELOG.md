@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.2.0 — 2026-10-27 — short commands, tested end to end
+- **Commands are `/pl-<role>`** (`/pl-onboard`, `/pl-pm`, `/pl-ba`, `/pl-arch`, `/pl-dev`, `/pl-code-review`, `/pl-qa`,
+  `/pl-doc`, `/pl-devops`, `/pl-sm`); typing `/pl` lists them all. Agents keep `plumbline-*` (never typed; avoids
+  clashes). Upgrading: delete the old `plumbline-<role>` command and prompt files, copy the two folders again.
+- `/pl-sm` works without a JIRA connection: give it a sprint export (CSV/JSON).
+- Helpers start in the foreground and the command waits for each result (a background helper made a run look
+  finished early).
+- If Claude Code refuses a helper's file write (it blocks report-like files), the helper returns the content as
+  `FILE: <path>` and the command saves it; the SM draft is now `standup.md`.
+- `/pl-doc` judge traces every documented status/error code to its handler (an unhandled exception is a 500).
+- **Tested:** every command on two real repositories (candidate-review-system, broker-dealer), including `/pl-qa`
+  driving the real frontend with Playwright and `/pl-sm` on a sprint export; and every judge against deliberately
+  flawed work — 47 of 47 planted defects caught. Report: `TEST-REPORT.md`.
+
 ## 2.1.0 — 2026-10-27 — all ten roles
 - **Seven roles back, in the 2.0 pattern** (writer subagent → independent judge → up to 3 attempts → hand over; no
   local tooling; Claude Code and Copilot share one file): `/plumbline-pm`, `/plumbline-ba`, `/plumbline-arch`,

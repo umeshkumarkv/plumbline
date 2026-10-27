@@ -26,6 +26,9 @@ and **sm** every morning. Each command also works on its own.
 **Nothing to install.** Plumbline is two folders of markdown: `.claude/` (Claude Code) and `.github/` (Copilot +
 an optional CI check). Same on Windows, macOS and Linux.
 
+**Tested:** every command on two real codebases, and every judge against deliberately flawed work (47/47 defects
+caught) — see [TEST-REPORT.md](TEST-REPORT.md).
+
 ## Install — copy two folders into your project
 
 Get Plumbline once: `git clone https://github.com/umeshkumarkv/plumbline` — or on GitHub: **Code → Download ZIP** and
