@@ -46,7 +46,8 @@ true of the code today — search for it before you write it.
 - **Solution** — what the system is, in a paragraph.
 - **Units** — table: unit, folder, kind, port, owns, its CLAUDE.md.
 - **How they connect** — which unit calls which (HTTP, messaging, shared database).
-- **Plumbline settings** — keep the existing values: `JIRA project`, `Confluence space`, `Base branch`.
+- **Plumbline settings** — keep the existing values: `JIRA project`, `Confluence space`, `Base branch`; add `API URL`
+  and `Frontend URL` for local runs if missing (from the config: e.g. `http://localhost:<gateway or backend port>`).
 - **Rules for every change** — the cross-cutting rules (security, data ownership, testing).
 
 When you finish, reply with one line: the file you wrote and its size in KB.

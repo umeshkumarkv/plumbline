@@ -1,15 +1,27 @@
 # Plumbline
 
-**AI agents for existing codebases, with a second pair of eyes.** Plumbline gives Claude Code and GitHub Copilot three
-commands. Each one has a *writer* agent do the work and a separate *judge* agent — fresh context, never saw how the work
+**AI agents for existing codebases, with a second pair of eyes.** Plumbline gives Claude Code and GitHub Copilot ten
+commands, one per SDLC role. Each one has a *writer* agent do the work and a separate *judge* agent — fresh context, never saw how the work
 was done — check it against your project's rules. Up to 3 attempts, then it hands over to you. Nothing is committed,
 pushed or posted without your yes.
 
-| Command | What it does |
-|---|---|
-| `/plumbline-onboard` | Documents the codebase: one `CLAUDE.md` per service/frontend + one master `CLAUDE.md` at the root |
-| `/plumbline-dev CRS-12` | Implements a story with tests on a new branch; checked by your build, a scope check and the judge |
-| `/plumbline-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules |
+| Command | What it does | Writes to |
+|---|---|---|
+| `/plumbline-onboard` | Documents the codebase: one `CLAUDE.md` per service/frontend + a master `CLAUDE.md` | CLAUDE.md files |
+| `/plumbline-pm "idea"` | Feature idea → PRD (problem, solution, success criteria, scope, backlog) | JIRA epic* |
+| `/plumbline-ba CRS-40` | Epic → stories with testable acceptance criteria | JIRA stories* |
+| `/plumbline-arch CRS-12` | Story → technical design (API, data, logic, access, tests) | JIRA comment* |
+| `/plumbline-dev CRS-12` | Implements the story with tests on a new branch | branch* |
+| `/plumbline-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules | PR comment* |
+| `/plumbline-qa CRS-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
+| `/plumbline-doc 42` | After merge: updates the API spec and CLAUDE.md files to match the code | docs PR* |
+| `/plumbline-devops 42` | Fixes a red CI run (code/tests/coverage) or proposes the fix (pipeline/config) | branch* |
+| `/plumbline-sm` | Daily sprint health: stuck, blocked, Definition of Done, velocity | JIRA comments* |
+
+\* only after you say yes — you see the exact content first.
+
+The usual flow: **onboard** once → **pm → ba → arch → dev → code-review → qa → doc**, with **devops** when CI is red
+and **sm** every morning. Each command also works on its own.
 
 **Nothing to install.** Plumbline is two folders of markdown: `.claude/` (Claude Code) and `.github/` (Copilot +
 an optional CI check). Same on Windows, macOS and Linux.
@@ -56,14 +68,17 @@ Don't want it? Delete that file.
 
 ## What's in the box
 ```
-.claude/commands/   plumbline-onboard.md  plumbline-dev.md  plumbline-code-review.md   ← the instructions (shared)
-.claude/agents/     plumbline-onboard-writer.md  plumbline-dev-writer.md  plumbline-judge.md
-.github/prompts/    the same three commands for Copilot (they point at .claude/commands)
-.github/agents/     the same three agents for Copilot (they point at .claude/agents)
+.claude/commands/   plumbline-<role>.md   ← one per command: the steps + the judge's checklist (the real content)
+.claude/agents/     plumbline-<role>-writer.md (pm, ba, arch, dev, doc, onboard, sm), plumbline-qa-runner.md,
+                    plumbline-devops-fixer.md, plumbline-judge.md (shared by every command)
+.github/prompts/    the same commands for Copilot (each points at .claude/commands)
+.github/agents/     the same agents for Copilot (each points at .claude/agents, plus its tool list)
 .github/workflows/  plumbline-checks.yml  (optional CI)
 .github/plumbline/  semgrep-java.yml      (rules for the CI check)
 ```
-To change how a command behaves, edit its file in `.claude/` — Copilot uses the same file.
+To change how a command behaves, edit its file in `.claude/` — Copilot uses the same file. Commands that need scratch
+space (PRDs, stories, designs, QA evidence, CI logs) use `.plumbline-drafts/`, which they add to `.git/info/exclude`
+so it never shows in `git status`.
 
 ## Remove
 Delete the `plumbline-*` files from `.claude/` and `.github/`, and `.github/plumbline/`. Your CLAUDE.md files stay.

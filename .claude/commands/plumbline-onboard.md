@@ -67,7 +67,8 @@ and move on.
 Only if at least one unit passed. Writer: `plumbline-onboard-writer` with "root master file: `CLAUDE.md`, units: <the
 table from Step 2 with results>, settings: <from Step 1>". Judge: `plumbline-judge` with the root file and this
 checklist: (1) every unit is in the Units table with the right folder and CLAUDE.md; (2) How they connect matches the
-units' Integrations/API sections; (3) Plumbline settings present; (4) text outside the markers unchanged. Up to 3
+units' Integrations/API sections; (3) Plumbline settings present (JIRA project, Confluence space, base branch, API URL,
+frontend URL — the URLs match the config); (4) text outside the markers unchanged. Up to 3
 attempts.
 
 ## Step 5 — Summary

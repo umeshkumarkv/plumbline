@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.1.0 — 2026-10-27 — all ten roles
+- **Seven roles back, in the 2.0 pattern** (writer subagent → independent judge → up to 3 attempts → hand over; no
+  local tooling; Claude Code and Copilot share one file): `/plumbline-pm`, `/plumbline-ba`, `/plumbline-arch`,
+  `/plumbline-qa`, `/plumbline-doc`, `/plumbline-devops`, `/plumbline-sm`. Each keeps its 1.x checklist and hard stops,
+  made generic (no broker-dealer section numbers; the project's root CLAUDE.md is the reference).
+- New agents: `plumbline-{pm,ba,arch,doc,sm}-writer`, `plumbline-qa-runner`, `plumbline-devops-fixer`; the judge is
+  shared by all ten commands.
+- Checks that the 1.x Python benchmarks did are now done by the judge from the code or data (e.g. SM recomputes every
+  list from the sprint facts file; Doc checks every changed endpoint against the spec).
+- Drafts (PRDs, stories, designs, QA evidence, CI logs) live in `.plumbline-drafts/`, kept out of git through
+  `.git/info/exclude` — nothing is added to the project.
+- Onboarding records `API URL` and `Frontend URL` in the root CLAUDE.md settings (used by `/plumbline-qa`).
+- Orchestrators route and hand over; they do not research the code themselves, and add `.plumbline-drafts/` to
+  `.git/info/exclude` with their file tools (no shell `echo`/`mkdir`).
+- `/plumbline-devops`: failures that also fail on the base branch don't block the fix; a commit called a refactor did
+  not intend to change output, so the tests are right.
+- **Live-tested** (Claude Code, two real repositories): pm, ba, arch, doc and devops all passed their judge on attempt
+  1 — see the test report. `/plumbline-qa` and `/plumbline-sm` were not run (they need a running system and live JIRA).
+
 ## 2.0.1 — 2026-10-23 — fixes from live runs (Claude Code, two real repositories)
 - Orchestrators run only `git` (and the project's build) — no `find`/`grep`/`ls`, which fail in PowerShell; files are
   found with the agent's own search tools.
