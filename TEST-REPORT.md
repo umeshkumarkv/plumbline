@@ -52,7 +52,29 @@ Each role's judge got deliberately flawed work with the role's checklist.
 
 The earlier code-review control (a clean branch) passed with no false alarms.
 
-## 3. Problems found and fixed in this round
+## 3. One feature, end to end, with the agents (broker-dealer)
+
+Goal given to `/pl-pm`: *find the most important gaps between the domain rules in the root CLAUDE.md and what
+order-service implements, and propose a feature that closes the highest-impact one.* Each step was fed the previous
+step's output; a person only answered one question (base branch = main).
+
+| Step | Command | Output | Judge | Time | Cost |
+|---|---|---|---|---|---|
+| 1 | `/pl-pm` | PRD: order-service does not enforce the section-5 state machine — a replayed `execution.completed` can move NEW → FILLED, skipping risk. 10+ other gaps tabled | PASS, attempt 1 | 2m | $0.76 |
+| 2 | `/pl-ba` | 5 stories (16 points), blocked-by chain; flagged that root CLAUDE.md (develop, `ai/BD-*`) and settings (main, SCRUM) disagree | 5/5 PASS | 3m | $2.25 |
+| 3 | `/pl-arch` ×2 | Designs for story 1 (transition table, exhaustive switch, exception) and story 2 (enforce before save/publish; consumer logs and skips, no DLT) | PASS, attempt 1 | 5m | $1.45 |
+| 4 | `/pl-dev` | Branch `ai/SCRUM-702-…`: `OrderStatus.canTransitionTo`, `InvalidOrderTransitionException`, guarded `transitionState`, consumer handling; 4 test files, nothing deleted | PASS | 3m | $0.99 |
+| 5 | `/pl-code-review` | PASS, 2 minor (risk-rejection path still sets status directly — story 3; no REST mapping for the new exception) | — | 1m | $0.33 |
+| 6 | `/pl-doc` | order-service CLAUDE.md: table, enforcement, where it surfaces; two open questions recorded honestly | PASS, attempt 1 | 2m | $0.44 |
+| | | **9 files, +640 / −10** | | **~15m** | **~$6.20** |
+
+**Hand checks:** the gap is real (`transitionState` saved and published any target state). The new
+`OrderStatus` and exception were compiled with plain `javac` and checked against all 121 status pairs: **0
+mismatches** with the table in root CLAUDE.md section 5 (12 allowed, 109 refused, null refused). The check runs
+before any save or publish; the risk-passed chain stays legal step by step. **Not run:** the JUnit tests and the
+Kafka/docker checks — Maven Central is blocked here; run `mvn -pl services/order-service test` before merging.
+
+## 4. Problems found and fixed in this round
 1. `/pl-doc` judge accepted an invented 400 as "minor, not checked" → must trace each documented error code to its
    handler.
 2. A helper ran in the background and the command reported "still waiting" as if finished → helpers run in the
@@ -62,7 +84,7 @@ The earlier code-review control (a clean branch) passed with no false alarms.
 4. Orchestrators still sometimes run `grep`/`mkdir` themselves. Works in Claude Code (bash/Git Bash); the rule
    against it stays. Watch this in Copilot on Windows.
 
-## 4. Not tested
+## 5. Not tested
 - **GitHub Copilot** (no Copilot login here; VS Code allows clicks only). Files match VS Code's documented format.
 - **Backend builds** — Maven Central is blocked in the test environment; dev and QA stories used the frontends, and
   `/pl-dev` on a backend story reported honestly that tests could not run.

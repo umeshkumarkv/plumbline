@@ -12,7 +12,8 @@
 - `/pl-doc` judge traces every documented status/error code to its handler (an unhandled exception is a 500).
 - **Tested:** every command on two real repositories (candidate-review-system, broker-dealer), including `/pl-qa`
   driving the real frontend with Playwright and `/pl-sm` on a sprint export; and every judge against deliberately
-  flawed work — 47 of 47 planted defects caught. Report: `TEST-REPORT.md`.
+  flawed work — 47 of 47 planted defects caught; and one feature end to end on broker-dealer (pm → ba → arch → dev →
+  code-review → doc: state-machine enforcement, ~15 minutes). Report: `TEST-REPORT.md`.
 
 ## 2.1.0 — 2026-10-27 — all ten roles
 - **Seven roles back, in the 2.0 pattern** (writer subagent → independent judge → up to 3 attempts → hand over; no
