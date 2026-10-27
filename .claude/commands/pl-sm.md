@@ -13,7 +13,7 @@ user. Comments are posted to JIRA only after the user says yes.
 Target: $ARGUMENTS (empty = the whole active sprint; a key = that ticket only)
 
 ## How subagents are started
-- **Claude Code:** the Agent tool with `subagent_type: plumbline-sm-writer` or `plumbline-judge`.
+- **Claude Code:** the Agent tool with `subagent_type: plumbline-sm-writer` or `plumbline-judge` — in the foreground (`run_in_background: false`): wait for each result before the next step.
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with
   agent `plumbline-sm-writer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 

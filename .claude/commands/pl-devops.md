@@ -13,7 +13,7 @@ is handed to the user. Nothing is pushed without your yes.
 Target: $ARGUMENTS
 
 ## How subagents are started
-- **Claude Code:** the Agent tool with `subagent_type: plumbline-devops-fixer` or `plumbline-judge`.
+- **Claude Code:** the Agent tool with `subagent_type: plumbline-devops-fixer` or `plumbline-judge` — in the foreground (`run_in_background: false`): wait for each result before the next step.
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with
   agent `plumbline-devops-fixer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 

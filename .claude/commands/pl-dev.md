@@ -12,7 +12,7 @@ it is handed to the user. Nothing is committed, pushed or posted without the use
 Story: $ARGUMENTS
 
 ## How subagents are started
-- **Claude Code:** the Agent tool with `subagent_type: plumbline-dev-writer` or `plumbline-judge`.
+- **Claude Code:** the Agent tool with `subagent_type: plumbline-dev-writer` or `plumbline-judge` — in the foreground (`run_in_background: false`): wait for each result before the next step.
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with agent `plumbline-dev-writer` or `plumbline-judge` (`.github/agents/`).
   If subagents are not available in this chat, stop and say so.
 

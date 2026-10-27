@@ -11,7 +11,7 @@ review is posted only if the user says yes.
 Target: $ARGUMENTS (empty = the current branch)
 
 ## How the judge is started
-- **Claude Code:** the Agent tool with `subagent_type: plumbline-judge`.
+- **Claude Code:** the Agent tool with `subagent_type: plumbline-judge` — in the foreground (`run_in_background: false`): wait for each result before the next step.
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with agent `plumbline-judge` (`.github/agents/`). If subagents are not available
   in this chat, stop and say so.
 

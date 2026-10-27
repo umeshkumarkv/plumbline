@@ -13,7 +13,7 @@ diagnoses code.
 Story: $ARGUMENTS
 
 ## How subagents are started
-- **Claude Code:** the Agent tool with `subagent_type: plumbline-qa-runner` or `plumbline-judge`.
+- **Claude Code:** the Agent tool with `subagent_type: plumbline-qa-runner` or `plumbline-judge` — in the foreground (`run_in_background: false`): wait for each result before the next step.
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with
   agent `plumbline-qa-runner` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 

@@ -12,7 +12,7 @@ an independent **judge** subagent; up to 3 attempts per file, then it is handed 
 Target: $ARGUMENTS (empty = every unit)
 
 ## How subagents are started
-- **Claude Code:** the Agent tool with `subagent_type: plumbline-onboard-writer` or `plumbline-judge`.
+- **Claude Code:** the Agent tool with `subagent_type: plumbline-onboard-writer` or `plumbline-judge` — in the foreground (`run_in_background: false`): wait for each result before the next step.
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with agent `plumbline-onboard-writer` or `plumbline-judge`
   (`.github/agents/`). If subagents are not available in this chat, stop and say so.
 
