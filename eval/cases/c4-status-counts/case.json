@@ -1,0 +1,29 @@
+{
+  "id": "c4-status-counts",
+  "title": "Order counts by status for the back-office dashboard",
+  "pr": "Adds GET /api/orders/stats (ADMIN only): the number of orders in each status, with 0 for statuses that have none. One GROUP BY query, at most 4 rows.",
+  "kind": "clean",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderRepository.java",
+      "find": "  /** Only OrderService may call this: it checks the transition first. */",
+      "replace": "  public java.util.Map<OrderStatus, Long> countByStatus() {\n    var counts = new java.util.EnumMap<OrderStatus, Long>(OrderStatus.class);\n    jdbc.query(\"SELECT status, COUNT(*) AS n FROM orders GROUP BY status\",\n        rs -> { counts.put(OrderStatus.valueOf(rs.getString(\"status\")), rs.getLong(\"n\")); });\n    return counts;\n  }\n\n  /** Only OrderService may call this: it checks the transition first. */"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderService.java",
+      "find": "  @Transactional\n  public Order create(",
+      "replace": "  public java.util.Map<OrderStatus, Long> countByStatus() {\n    var result = new java.util.EnumMap<OrderStatus, Long>(OrderStatus.class);\n    for (OrderStatus status : OrderStatus.values()) result.put(status, 0L);\n    result.putAll(repository.countByStatus());\n    return result;\n  }\n\n  @Transactional\n  public Order create("
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "  @GetMapping(\"/{id}\")",
+      "replace": "  @GetMapping(\"/stats\")\n  @PreAuthorize(\"hasRole('ADMIN')\")\n  public java.util.Map<OrderStatus, Long> stats() {\n    return service.countByStatus();\n  }\n\n  @GetMapping(\"/{id}\")"
+    },
+    {
+      "file": "src/test/java/com/example/orderdesk/order/OrderServiceTest.java",
+      "find": "  @Test\n  void cancelShippedOrderIsRefused() {",
+      "replace": "  @Test\n  void countByStatusFillsMissingStatusesWithZero() {\n    when(repository.countByStatus()).thenReturn(java.util.Map.of(OrderStatus.NEW, 4L, OrderStatus.PAID, 2L));\n    var counts = service.countByStatus();\n    assertThat(counts).containsEntry(OrderStatus.NEW, 4L).containsEntry(OrderStatus.PAID, 2L)\n        .containsEntry(OrderStatus.SHIPPED, 0L).containsEntry(OrderStatus.CANCELLED, 0L).hasSize(4);\n  }\n\n  @Test\n  void cancelShippedOrderIsRefused() {"
+    }
+  ],
+  "new_files": {}
+}

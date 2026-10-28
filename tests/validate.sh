@@ -108,5 +108,21 @@ sys.exit(bad)
 PY
 checks=$((checks+1))
 
+# 9. Eval set: every case is well-formed and applies cleanly to the sample app
+if [ -d eval/cases ]; then
+  tmp=$(mktemp -d)
+  for d in eval/cases/*/; do
+    c=$(basename "$d")
+    python3 -c "import json,sys;c=json.load(open(sys.argv[1]));assert c['kind'] in ('clean','defects') and c['edits'] or c['new_files']" "$d/case.json" 2>/dev/null \
+      && ok || bad "eval/cases/$c/case.json is malformed"
+    if grep -q '"kind": "defects"' "$d/case.json"; then
+      python3 -c "import json,sys;a=json.load(open(sys.argv[1]));assert a['defects'] and all(x['files'] and x['keywords'] for x in a['defects'])" "$d/answer.json" 2>/dev/null \
+        && ok || bad "eval/cases/$c/answer.json missing or malformed"
+    fi
+    bash eval/setup-case.sh "$c" "$tmp/$c" > /dev/null 2>&1 && ok || bad "eval case $c does not apply to the sample app"
+  done
+  rm -rf "$tmp"
+fi
+
 echo "Plumbline self-test: $((checks-fail))/$checks checks passed."
 [ "$fail" -eq 0 ]

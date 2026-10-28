@@ -1,0 +1,29 @@
+{
+  "id": "d1-email-search",
+  "title": "Back office: find orders by customer e-mail",
+  "pr": "Adds GET /api/orders/search?email= for the back office (ADMIN only) to find a customer's orders by e-mail. Repository query, service method, controller endpoint, unit test.",
+  "kind": "defects",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderRepository.java",
+      "find": "  public List<OrderLine> findLines(long orderId) {",
+      "replace": "  public List<Order> findByCustomerEmail(String email) {\n    String sql = \"SELECT o.* FROM orders o JOIN customer c ON c.id = o.customer_id WHERE c.email = '\" + email\n        + \"' ORDER BY o.created_at DESC\";\n    return jdbc.query(sql, this::map);\n  }\n\n  public List<OrderLine> findLines(long orderId) {"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderService.java",
+      "find": "  @Transactional\n  public Order create(",
+      "replace": "  public List<Order> searchByEmail(String email) {\n    log.info(\"Back-office order search for customer email={}\", email);\n    return repository.findByCustomerEmail(email.trim().toLowerCase());\n  }\n\n  @Transactional\n  public Order create("
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "  @PostMapping\n  @ResponseStatus(HttpStatus.CREATED)",
+      "replace": "  @GetMapping(\"/search\")\n  @PreAuthorize(\"hasRole('ADMIN')\")\n  public List<Order> search(@RequestParam String email) {\n    return service.searchByEmail(email);\n  }\n\n  @PostMapping\n  @ResponseStatus(HttpStatus.CREATED)"
+    },
+    {
+      "file": "src/test/java/com/example/orderdesk/order/OrderServiceTest.java",
+      "find": "  @Test\n  void getUnknownOrderThrowsNotFound() {",
+      "replace": "  @Test\n  void searchByEmailNormalisesTheAddress() {\n    when(repository.findByCustomerEmail(\"ann@example.com\")).thenReturn(List.of(order(OrderStatus.NEW)));\n    assertThat(service.searchByEmail(\"  Ann@Example.com \")).hasSize(1);\n    verify(repository).findByCustomerEmail(\"ann@example.com\");\n  }\n\n  @Test\n  void getUnknownOrderThrowsNotFound() {"
+    }
+  ],
+  "new_files": {}
+}

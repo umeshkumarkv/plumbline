@@ -1,0 +1,56 @@
+{
+  "defects": [
+    {
+      "id": "D2-1",
+      "severity": "blocker",
+      "files": [
+        "OrderController.java"
+      ],
+      "keywords": [
+        "admin",
+        "preauthorize",
+        "authoriz",
+        "any user",
+        "any authenticated",
+        "role"
+      ],
+      "desc": "Refund endpoint has no ADMIN check"
+    },
+    {
+      "id": "D2-2",
+      "severity": "major",
+      "files": [
+        "OrderService.java",
+        "OrderRepository.java",
+        "OrderController.java"
+      ],
+      "keywords": [
+        "double",
+        "floating",
+        "bigdecimal"
+      ],
+      "desc": "Refund amount handled as double, not BigDecimal"
+    },
+    {
+      "id": "D2-3",
+      "severity": "major",
+      "files": [
+        "OrderServiceTest.java"
+      ],
+      "keywords": [
+        "isnotnull",
+        "not null",
+        "asserts nothing",
+        "weak",
+        "does not verify",
+        "doesn't verify",
+        "never verif",
+        "only checks",
+        "only asserts",
+        "no assertion"
+      ],
+      "desc": "Test only asserts the result is not null"
+    }
+  ],
+  "decoys": []
+}

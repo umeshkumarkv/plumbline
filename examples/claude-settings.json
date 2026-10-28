@@ -28,7 +28,8 @@
       "Bash(java -version)",
       "Bash(node -v)",
       "Bash(mvn -v)",
-      "Bash(./mvnw -v)"
+      "Bash(./mvnw -v)",
+      "Bash(date +%s)"
     ],
     "deny": [
       "Bash(git clean:*)",

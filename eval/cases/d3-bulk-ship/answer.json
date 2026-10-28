@@ -1,0 +1,57 @@
+{
+  "defects": [
+    {
+      "id": "D3-1",
+      "severity": "major",
+      "files": [
+        "OrderService.java"
+      ],
+      "keywords": [
+        "canmoveto",
+        "changestatus",
+        "bypass",
+        "transition",
+        "assumes paid",
+        "current status",
+        "not paid",
+        "any status",
+        "hard-code",
+        "hardcode"
+      ],
+      "desc": "Bypasses changeStatus/canMoveTo: assumes PAID without checking"
+    },
+    {
+      "id": "D3-2",
+      "severity": "major",
+      "files": [
+        "OrderController.java"
+      ],
+      "keywords": [
+        "swallow",
+        "catch",
+        "200",
+        "exception",
+        "hides"
+      ],
+      "desc": "Catches every exception and returns 200"
+    },
+    {
+      "id": "D3-3",
+      "severity": "major",
+      "files": [
+        "OrderController.java"
+      ],
+      "keywords": [
+        "apierror",
+        "error format",
+        "error body",
+        "\"error\"",
+        "code, message",
+        "{code",
+        "map.of"
+      ],
+      "desc": "Error body is a Map with 'error', not ApiError {code, message}"
+    }
+  ],
+  "decoys": []
+}

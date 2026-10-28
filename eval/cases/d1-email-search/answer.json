@@ -1,0 +1,55 @@
+{
+  "defects": [
+    {
+      "id": "D1-1",
+      "severity": "blocker",
+      "files": [
+        "OrderRepository.java"
+      ],
+      "keywords": [
+        "inject",
+        "concaten",
+        "bind",
+        "parameteri",
+        "placeholder",
+        "? param",
+        "user input into sql",
+        "built from input",
+        "string-built",
+        "string concatenation"
+      ],
+      "desc": "SQL built by concatenating the email request parameter"
+    },
+    {
+      "id": "D1-2",
+      "severity": "major",
+      "files": [
+        "OrderService.java"
+      ],
+      "keywords": [
+        "email",
+        "personal",
+        "pii"
+      ],
+      "desc": "Logs the customer e-mail address (personal data)"
+    },
+    {
+      "id": "D1-3",
+      "severity": "major",
+      "files": [
+        "OrderRepository.java",
+        "OrderService.java",
+        "OrderController.java"
+      ],
+      "keywords": [
+        "unbounded",
+        "no limit",
+        "max-limit",
+        "bounded",
+        "limit"
+      ],
+      "desc": "Search returns an unbounded list (no max-limit)"
+    }
+  ],
+  "decoys": []
+}

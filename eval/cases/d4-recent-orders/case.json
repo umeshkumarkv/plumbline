@@ -1,0 +1,29 @@
+{
+  "id": "d4-recent-orders",
+  "title": "List a customer's orders created after a date",
+  "pr": "Adds GET /api/orders/recent?customerId=&after=&limit= so the customer app can show orders since a date. Owner or ADMIN, like the existing list. Tidies the old list test while here.",
+  "kind": "defects",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderRepository.java",
+      "find": "  public List<OrderLine> findLines(long orderId) {",
+      "replace": "  public List<Order> findByCustomerAfter(long customerId, Instant after, int limit) {\n    return jdbc.query(\"SELECT * FROM orders WHERE customer_id = ? AND created_at > ? ORDER BY created_at DESC LIMIT ?\",\n        this::map, customerId, Timestamp.from(after), limit);\n  }\n\n  public List<OrderLine> findLines(long orderId) {"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderService.java",
+      "find": "  @Transactional\n  public Order create(",
+      "replace": "  public List<Order> listRecent(long customerId, Instant after, int limit) {\n    if (limit < 1) throw new IllegalArgumentException(\"limit must be at least 1\");\n    return repository.findByCustomerAfter(customerId, after, limit);\n  }\n\n  @Transactional\n  public Order create("
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "  @PostMapping\n  @ResponseStatus(HttpStatus.CREATED)",
+      "replace": "  @GetMapping(\"/recent\")\n  public List<Order> recent(@RequestParam long customerId, @RequestParam java.time.Instant after,\n                            @RequestParam(defaultValue = \"20\") int limit) {\n    if (!CurrentUser.isAdmin() && !CurrentUser.id().equals(String.valueOf(customerId))) {\n      throw new AccessDeniedException(\"Not your orders\");\n    }\n    return service.listRecent(customerId, after, limit);\n  }\n\n  @PostMapping\n  @ResponseStatus(HttpStatus.CREATED)"
+    },
+    {
+      "file": "src/test/java/com/example/orderdesk/order/OrderServiceTest.java",
+      "find": "  @Test\n  void listCapsLimitAtMaximum() {\n    service.listForCustomer(3L, 5000);\n    verify(repository).findByCustomer(3L, 100);\n  }\n\n",
+      "replace": "  @Test\n  void listRecentPassesTheDate() {\n    Instant after = Instant.parse(\"2026-01-01T00:00:00Z\");\n    service.listRecent(3L, after, 10);\n    verify(repository).findByCustomerAfter(3L, after, 10);\n  }\n\n"
+    }
+  ],
+  "new_files": {}
+}

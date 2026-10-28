@@ -32,6 +32,7 @@ we have never seen?**
 | Bugs found after merge in agent-built stories | JIRA, 30 days after the pilot | not higher than baseline |
 | Cycle time for agent-built stories | JIRA | lower than baseline |
 | Planted defects caught blind | the blind tests | ≥ 80%, no false alarms on clean code |
+| Agent time per command | `metrics.csv` `minutes` | recorded, compared with the team's own estimate |
 | Agent cost per story | the Claude Code usage page | recorded, no target |
 
 ## Exit

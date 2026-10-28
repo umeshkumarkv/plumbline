@@ -1,0 +1,41 @@
+{
+  "id": "c3-owner-check-refactor",
+  "title": "Move the owner-or-admin check into CurrentUser",
+  "pr": "Refactor, no behaviour change: the owner-or-ADMIN check that OrderController repeated four times becomes CurrentUser.requireOwnerOrAdmin(customerId). Adds unit tests for it.",
+  "kind": "clean",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/security/CurrentUser.java",
+      "find": "import org.springframework.security.core.context.SecurityContextHolder;",
+      "replace": "import org.springframework.security.access.AccessDeniedException;\nimport org.springframework.security.core.context.SecurityContextHolder;"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/security/CurrentUser.java",
+      "find": "        .anyMatch(a -> a.getAuthority().equals(\"ROLE_ADMIN\"));\n  }",
+      "replace": "        .anyMatch(a -> a.getAuthority().equals(\"ROLE_ADMIN\"));\n  }\n\n  /** Throws AccessDeniedException (403 FORBIDDEN) unless the caller is ADMIN or the given customer. */\n  public static void requireOwnerOrAdmin(long customerId) {\n    if (!isAdmin() && !id().equals(String.valueOf(customerId))) {\n      throw new AccessDeniedException(\"Not allowed for this customer\");\n    }\n  }"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "    if (!CurrentUser.isAdmin() && !CurrentUser.id().equals(String.valueOf(customerId))) {\n      throw new AccessDeniedException(\"Not your orders\");\n    }\n    return service.listForCustomer(customerId, limit);",
+      "replace": "    CurrentUser.requireOwnerOrAdmin(customerId);\n    return service.listForCustomer(customerId, limit);"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "    if (!CurrentUser.isAdmin() && !CurrentUser.id().equals(String.valueOf(request.customerId()))) {\n      throw new AccessDeniedException(\"Not your account\");\n    }\n    return service.create(request);",
+      "replace": "    CurrentUser.requireOwnerOrAdmin(request.customerId());\n    return service.create(request);"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "  private void checkOwnerOrAdmin(Order order) {\n    if (!CurrentUser.isAdmin() && !CurrentUser.id().equals(String.valueOf(order.customerId()))) {\n      throw new AccessDeniedException(\"Not your order\");\n    }\n  }",
+      "replace": "  private void checkOwnerOrAdmin(Order order) {\n    CurrentUser.requireOwnerOrAdmin(order.customerId());\n  }"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "import org.springframework.security.access.AccessDeniedException;\n",
+      "replace": ""
+    }
+  ],
+  "new_files": {
+    "src/test/java/com/example/orderdesk/security/CurrentUserTest.java": "package com.example.orderdesk.security;\n\nimport static org.assertj.core.api.Assertions.assertThatCode;\nimport static org.assertj.core.api.Assertions.assertThatThrownBy;\n\nimport java.util.List;\nimport org.junit.jupiter.api.AfterEach;\nimport org.junit.jupiter.api.Test;\nimport org.springframework.security.access.AccessDeniedException;\nimport org.springframework.security.authentication.UsernamePasswordAuthenticationToken;\nimport org.springframework.security.core.authority.SimpleGrantedAuthority;\nimport org.springframework.security.core.context.SecurityContextHolder;\n\nclass CurrentUserTest {\n\n  @AfterEach\n  void clear() {\n    SecurityContextHolder.clearContext();\n  }\n\n  private void login(String id, String role) {\n    SecurityContextHolder.getContext().setAuthentication(\n        new UsernamePasswordAuthenticationToken(id, null, List.of(new SimpleGrantedAuthority(\"ROLE_\" + role))));\n  }\n\n  @Test\n  void ownerIsAllowed() {\n    login(\"3\", \"CUSTOMER\");\n    assertThatCode(() -> CurrentUser.requireOwnerOrAdmin(3L)).doesNotThrowAnyException();\n  }\n\n  @Test\n  void otherCustomerIsRefused() {\n    login(\"4\", \"CUSTOMER\");\n    assertThatThrownBy(() -> CurrentUser.requireOwnerOrAdmin(3L)).isInstanceOf(AccessDeniedException.class);\n  }\n\n  @Test\n  void adminIsAllowedForAnyCustomer() {\n    login(\"admin-1\", \"ADMIN\");\n    assertThatCode(() -> CurrentUser.requireOwnerOrAdmin(3L)).doesNotThrowAnyException();\n  }\n}\n"
+  }
+}

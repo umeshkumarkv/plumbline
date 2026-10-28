@@ -1,0 +1,36 @@
+{
+  "id": "c2-status-history",
+  "title": "Order status history for the back office",
+  "pr": "Adds GET /api/orders/{id}/history (ADMIN only): the order's status changes from order_status_history, oldest first, capped at orderdesk.list.max-limit. 404 for an unknown order.",
+  "kind": "clean",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderRepository.java",
+      "find": "  /** Only OrderService may call this: it checks the transition first. */",
+      "replace": "  public List<StatusChange> findHistory(long orderId, int limit) {\n    return jdbc.query(\n        \"SELECT from_status, to_status, changed_by, changed_at FROM order_status_history WHERE order_id = ? \"\n            + \"ORDER BY changed_at, id LIMIT ?\",\n        (rs, n) -> new StatusChange(\n            rs.getString(\"from_status\") == null ? null : OrderStatus.valueOf(rs.getString(\"from_status\")),\n            OrderStatus.valueOf(rs.getString(\"to_status\")), rs.getString(\"changed_by\"),\n            rs.getTimestamp(\"changed_at\").toInstant()),\n        orderId, limit);\n  }\n\n  /** Only OrderService may call this: it checks the transition first. */"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderService.java",
+      "find": "  @Transactional\n  public Order create(",
+      "replace": "  public List<StatusChange> history(long id) {\n    get(id);\n    return repository.findHistory(id, maxLimit);\n  }\n\n  @Transactional\n  public Order create("
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "  @PostMapping(\"/{id}/cancel\")",
+      "replace": "  @GetMapping(\"/{id}/history\")\n  @PreAuthorize(\"hasRole('ADMIN')\")\n  public List<StatusChange> history(@PathVariable long id) {\n    return service.history(id);\n  }\n\n  @PostMapping(\"/{id}/cancel\")"
+    },
+    {
+      "file": "src/test/java/com/example/orderdesk/order/OrderServiceTest.java",
+      "find": "  @Test\n  void cancelShippedOrderIsRefused() {",
+      "replace": "  @Test\n  void historyIsCappedAtMaxLimit() {\n    when(repository.findById(7L)).thenReturn(Optional.of(order(OrderStatus.PAID)));\n    service.history(7L);\n    verify(repository).findHistory(7L, 100);\n  }\n\n  @Test\n  void historyOfUnknownOrderThrowsNotFound() {\n    when(repository.findById(99L)).thenReturn(Optional.empty());\n    assertThatThrownBy(() -> service.history(99L)).isInstanceOf(NotFoundException.class);\n    verify(repository, never()).findHistory(anyLong(), anyInt());\n  }\n\n  @Test\n  void cancelShippedOrderIsRefused() {"
+    },
+    {
+      "file": "src/test/java/com/example/orderdesk/order/OrderServiceTest.java",
+      "find": "import static org.mockito.ArgumentMatchers.anyLong;",
+      "replace": "import static org.mockito.ArgumentMatchers.anyInt;\nimport static org.mockito.ArgumentMatchers.anyLong;"
+    }
+  ],
+  "new_files": {
+    "src/main/java/com/example/orderdesk/order/StatusChange.java": "package com.example.orderdesk.order;\n\nimport java.time.Instant;\n\n/** One row of order_status_history; fromStatus is null for the first entry. */\npublic record StatusChange(OrderStatus fromStatus, OrderStatus toStatus, String changedBy, Instant changedAt) {}\n"
+  }
+}

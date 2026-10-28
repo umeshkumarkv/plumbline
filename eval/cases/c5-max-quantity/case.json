@@ -1,0 +1,21 @@
+{
+  "id": "c5-max-quantity",
+  "title": "Cap the quantity of an order line at 1000",
+  "pr": "A line's quantity must be 1..1000 (was: at least 1); above that the request is rejected with 400 VALIDATION_FAILED by the existing handler. Adds validation tests.",
+  "kind": "clean",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderLine.java",
+      "find": "import jakarta.validation.constraints.Min;",
+      "replace": "import jakarta.validation.constraints.Max;\nimport jakarta.validation.constraints.Min;"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderLine.java",
+      "find": "@Min(1) int quantity",
+      "replace": "@Min(1) @Max(1000) int quantity"
+    }
+  ],
+  "new_files": {
+    "src/test/java/com/example/orderdesk/order/OrderLineTest.java": "package com.example.orderdesk.order;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\nimport jakarta.validation.Validation;\nimport jakarta.validation.Validator;\nimport java.math.BigDecimal;\nimport org.junit.jupiter.api.Test;\n\nclass OrderLineTest {\n  private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();\n\n  @Test\n  void quantityOf1000IsAccepted() {\n    assertThat(validator.validate(new OrderLine(\"A-1\", 1000, new BigDecimal(\"1.00\")))).isEmpty();\n  }\n\n  @Test\n  void quantityOf1001IsRejected() {\n    assertThat(validator.validate(new OrderLine(\"A-1\", 1001, new BigDecimal(\"1.00\"))))\n        .extracting(v -> v.getPropertyPath().toString()).containsExactly(\"quantity\");\n  }\n\n  @Test\n  void quantityOf0IsStillRejected() {\n    assertThat(validator.validate(new OrderLine(\"A-1\", 0, new BigDecimal(\"1.00\"))))\n        .extracting(v -> v.getPropertyPath().toString()).containsExactly(\"quantity\");\n  }\n}\n"
+  }
+}

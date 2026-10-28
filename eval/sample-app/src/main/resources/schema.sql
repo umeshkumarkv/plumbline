@@ -1,0 +1,27 @@
+CREATE TABLE customer (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  email VARCHAR(200) NOT NULL UNIQUE
+);
+CREATE TABLE orders (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  customer_id BIGINT NOT NULL REFERENCES customer(id),
+  status VARCHAR(20) NOT NULL,
+  total_amount DECIMAL(12,2) NOT NULL,
+  created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE order_line (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT NOT NULL REFERENCES orders(id),
+  sku VARCHAR(40) NOT NULL,
+  quantity INT NOT NULL,
+  unit_price DECIMAL(12,2) NOT NULL
+);
+CREATE TABLE order_status_history (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT NOT NULL REFERENCES orders(id),
+  from_status VARCHAR(20),
+  to_status VARCHAR(20) NOT NULL,
+  changed_by VARCHAR(100) NOT NULL,
+  changed_at TIMESTAMP NOT NULL
+);

@@ -1,0 +1,21 @@
+{
+  "id": "c1-max-lines",
+  "title": "Limit an order to 50 lines",
+  "pr": "An order may have at most 50 lines; more returns 400 VALIDATION_FAILED through the existing handler. Adds validation tests for the request.",
+  "kind": "clean",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/order/CreateOrderRequest.java",
+      "find": "import jakarta.validation.constraints.NotNull;",
+      "replace": "import jakarta.validation.constraints.NotNull;\nimport jakarta.validation.constraints.Size;"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/CreateOrderRequest.java",
+      "find": "@NotEmpty List<@Valid OrderLine> lines",
+      "replace": "@NotEmpty @Size(max = 50) List<@Valid OrderLine> lines"
+    }
+  ],
+  "new_files": {
+    "src/test/java/com/example/orderdesk/order/CreateOrderRequestTest.java": "package com.example.orderdesk.order;\n\nimport static org.assertj.core.api.Assertions.assertThat;\n\nimport jakarta.validation.Validation;\nimport jakarta.validation.Validator;\nimport java.math.BigDecimal;\nimport java.util.Collections;\nimport org.junit.jupiter.api.Test;\n\nclass CreateOrderRequestTest {\n  private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();\n  private final OrderLine line = new OrderLine(\"A-1\", 1, new BigDecimal(\"1.00\"));\n\n  @Test\n  void fiftyLinesAreAccepted() {\n    var request = new CreateOrderRequest(3L, Collections.nCopies(50, line));\n    assertThat(validator.validate(request)).isEmpty();\n  }\n\n  @Test\n  void fiftyOneLinesAreRejected() {\n    var request = new CreateOrderRequest(3L, Collections.nCopies(51, line));\n    assertThat(validator.validate(request)).extracting(v -> v.getPropertyPath().toString()).containsExactly(\"lines\");\n  }\n}\n"
+  }
+}

@@ -38,8 +38,9 @@ unchanged, then continue — but only for a path you gave that helper; any other
 
 ## Metrics
 At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
-`date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
-story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
+`date,command,target,attempts,verdict,tests_run,minutes,human_decision` if missing): today's date, this command, the
+story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, the
+minutes from start to hand-over (run `date +%s` once at the start and once at the hand-over), and leave
 `human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
 The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-sm` can summarise it.
 **Files:** create every draft, tracker and metrics file with your write tool — it creates missing folders. Never

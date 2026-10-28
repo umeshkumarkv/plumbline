@@ -1,0 +1,34 @@
+{
+  "id": "d2-refund",
+  "title": "Refund part of an order",
+  "pr": "Adds POST /api/orders/{id}/refund?amount= so support can refund part of a paid order. Stores the refunded amount on the order. Includes a unit test.",
+  "kind": "defects",
+  "edits": [
+    {
+      "file": "src/main/resources/schema.sql",
+      "find": "  total_amount DECIMAL(12,2) NOT NULL,\n  created_at TIMESTAMP NOT NULL\n);",
+      "replace": "  total_amount DECIMAL(12,2) NOT NULL,\n  refunded_amount DECIMAL(12,2) NOT NULL DEFAULT 0,\n  created_at TIMESTAMP NOT NULL\n);"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderRepository.java",
+      "find": "  /** Only OrderService may call this: it checks the transition first. */",
+      "replace": "  public void addRefund(long id, double amount) {\n    jdbc.update(\"UPDATE orders SET refunded_amount = refunded_amount + ? WHERE id = ?\", amount, id);\n  }\n\n  /** Only OrderService may call this: it checks the transition first. */"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderService.java",
+      "find": "  @Transactional\n  public Order changeStatus(",
+      "replace": "  @Transactional\n  public Order refund(long id, double amount) {\n    Order order = get(id);\n    if (order.status() != OrderStatus.PAID && order.status() != OrderStatus.SHIPPED) {\n      throw new InvalidStateException(\"Only paid or shipped orders can be refunded\");\n    }\n    if (amount <= 0 || amount > order.totalAmount().doubleValue()) {\n      throw new IllegalArgumentException(\"Refund amount out of range\");\n    }\n    repository.addRefund(id, amount);\n    log.info(\"Order refunded: orderId={}\", id);\n    return order;\n  }\n\n  @Transactional\n  public Order changeStatus("
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "  @PostMapping(\"/{id}/cancel\")",
+      "replace": "  @PostMapping(\"/{id}/refund\")\n  public Order refund(@PathVariable long id, @RequestParam double amount) {\n    return service.refund(id, amount);\n  }\n\n  @PostMapping(\"/{id}/cancel\")"
+    },
+    {
+      "file": "src/test/java/com/example/orderdesk/order/OrderServiceTest.java",
+      "find": "  @Test\n  void cancelShippedOrderIsRefused() {",
+      "replace": "  @Test\n  void refundPaidOrder() {\n    when(repository.findById(7L)).thenReturn(Optional.of(order(OrderStatus.PAID)));\n    Order result = service.refund(7L, 10.0);\n    assertThat(result).isNotNull();\n  }\n\n  @Test\n  void cancelShippedOrderIsRefused() {"
+    }
+  ],
+  "new_files": {}
+}

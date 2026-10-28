@@ -1,0 +1,34 @@
+{
+  "id": "d5-discount",
+  "title": "Apply a percentage discount to a new order",
+  "pr": "Adds POST /api/orders/{id}/discount?percent= (ADMIN only) to reduce the total of a NEW order by a whole-number percentage, and rejects a discount that brings the total to zero.",
+  "kind": "defects",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderRepository.java",
+      "find": "  /** Only OrderService may call this: it checks the transition first. */",
+      "replace": "  public void updateTotal(long id, BigDecimal total) {\n    jdbc.update(\"UPDATE orders SET total_amount = ? WHERE id = ?\", total, id);\n  }\n\n  /** Only OrderService may call this: it checks the transition first. */"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderRepository.java",
+      "find": "import java.sql.ResultSet;",
+      "replace": "import java.math.BigDecimal;\nimport java.sql.ResultSet;"
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderService.java",
+      "find": "  @Transactional\n  public Order changeStatus(",
+      "replace": "  @Transactional\n  public Order applyDiscount(long id, int percent) {\n    if (percent < 1 || percent > 90) throw new IllegalArgumentException(\"percent must be 1..90\");\n    Order order = get(id);\n    if (order.status() != OrderStatus.NEW) throw new InvalidStateException(\"Only NEW orders can be discounted\");\n    BigDecimal factor = BigDecimal.valueOf(1 - percent / 100);\n    BigDecimal discounted = order.totalAmount().multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP);\n    if (discounted.equals(BigDecimal.ZERO)) throw new IllegalArgumentException(\"Discount would make the order free\");\n    repository.updateTotal(id, discounted);\n    log.info(\"Order discounted: orderId={} percent={}\", id, percent);\n    return new Order(order.id(), order.customerId(), order.status(), discounted, order.createdAt());\n  }\n\n  @Transactional\n  public Order changeStatus("
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "  @PostMapping(\"/{id}/cancel\")",
+      "replace": "  @PostMapping(\"/{id}/discount\")\n  @PreAuthorize(\"hasRole('ADMIN')\")\n  public Order discount(@PathVariable long id, @RequestParam int percent) {\n    return service.applyDiscount(id, percent);\n  }\n\n  @PostMapping(\"/{id}/cancel\")"
+    },
+    {
+      "file": "src/test/java/com/example/orderdesk/order/OrderServiceTest.java",
+      "find": "  @Test\n  void cancelShippedOrderIsRefused() {",
+      "replace": "  @Test\n  void discountRejectsOutOfRangePercent() {\n    assertThatThrownBy(() -> service.applyDiscount(7L, 95)).isInstanceOf(IllegalArgumentException.class);\n  }\n\n  @Test\n  void discountOnlyForNewOrders() {\n    when(repository.findById(7L)).thenReturn(Optional.of(order(OrderStatus.PAID)));\n    assertThatThrownBy(() -> service.applyDiscount(7L, 10)).isInstanceOf(InvalidStateException.class);\n  }\n\n  @Test\n  void cancelShippedOrderIsRefused() {"
+    }
+  ],
+  "new_files": {}
+}

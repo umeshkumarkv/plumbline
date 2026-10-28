@@ -1,0 +1,24 @@
+{
+  "id": "d3-bulk-ship",
+  "title": "Ship several orders at once",
+  "pr": "Adds POST /api/orders/ship-batch for the warehouse: ships up to 50 paid orders in one call (ADMIN only). Returns the orders that were shipped.",
+  "kind": "defects",
+  "edits": [
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderService.java",
+      "find": "  @Transactional\n  public Order changeStatus(",
+      "replace": "  @Transactional\n  public List<Order> shipAll(List<Long> ids, String changedBy) {\n    if (ids.size() > 50) throw new IllegalArgumentException(\"At most 50 orders per batch\");\n    List<Order> shipped = new java.util.ArrayList<>();\n    for (Long id : ids) {\n      Order order = get(id);\n      repository.updateStatus(id, OrderStatus.PAID, OrderStatus.SHIPPED, changedBy);\n      shipped.add(order.withStatus(OrderStatus.SHIPPED));\n    }\n    return shipped;\n  }\n\n  @Transactional\n  public Order changeStatus("
+    },
+    {
+      "file": "src/main/java/com/example/orderdesk/order/OrderController.java",
+      "find": "  @PostMapping(\"/{id}/cancel\")",
+      "replace": "  @PostMapping(\"/ship-batch\")\n  @PreAuthorize(\"hasRole('ADMIN')\")\n  public Object shipBatch(@RequestBody List<Long> ids) {\n    try {\n      return service.shipAll(ids, CurrentUser.id());\n    } catch (Exception e) {\n      return java.util.Map.of(\"error\", \"Batch failed\", \"shipped\", List.of());\n    }\n  }\n\n  @PostMapping(\"/{id}/cancel\")"
+    },
+    {
+      "file": "src/test/java/com/example/orderdesk/order/OrderServiceTest.java",
+      "find": "  @Test\n  void cancelShippedOrderIsRefused() {",
+      "replace": "  @Test\n  void shipAllShipsEachOrder() {\n    when(repository.findById(7L)).thenReturn(Optional.of(order(OrderStatus.PAID)));\n    assertThat(service.shipAll(List.of(7L), \"admin-1\")).hasSize(1);\n    verify(repository).updateStatus(7L, OrderStatus.PAID, OrderStatus.SHIPPED, \"admin-1\");\n  }\n\n  @Test\n  void cancelShippedOrderIsRefused() {"
+    }
+  ],
+  "new_files": {}
+}

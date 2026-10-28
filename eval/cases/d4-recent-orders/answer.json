@@ -1,0 +1,48 @@
+{
+  "defects": [
+    {
+      "id": "D4-1",
+      "severity": "major",
+      "files": [
+        "OrderService.java",
+        "OrderRepository.java",
+        "OrderController.java"
+      ],
+      "keywords": [
+        "max-limit",
+        "maxlimit",
+        "cap",
+        "unbounded",
+        "bounded",
+        "math.min",
+        "5000"
+      ],
+      "desc": "listRecent does not cap limit at max-limit"
+    },
+    {
+      "id": "D4-2",
+      "severity": "major",
+      "files": [
+        "OrderServiceTest.java"
+      ],
+      "keywords": [
+        "listcapslimitatmaximum",
+        "deleted",
+        "removed",
+        "delete"
+      ],
+      "desc": "Existing test listCapsLimitAtMaximum deleted"
+    }
+  ],
+  "decoys": [
+    {
+      "files": [
+        "OrderController.java"
+      ],
+      "keywords": [
+        "preauthorize"
+      ],
+      "desc": "No @PreAuthorize on /recent is correct: it is customer-facing and checks owner-or-ADMIN like the existing list"
+    }
+  ]
+}
