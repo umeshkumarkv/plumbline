@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.1 — 2026-10-28 — independent critique applied
+- Test report corrected (all runs used `claude-sonnet-5-5`; the "second model" test was a repeat), evidence status
+  stated, tighter example permissions, onboarding one unit at a time. See TEST-REPORT.md section 7.
+
 ## 2.4.0 — 2026-10-28 — onboarding proves the tests run; decisions get settled; secrets and injection
 - **Test recipe:** `/pl-onboard` runs each unit's test command once and records, in its CLAUDE.md, the command, the
   runtime it needs and the real result (or exactly why it could not run), plus hard-coded paths tests depend on. The
