@@ -1,3 +1,4 @@
+<!-- plumbline:template handoff-arch v1 -->
 <!-- plumbline:forbid ^```(java|kotlin|typescript|ts|js|python|go)|public (class|interface) |@(Service|RestController|Entity|Test)$ -->
 [Plumbline /pl-arch] {{YYYY-MM-DD}}
 
@@ -39,4 +40,4 @@
 ## Open questions
 {{anything the story or code does not answer, or None}}
 
-— Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · handoff-arch v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

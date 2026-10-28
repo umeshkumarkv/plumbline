@@ -1,3 +1,4 @@
+<!-- plumbline:template hld v1 -->
 <!-- plumbline:forbid ^```(java|kotlin|typescript|ts|js|python|go)|public (class|interface) |@(Service|RestController|Entity|Test)$ -->
 # {{Epic key}} — {{feature title}} — HLD
 
@@ -25,4 +26,4 @@
 ## Risks and open questions
 {{or None}}
 
-— Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · hld v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

@@ -33,7 +33,9 @@ true of the code today — search for it before you write it.
 - Use only your read, search and edit tools — no shell commands.
 
 ## Unit CLAUDE.md — the core (skip a section only by writing "None found")
-Start the block with one line: `Last updated: <commit> (<date>, /pl-onboard)` — the commit you were given. This file is
+Write it on `.github/plumbline/templates/claude-unit.md`: its `## ` headings exactly (no numbers), in its order, inside
+its markers. Start the block with `Last updated: <commit> (<date>, /pl-onboard, claude-unit v1)` — the commit you were
+given. This file is
 the single source of truth other agents work from instead of re-reading the code; `/pl-doc` keeps it current after
 every merge.
 1. **Purpose** — what this unit does, in 3–5 lines.
@@ -54,7 +56,9 @@ every merge.
    line "Open CLAUDE.reference.md only for the section your task needs."
 
 ## Unit CLAUDE.reference.md — the catalogue
-Between `<!-- plumbline:begin reference -->` and `<!-- plumbline:end reference -->`, the same `Last updated` line, then:
+Write it on `.github/plumbline/templates/claude-reference.md` (its headings exactly), between
+`<!-- plumbline:begin reference -->` and `<!-- plumbline:end reference -->`, with `Last updated: <commit> (<date>,
+/pl-onboard, claude-reference v1)`, then:
 1. **API** — backend: every endpoint as `VERB /path — handler — one-line purpose`, grouped by controller.
    Frontend: every route/page, then every backend call as `VERB /path — file — backend endpoint it hits`; calls no
    backend endpoint serves go in a separate "Calls with no matching endpoint" list.
@@ -66,6 +70,8 @@ Between `<!-- plumbline:begin reference -->` and `<!-- plumbline:end reference -
 6. **Open questions** — what the code does not answer.
 
 ## Root (master) CLAUDE.md — the `solution` block
+Write it on `.github/plumbline/templates/claude-root.md` (its headings exactly), starting the block with
+`Last updated: <commit> (<date>, /pl-onboard, claude-root v1)`:
 - **Solution** — what the system is, in a paragraph.
 - **Units** — table: unit, folder, kind, port, owns, its CLAUDE.md.
 - **How they connect** — which unit calls which (HTTP, messaging, shared database).

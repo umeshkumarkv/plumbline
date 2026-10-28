@@ -1,3 +1,4 @@
+<!-- plumbline:template prd v1 -->
 <!-- plumbline:forbid (GET|POST|PUT|PATCH|DELETE) /|/api/|[a-z]\.(java|ts|py|kt)|[A-Z][a-z]+(Service|Controller|Repository|Exception|Dto|Entity)|HTTP [1-5][0-9][0-9]|status [1-5][0-9][0-9]|customfield_|[Ss]tory points|[0-9]+ points -->
 # {{Epic key or "new epic"}} — {{feature title}} — PRD
 
@@ -25,4 +26,4 @@
 ## Open questions
 {{for the business, or None}}
 
-— Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · prd v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

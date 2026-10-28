@@ -85,8 +85,11 @@ your yes.
   person: the PR approval your GitHub branch protection requires.
 - **The architect's design is final.** Dev, code review, QA, doc and devops follow the HLD and LLD exactly; a role that
   cannot stops with `design gap — /pl-arch <KEY>` instead of working around it, and code review fails any difference.
-- **Same shape everywhere.** Everything posted is written on a template in `.github/plumbline/templates/`;
-  `check-template.sh` checks headings and fields before any judge runs. Acceptance criteria carry ids (`AC1`, `AC2`,
+- **Same shape everywhere, versioned.** Everything Plumbline produces — JIRA descriptions and comments, Confluence
+  pages, PR descriptions and reviews, and the CLAUDE.md files — is written on a template in
+  `.github/plumbline/templates/` and names its template version (`story v1`). `check-template.sh` checks headings,
+  fields, the version and the role lane before any judge runs; a template cannot change without a new version
+  (`VERSIONS` lock + `CHANGELOG.md`). Acceptance criteria carry ids (`AC1`, `AC2`,
   …) that design, tests and QA evidence cite.
 - **Every agent stays in its lane.** Each writer has a *Your lane* section (what it owns, what it must never do);
   the template check rejects what other roles own (an API path or points in a BA story, code in a design), the judge

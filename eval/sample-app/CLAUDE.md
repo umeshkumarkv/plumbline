@@ -1,6 +1,8 @@
 # Order Desk
 
 <!-- plumbline:begin solution -->
+Last updated: 0000000 (2026-10-28, /pl-onboard, claude-root v1)
+
 ## Solution
 Order Desk is a small order service: customers place orders with lines; back-office staff (ADMIN) mark them paid and
 shipped; customers or staff can cancel. One Spring Boot unit; H2 in memory for local runs.
@@ -18,7 +20,7 @@ One Spring Boot service behind an API gateway; stateless; authorization in this 
 error format (`ApiError`) for every endpoint.
 
 ## Decisions & trade-offs
-None recorded beyond `src/CLAUDE.md` §7.
+None recorded beyond `src/CLAUDE.md` Decisions.
 
 ## Plumbline settings
 - JIRA project: OD

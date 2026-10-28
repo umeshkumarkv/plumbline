@@ -131,7 +131,7 @@ for t in $(grep -rhoE 'templates/[a-z-]+\.md|`[a-z-]+\.md`' .claude | grep -oE '
   [ -f ".github/plumbline/templates/$t" ] && ok || bad "a command names template '$t' that does not exist"
 done
 for t in .github/plumbline/templates/*.md; do
-  [ "$(basename "$t")" = README.md ] && continue
+  case "$(basename "$t")" in README.md|CHANGELOG.md|claude-*.md) continue;; esac
   grep -q '^— Plumbline {{version}} · ' "$t" && ! grep -q '^## Record$' "$t" && ok || bad "$t: needs the '— Plumbline …' footer (no '## Record')"
 done
 bash .github/plumbline/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.good.md >/dev/null \
@@ -147,6 +147,54 @@ for a in pm ba arch dev qa doc sm onboard; do
   grep -q '^## Your lane$' "$f" && ok || bad "$f: needs a '## Your lane' section"
 done
 for a in pm ba sm; do grep -qE '^tools: Read, (Grep, Glob, )?Write$' .claude/agents/plumbline-$a-writer.md && ok || bad "plumbline-$a-writer: read and write only (no Edit, no Bash)"; done
+
+# 11. Template versions: every template has its name/version line, is in the lock with the same version and content,
+#     and has a CHANGELOG entry — a template cannot change without its version going up
+python3 - <<'PY' || fail=$((fail+1))
+import glob, hashlib, os, re, sys
+lock = {}
+for l in open(".github/plumbline/templates/VERSIONS"):
+    if l.strip() and not l.startswith("#"): n, v, h = l.split(); lock[n] = (v, h)
+log = open(".github/plumbline/templates/CHANGELOG.md").read()
+errs = []
+for t in sorted(glob.glob(".github/plumbline/templates/*.md")):
+    n = os.path.basename(t)[:-3]
+    if n in ("README", "CHANGELOG"): continue
+    s = open(t, "rb").read()
+    m = re.search(rb"<!-- plumbline:template ([a-z-]+) (v[0-9]+) -->", s)
+    if not m or m.group(1).decode() != n: errs.append(f"{t}: needs <!-- plumbline:template {n} vN -->"); continue
+    v = m.group(2).decode()
+    if n not in lock: errs.append(f"{n}: not in templates/VERSIONS — run bash tests/lock-templates.sh"); continue
+    lv, lh = lock[n]
+    if v == lv and hashlib.sha256(s).hexdigest() != lh:
+        errs.append(f"{n} {v}: changed without a new version — bump it, add a CHANGELOG entry, run tests/lock-templates.sh")
+    elif v != lv: errs.append(f"{n}: is {v}, lock says {lv} — run bash tests/lock-templates.sh")
+    if v != "v1" and f"{n} {v}" not in log: errs.append(f"{n} {v}: no entry in templates/CHANGELOG.md")
+for e in errs: print("FAIL:", e)
+sys.exit(1 if errs else 0)
+PY
+checks=$((checks+1))
+
+for pair in "claude-root:CLAUDE.md" "claude-unit:src/CLAUDE.md" "claude-reference:src/CLAUDE.reference.md"; do
+  bash .github/plumbline/check-template.sh ".github/plumbline/templates/${pair%%:*}.md" "eval/sample-app/${pair#*:}" >/dev/null \
+    && ok || bad "eval sample ${pair#*:} does not match template ${pair%%:*}"
+done
+
+# 12. Every output a command posts names its template
+while read -r c ts; do
+  for t in $ts; do grep -q "\b$t\b" ".claude/commands/$c.md" && ok || bad "$c: never names its template $t"; done
+done <<'MAP'
+pl-pm prd.md epic.md
+pl-ba story.md
+pl-arch hld.md handoff-hld.md handoff-arch.md pr.md
+pl-dev handoff-dev.md pr.md
+pl-code-review handoff-review.md
+pl-qa handoff-qa.md
+pl-doc handoff-doc.md pr.md
+pl-devops handoff-devops.md pr.md
+pl-sm sprint-report.md sm-flag.md
+pl-onboard claude-unit.md claude-reference.md claude-root.md pr.md
+MAP
 
 echo "Plumbline self-test: $((checks-fail))/$checks checks passed."
 [ "$fail" -eq 0 ]

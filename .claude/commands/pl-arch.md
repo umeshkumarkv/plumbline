@@ -31,12 +31,13 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
   <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
-- **Templates and lanes:** what will be posted is written on its template (JIRA hand-off table;
-  `.github/plumbline/templates/`). Give each writer the template, the version (`.github/plumbline/VERSION`) and
+- **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
+  every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
+  `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
+  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and
   `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
-  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` — it also fails
-  text outside the role's lane: FAIL = that attempt's finding, no judge. No bash → the judge checks it instead. Before
-  posting, set the footer's `judge` to the result (e.g. `PASS 1/3`).
+  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` (it also fails text
+  outside the lane): FAIL = that attempt's finding, no judge. No bash → the judge checks it. Set the footer's `judge`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -59,13 +60,14 @@ The person running a command is that role's SME: their yes at the hand-over is t
 |---|---|---|---|
 | `/pl-pm` | PRD page; the epic, with summary + PRD link | `prd.md`, `epic.md` | `plumbline-prd-approved` |
 | `/pl-ba` | stories under the epic — business criteria | `story.md` | `plumbline-dor-ready` |
-| `/pl-arch <EPIC>` | HLD page under the PRD; epic comment with its link; decisions → CLAUDE.md docs PR | `hld.md`, `handoff-hld.md` | `plumbline-hld-final` |
+| `/pl-arch <EPIC>` | HLD page under the PRD; epic comment with its link; decisions → CLAUDE.md docs PR | `hld.md`, `handoff-hld.md`, `pr.md` | `plumbline-hld-final` |
 | `/pl-arch <STORY>` | story comment — the LLD; story points set | `handoff-arch.md` | `plumbline-arch-approved` |
-| `/pl-dev` | story comment — branch, PR, test result | `handoff-dev.md` | — (the PR is reviewed next) |
-| `/pl-code-review` | PR review + story comment — verdict and findings | `handoff-review.md` | `plumbline-review-passed` |
+| `/pl-dev` | PR description; story comment — branch, PR, test result | `pr.md`, `handoff-dev.md` | — (the PR is reviewed next) |
+| `/pl-code-review` | the same text as the PR review and the story comment | `handoff-review.md` | `plumbline-review-passed` |
 | `/pl-qa` | story comment — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
-| `/pl-doc` | docs PR updating CLAUDE.md + story comment | `handoff-doc.md` | the architect approves the docs PR |
-| `/pl-devops`, `/pl-sm` | comment on the story / sprint issue | `handoff-devops.md`, `sprint-report.md` | — |
+| `/pl-doc` | docs PR updating CLAUDE.md + story comment | `pr.md`, `handoff-doc.md` | the architect approves the docs PR |
+| `/pl-devops` | PR description; story comment | `pr.md`, `handoff-devops.md` | — |
+| `/pl-sm` | sprint report; one comment per flagged ticket | `sprint-report.md`, `sm-flag.md` | — |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
   `[Plumbline /pl-<role>]` (JIRA returns `\[Plumbline …\]`: ignore backslashes), and each PRD or HLD page they link —
@@ -125,16 +127,14 @@ After 3 failed attempts: stop, show the last findings, hand over (usually the st
 5. Service logic: class and method, ordered steps, error paths; follows the layering rules in the CLAUDE.md files.
 6. Calls to other units hit endpoints that exist; the failure/timeout behaviour is stated. Consumed events have a
    producer; produced events have a consumer or a stated reason.
-7. Cache/config/env-var changes named, or "none".
-8. **Identity and access, exactly:** the field used for ownership checks, the kind of each identifier (e.g. user id vs
-   customer id, compared like with like), who may call each endpoint per role, and the headers/claims the gateway
-   passes.
+7. Cache/config/env-var changes named, or "none"; the API-spec delta stated, or "no change".
+8. **Identity and access, exactly:** the ownership field, each identifier's kind (user id vs customer id, compared like
+   with like), who may call each endpoint per role, and the headers/claims the gateway passes.
 9. Tests: at least 3 cases per layer touched (logic, API/controller, UI), including the error paths.
-10. API-spec delta (e.g. openapi.yaml) stated, or "no change". No placeholders left.
 
 ## Step 3 — Hand over
 Show the HLD or LLD, then ask before each — exact text first, then a yes. **HLD:** publish the page `<EPIC> — <title> —
-HLD` under the PRD page; commit the CLAUDE.md changes on `docs/<EPIC>-hld`, push and open a docs PR (the architect
-owns it — merge it before stories are built); post `handoff-hld.md` on the epic with the page link, version and PR;
+HLD` under the PRD page; commit the CLAUDE.md changes on `docs/<EPIC>-hld`, push, open a docs PR on `pr.md` (the
+architect owns it — merge it before stories are built); post `handoff-hld.md` on the epic with the page link, version and PR;
 add `plumbline-hld-final`. **LLD:** post it on the story; add `plumbline-arch-approved`; set the story points and one
 `Blocks` link per technical blocker. The architect's yes is final. Next: `/pl-arch <STORY>` in *Story design order*.

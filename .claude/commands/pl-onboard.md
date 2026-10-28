@@ -31,12 +31,13 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
   <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
-- **Templates and lanes:** what will be posted is written on its template (JIRA hand-off table;
-  `.github/plumbline/templates/`). Give each writer the template, the version (`.github/plumbline/VERSION`) and
+- **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
+  every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
+  `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
+  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and
   `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
-  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` — it also fails
-  text outside the role's lane: FAIL = that attempt's finding, no judge. No bash → the judge checks it instead. Before
-  posting, set the footer's `judge` to the result (e.g. `PASS 1/3`).
+  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` (it also fails text
+  outside the lane): FAIL = that attempt's finding, no judge. No bash → the judge checks it. Set the footer's `judge`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -107,7 +108,7 @@ and move on.
 8. Tech debt states the TODO/FIXME count and top files; other debt as counts plus up to 10 locations. Debt recorded
    truthfully passes.
 9. Core: 8 sections, at most 8 KB, the Reference lines' counts match the reference file. Reference: 6 sections, at
-   most 30 KB. Both start with `Last updated: <commit> (<date>, /pl-onboard)` with the commit given in the request.
+   most 30 KB. Both start with `Last updated: <commit> (<date>, /pl-onboard, <template> v<N>)`, with the given commit.
 10. Text outside the plumbline markers is unchanged, in both files.
 11. Decisions & trade-offs: each one names its source (code comment, README, ADR, commit message, config) — none is
     invented; "None found" is fine.
@@ -118,8 +119,7 @@ table from Step 2 with results>, settings: <from Step 1>". Judge: `plumbline-jud
 checklist: (1) every unit is in the Units table with the right folder and CLAUDE.md; (2) How they connect matches the
 units' Integrations/API sections; (3) Plumbline settings present (JIRA project, Confluence space and parent page, base
 branch, PR target, branch pattern, API URL, frontend URL — the URLs match the config); (4) text outside the markers unchanged;
-(5) **Architecture** (how the units fit, cross-cutting stack and patterns) and **Decisions & trade-offs** (each with
-its source, none invented) are present; (6) **Decisions needed** lists every place where the repository's own docs, the settings and the code disagree on how
+(5) *Architecture* and *Decisions & trade-offs* (each with its source, none invented) present; (6) **Decisions needed** lists every place where the repository's own docs, the settings and the code disagree on how
 work is done (base/PR branch, branch naming, ticket key, test command, environments) — each with both sides and their
 files — or says "None". Up to 3 attempts.
 
@@ -132,9 +132,5 @@ then use the Plumbline settings value and name the open decision in their hand-o
 ## Step 5 — Summary
 One table: unit · result (PASS / ESCALATED) · attempts · file · test recipe result · open findings. If any unit's
 tests did not run or failed on the untouched code, say so first: later `/pl-dev` runs on that unit will be
-**UNVERIFIED** until it is fixed. Then:
-- review the changes with `git diff`; discard one file with `git checkout -- <file>`;
-- commit on a branch and open a PR so the team reviews the docs.
-
-Do not commit, push, open a PR, or write to JIRA/Confluence unless the user asks — and then show exactly what will be
-written and wait for a yes.
+**UNVERIFIED** until it is fixed. Then: review with `git diff` (discard a file: `git checkout -- <file>`), and offer
+to commit on a branch and open a PR described on `pr.md` — the exact text first, then a yes. Nothing else is written.

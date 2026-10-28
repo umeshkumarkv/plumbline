@@ -1,3 +1,4 @@
+<!-- plumbline:template handoff-devops v1 -->
 [Plumbline /pl-devops] {{YYYY-MM-DD}}
 
 ## CI failure
@@ -14,4 +15,4 @@
 - Local: {{command and result}}
 - CI: {{result after the fix, or "not re-run"}}
 
-— Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · handoff-devops v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

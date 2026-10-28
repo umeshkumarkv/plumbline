@@ -24,7 +24,7 @@ if ! grep -rqF 'CLAUDE.reference.md' "$SRC/.claude"; then
 import sys, os
 d = sys.argv[1]; core = open(f"{d}/CLAUDE.md").read(); ref = open(f"{d}/CLAUDE.reference.md").read()
 body = ref.split("<!-- plumbline:begin reference -->")[1].split("<!-- plumbline:end reference -->")[0]
-body = "\n".join(l for l in body.splitlines() if not l.startswith("Last updated:")).replace("## ", "## R")
+body = "\n".join(l for l in body.splitlines() if not l.startswith("Last updated:")).replace("## ", "## Reference: ")
 open(f"{d}/CLAUDE.md", "w").write(core.replace("<!-- plumbline:end unit -->", body.strip() + "\n<!-- plumbline:end unit -->"))
 os.remove(f"{d}/CLAUDE.reference.md")
 PY

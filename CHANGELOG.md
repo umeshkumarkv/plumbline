@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.8.6 — 2026-10-28 — every output templated, and templates versioned
+- **No untemplated output left.** New templates: `pr.md` (every PR description — story, docs, CI fix), `sm-flag.md`
+  (each flagged ticket's comment), and `claude-root.md`, `claude-unit.md`, `claude-reference.md` (the CLAUDE.md files,
+  written by `/pl-onboard`, `/pl-doc` and `/pl-arch <EPIC>`). `/pl-code-review` posts one `handoff-review.md` text as
+  both the PR review and the story comment. Commit messages are `<KEY>: <summary>`.
+- **Template versions.** Every template starts with `<!-- plumbline:template <name> v<N> -->`; every output names the
+  version it was written on (hand-off footer `· story v1 ·`; CLAUDE.md `Last updated: … (…, /pl-onboard, claude-unit v1)`)
+  and `check-template.sh` fails it otherwise. `templates/VERSIONS` locks version to content (sha256): the self-test
+  fails a template changed without a new version. `templates/CHANGELOG.md` records each version; commands read older
+  hand-offs as written. Everything starts at v1; 2.8.0–2.8.5 output reads as v1. `tests/lock-templates.sh` re-locks.
+- Every command's Every-run rule covers JIRA, Confluence, PR descriptions and reviews, and CLAUDE.md files; the JIRA
+  hand-off table names every template; the self-test checks each command names its templates and that the eval
+  sample's CLAUDE.md files pass theirs (headings now unnumbered, as the templates).
+
 ## 2.8.5 — 2026-10-28 — the HLD is a Confluence page, and its decisions go into CLAUDE.md
 - `/pl-arch <EPIC>` publishes the HLD as a Confluence page under the PRD (template `hld.md`), adds its decisions
   (*Decisions & trade-offs*) and rules (*Rules*, `[decided <EPIC>]`) to the CLAUDE.md files through a docs PR the

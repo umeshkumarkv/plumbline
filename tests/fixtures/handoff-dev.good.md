@@ -17,4 +17,4 @@ None
 ## Notes for /pl-doc
 None
 
-— Plumbline 2.8.3 · /pl-dev · commit abc1234 · judge PASS 1/3 · AI-drafted, posted after SME review
+— Plumbline 2.8.3 · /pl-dev · handoff-dev v1 · commit abc1234 · judge PASS 1/3 · AI-drafted, posted after SME review
