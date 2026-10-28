@@ -9,10 +9,11 @@ checks the content.
 
 | Template | Becomes | Written by |
 |---|---|---|
-| `prd.md` | Confluence page (or the epic description without Confluence) — the only Confluence page | `/pl-pm` writer |
+| `prd.md` | Confluence page (or the epic description without Confluence) | `/pl-pm` writer |
 | `epic.md` | JIRA epic description: summary + link to the PRD page | `/pl-pm` |
 | `story.md` | JIRA story description | `/pl-ba` writer |
-| `handoff-hld.md` | `[Plumbline /pl-arch]` comment on the epic: the HLD | `/pl-arch <EPIC>` writer |
+| `hld.md` | Confluence page under the PRD: the HLD | `/pl-arch <EPIC>` writer |
+| `handoff-hld.md` | `[Plumbline /pl-arch]` comment on the epic: HLD link, summary, docs PR | `/pl-arch <EPIC>` |
 | `handoff-arch.md` | `[Plumbline /pl-arch]` comment on the story: the LLD | `/pl-arch <STORY>` writer |
 | `handoff-dev.md` … `handoff-devops.md` | `[Plumbline /pl-<role>]` comment on the story | each command, at the hand-over |
 | `sprint-report.md` | sprint report comment or page | `/pl-sm` writer |

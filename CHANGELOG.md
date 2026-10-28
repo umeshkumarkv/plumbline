@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.8.5 — 2026-10-28 — the HLD is a Confluence page, and its decisions go into CLAUDE.md
+- `/pl-arch <EPIC>` publishes the HLD as a Confluence page under the PRD (template `hld.md`), adds its decisions
+  (*Decisions & trade-offs*) and rules (*Rules*, `[decided <EPIC>]`) to the CLAUDE.md files through a docs PR the
+  architect owns, and posts a short epic comment (`handoff-hld.md`: page link and version, summary, docs PR).
+  Nothing that does not exist in code yet goes into CLAUDE.md — `/pl-doc` adds endpoints and tables after merge.
+- The arch writer may edit CLAUDE.md for an HLD (Rules and Decisions only); a scope check allows only CLAUDE.md
+  changes, and the HLD checklist (item 6) fails anything else.
+- `/pl-arch <STORY>` is unchanged: the LLD is a story comment.
+- Commands read the HLD from the page the epic comment links, pinned to its version; an HLD page edited after it was
+  posted stops the next command.
+
 ## 2.8.4 — 2026-10-28 — the architect's design is final; the SME's yes is the approval
 - **HLD and LLD.** `/pl-arch <EPIC>` writes the HLD (units and responsibilities, interactions, data ownership,
   cross-cutting rules, story design order, decisions) as a comment on the epic, labelled `plumbline-hld-final`;

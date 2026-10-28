@@ -50,15 +50,15 @@ Logs and diagnoses go in `.plumbline-drafts/ci-<branch>/`. Make sure `.plumbline
 
 ## JIRA hand-off
 Roles pass work to each other only through JIRA — tickets, comments and labels — never through files on someone's
-machine, so no agent redoes what an earlier role settled. Only the PRD is a Confluence page (under the `Confluence
-parent page` in the Plumbline settings), linked from the epic; every other hand-off is the ticket or a comment on it.
+machine, so no agent redoes what an earlier role settled. The PRD and each epic's HLD are Confluence pages (under the
+`Confluence parent page` in the Plumbline settings), linked from the epic; every other hand-off is a ticket or comment.
 The person running a command is that role's SME: their yes at the hand-over is the approval, and JIRA records who.
 
 | Step | Posts | Template | Label added on the SME's yes |
 |---|---|---|---|
 | `/pl-pm` | PRD page; the epic, with summary + PRD link | `prd.md`, `epic.md` | `plumbline-prd-approved` |
 | `/pl-ba` | stories under the epic — business criteria | `story.md` | `plumbline-dor-ready` |
-| `/pl-arch <EPIC>` | epic comment — the HLD | `handoff-hld.md` | `plumbline-hld-final` |
+| `/pl-arch <EPIC>` | HLD page under the PRD; epic comment with its link; decisions → CLAUDE.md docs PR | `hld.md`, `handoff-hld.md` | `plumbline-hld-final` |
 | `/pl-arch <STORY>` | story comment — the LLD; story points set | `handoff-arch.md` | `plumbline-arch-approved` |
 | `/pl-dev` | story comment — branch, PR, test result | `handoff-dev.md` | — (the PR is reviewed next) |
 | `/pl-code-review` | PR review + story comment — verdict and findings | `handoff-review.md` | `plumbline-review-passed` |
@@ -67,16 +67,16 @@ The person running a command is that role's SME: their yes at the hand-over is t
 | `/pl-devops`, `/pl-sm` | comment on the story / sprint issue | `handoff-devops.md`, `sprint-report.md` | — |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]` (JIRA returns `\[Plumbline …\]`: ignore backslashes), the epic's HLD for a story, and for
-  an epic the PRD page it links, **at the version it names** (no version → compare last-modified times).
+  `[Plumbline /pl-<role>]` (JIRA returns `\[Plumbline …\]`: ignore backslashes), and each PRD or HLD page they link —
+  **at the version named**; a story's HLD is linked from its epic (no version → compare last-modified times).
 - **Gate:** start only when the previous step's label is on the ticket (a story's design also needs
   `plumbline-hld-final` on its epic). A hand-off edited after it was posted (comment `updated` later than `created`;
-  PRD page past the pinned version) → `STOPPED: <what> changed after approval — re-run <command>`.
+  PRD or HLD page past the pinned version) → `STOPPED: <what> changed after approval — re-run <command>`.
 - **The architect's word is final:** later roles follow the HLD and LLD exactly. A role that cannot → `STOPPED:
   design gap — /pl-arch <KEY>`; never work around it. Do not redo an earlier role's work.
 - **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first; then
   add the label.
-- No Confluence tools or no parent page → the PRD goes in the epic description. A comment must stay under 30,000
+- No Confluence tools or no parent page → the PRD goes in the epic description, the HLD in the epic comment. A comment must stay under 30,000
   characters (JIRA's limit is 32,767): longer → split. No JIRA tools → output as text to paste. Drafts are scratch.
 
 ## Metrics

@@ -12,7 +12,7 @@ Plan as if anything only instructed can fail.
 | No `reset`, `checkout`, `restore`, `rebase`, `clean`, `stash`, `--amend`, branch deletes, `git -C` | Claude Code permissions (`deny`) — same condition | Rules match command prefixes; a command wrapped in another tool or script is not matched |
 | No edits to `.claude/` or `.github/` by the agents | Claude Code permissions (`deny`) — same condition | |
 | No reading `.env`, keys, credential files, `*-prod*` / `*-local*` config | Claude Code permissions (`deny`) — same condition | Add every other file that holds secrets in your repository |
-| Agents cannot quietly change Plumbline's own rules | CI `protected-files` job + a human adding the `plumbline-policy-change` label | Your `CLAUDE.md` files are **not** protected: `/pl-onboard` and `/pl-doc` edit them by design — review those PRs |
+| Agents cannot quietly change Plumbline's own rules | CI `protected-files` job + a human adding the `plumbline-policy-change` label | Your `CLAUDE.md` files are **not** protected: `/pl-onboard`, `/pl-arch <EPIC>` (decisions and rules only) and `/pl-doc` edit them by design — review those PRs |
 | Security rules on new Java code | CI Semgrep on changed lines, rules from the base branch | Java only |
 | Drafts stay out of git | `.plumbline-drafts/.gitignore` (`*`) | |
 | A role starts only after the previous SME approved | Only instructed: each command checks the previous label on the JIRA issue (`plumbline-dor-ready`, `plumbline-arch-approved`, …) | To enforce it, restrict who can add `plumbline-*` labels in JIRA (or use a workflow transition) so only the role's SME can |

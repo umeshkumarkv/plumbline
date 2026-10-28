@@ -36,6 +36,8 @@ The commit range, the code change as a diff file, the list of what changed, the 
 - **Core vs reference:** catalogue entries (endpoints, tables, topics, config keys, debt) go in the unit's
   `CLAUDE.reference.md`; the core `CLAUDE.md` gets rules, must-nevers, decisions and the Reference counts. A rule from
   a story goes in only if every later change must keep it, tagged `[decided <KEY>]`; display details do not.
+- Rules and decisions the architect already added from the epic's HLD (`[decided <EPIC>]`) stay as they are; do not
+  repeat them.
 - **Keep the core at most 8 KB:** merge duplicate rules and move detail to the reference file. Never delete a
   `[decided]` rule: list anything stale or superseded under "Proposed removals" in your reply, with why, for the
   architect.

@@ -1,28 +1,12 @@
-<!-- plumbline:forbid ^```(java|kotlin|typescript|ts|js|python|go)|public (class|interface) |@(Service|RestController|Entity|Test)$ -->
 [Plumbline /pl-arch] {{YYYY-MM-DD}}
 
-## High-level design
-{{the shape of the solution for the whole epic in a paragraph}}
+## HLD
+- HLD: {{link to the Confluence HLD page}} (version {{n}})
 
-## Units and responsibilities
-{{each unit involved and what it does for this epic; new units need a decision from the root CLAUDE.md owners}}
+## Summary
+{{3–5 lines: units involved, the riskiest interaction, the key decision}}
 
-## Interactions
-{{calls and events between units, in order, with sync/async and failure behaviour}}
-
-## Data and ownership
-{{which unit owns which data; new tables or fields at a high level; no unit reads another's database}}
-
-## Cross-cutting
-{{security and roles, error format, transactions, idempotency, audit, performance limits}}
-
-## Story design order
-{{each story of the epic → the unit that builds it, and which must be designed or built first}}
-
-## Decisions
-{{each architectural decision and why — final for every story of this epic}}
-
-## Risks and open questions
-{{or None}}
+## CLAUDE.md changes
+- Docs PR: {{link — the HLD's decisions and rules as [decided <EPIC>], or "none"}}
 
 — Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

@@ -6,8 +6,8 @@ and send it back with the hand-overs (copy the text) and any `STOPPED` lines.
 ## Before you start
 - **Repository:** a fresh clone of a test copy of a real service (e.g. broker-dealer). Never one holding production
   secrets you have not denied (SECURITY.md).
-- **JIRA + Confluence:** a *test* JIRA project, and a Confluence space with a page to hold PRDs (the `Confluence
-  parent page`) — the PRD is the only Confluence page. The Atlassian connector connected in Claude Code; its write tools on **ask**.
+- **JIRA + Confluence:** a *test* JIRA project, and a Confluence space with a page to hold PRDs and HLDs (the
+  `Confluence parent page`). The Atlassian connector connected in Claude Code; its write tools on **ask**.
 - **People:** one per role is ideal (PM, BA, architect, developer, QA); one person playing every role also works.
 - **Install:** copy `.claude` and `.github` from Plumbline `main` (README → Install), merge
   `examples/claude-settings.json`. Note `claude --version` and the model.
@@ -32,7 +32,7 @@ Use one small real backlog idea. After each step, open JIRA and Confluence and l
 | 3.1 | `/pl-pm "<idea>"` | a Confluence PRD page under the parent page, business-only, with a *Today* section; the epic links it with its version; after your yes, `plumbline-prd-approved` |
 | 3.2 | `/pl-ba <EPIC>` | stories in business language: *Today*, Given/When/Then `AC1`…, no APIs/units/points (plant an API path in a draft: the template check fails it); `plumbline-dor-ready` |
 | 3.3 | `/pl-arch <STORY>` before the HLD | stops: `plumbline-hld-final` not on the epic |
-| 3.4 | `/pl-arch <EPIC>` | an HLD comment on the epic: units, interactions, data ownership, cross-cutting, story design order; `plumbline-hld-final` |
+| 3.4 | `/pl-arch <EPIC>` | an HLD page under the PRD (units, interactions, data ownership, cross-cutting, story design order); a docs PR adding only its decisions and `[decided <EPIC>]` rules to CLAUDE.md; an epic comment with the page link, version and PR; `plumbline-hld-final` |
 | 3.5 | `/pl-arch <STORY>` | an LLD comment conforming to the HLD: unit, blockers, story points (field set), every AC id mapped to its technical check; `plumbline-arch-approved` |
 | 3.6 | edit one word of the LLD comment, then `/pl-dev <STORY>` | stops: changed after approval — re-run `/pl-arch` |
 | 3.7 | `/pl-dev <STORY>` | a branch; the comment maps every AC id to a test; *Design gaps* None; tests ran (or the first line says UNVERIFIED) |

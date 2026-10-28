@@ -10,7 +10,7 @@ over to you. Nothing is committed, pushed or posted without your yes.
 | `/pl-onboard` | Documents the codebase: per service/frontend a short `CLAUDE.md` + a `CLAUDE.reference.md` catalogue, and a master `CLAUDE.md`; checks the tests run | CLAUDE.md files |
 | `/pl-pm "idea"` | Feature idea → PRD in business language (problem, behaviour, success criteria, scope, sized backlog) | Confluence page + JIRA epic* |
 | `/pl-ba CRS-40` | Epic → stories in business language (Given/When/Then criteria, examples) — no APIs, units or points | JIRA stories* |
-| `/pl-arch CRS-40` / `CRS-12` | The architect's final design: epic → HLD; story → LLD (unit, how each criterion is checked, API, data, logic, tests, points) | JIRA comment* |
+| `/pl-arch CRS-40` / `CRS-12` | The architect's final design: epic → HLD (Confluence page + its decisions into CLAUDE.md); story → LLD (unit, how each criterion is checked, API, data, logic, tests, points) | Confluence + docs PR + JIRA* |
 | `/pl-dev CRS-12` | Implements the story and the design's tests on a new branch | branch* |
 | `/pl-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules and its stories | PR comment* |
 | `/pl-qa CRS-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
@@ -75,9 +75,10 @@ your yes.
   `[decided <source>]` (what a person decided). After each merge `/pl-doc` adds the new durable rules and design
   decisions, keeps the core under 8 KB, and proposes removals for the architect, who approves the docs PR. Before
   each run, commands check whether the code changed since CLAUDE.md's `Last updated` commit and warn the agents.
-- **JIRA is the hand-off; the SME's yes is the approval.** Only the PRD is a Confluence page, linked from the epic.
-  Everything else lives in JIRA: the epic, the stories, and one `[Plumbline /pl-<role>]` comment per step — the HLD on
-  the epic, the LLD on each story. Each command posts only after its SME's yes and then adds its label
+- **JIRA is the hand-off; the SME's yes is the approval.** The PRD and each epic's HLD are Confluence pages, linked
+  from the epic. Everything else lives in JIRA: the epic, the stories, and one `[Plumbline /pl-<role>]` comment per
+  step — the LLD on each story. The HLD's decisions and rules also go into CLAUDE.md (`[decided <EPIC>]`) through a
+  docs PR the architect owns, so every later agent works under them. Each command posts only after its SME's yes and then adds its label
   (`plumbline-prd-approved`, `plumbline-dor-ready`, `plumbline-hld-final`, `plumbline-arch-approved`,
   `plumbline-review-passed`, `plumbline-qa-passed`); JIRA records who posted it. The next command starts only when the
   label is there, and stops if a PRD page or hand-off comment was edited after it was posted. Code still needs a second
