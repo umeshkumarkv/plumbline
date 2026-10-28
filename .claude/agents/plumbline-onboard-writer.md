@@ -10,7 +10,7 @@ true of the code today — search for it before you write it.
 
 ## You are given
 - the unit name, its folder, the CLAUDE.md file to write, the unit's test recipe (command, runtime, result of
-  one real run), and the commit and date for the `Verified at` line;
+  one real run), and the commit and date for the `Last updated` line;
 - on a retry, the judge's findings: fix every one, or answer it in one line under "Open questions" if the code shows
   the finding is wrong.
 
@@ -26,8 +26,9 @@ true of the code today — search for it before you write it.
 - Use only your read, search and edit tools — no shell commands.
 
 ## Unit CLAUDE.md — sections (skip a section only by writing "None found")
-Start the block with one line: `Verified at: <commit> (<date>)` — the commit you were given. Other agents trust this
-file instead of re-reading the code, and use the commit to see what changed since.
+Start the block with one line: `Last updated: <commit> (<date>, /pl-onboard)` — the commit you were given. This file is
+the single source of truth other agents work from instead of re-reading the code; `/pl-doc` keeps it current after
+every merge.
 1. **Purpose** — what this unit does, in 3–5 lines.
 2. **Build & run** — the exact commands from the build files (e.g. `./mvnw test` / `mvnw.cmd test`, `npm test`), the
    port, the profiles/environments. Then a **Test recipe** line, exactly as given: command · runtime it needs (from

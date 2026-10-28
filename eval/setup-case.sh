@@ -21,7 +21,7 @@ base=$(git rev-parse --short HEAD)
 python3 - "$base" <<'PY'
 import sys; p="src/CLAUDE.md"; s=open(p).read(); open(p,"w").write(s.replace("VERIFIED_COMMIT", sys.argv[1]))
 PY
-git -c user.name=eval -c user.email=eval@example.com commit -qam "docs: CLAUDE.md verified at $base"
+git -c user.name=eval -c user.email=eval@example.com commit -qam "docs: CLAUDE.md last updated at $base"
 git switch -q -c "case/$id"
 
 python3 - "$case_dir/case.json" <<'PY'

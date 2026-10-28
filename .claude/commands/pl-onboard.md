@@ -26,11 +26,10 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
   judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
   unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
-- **Project memory:** before the first helper, for each unit involved take the `Verified at` commit from its
-  CLAUDE.md and run `git diff --name-only <commit>..HEAD -- <unit folder>` (ignore the CLAUDE.md files themselves). Give every helper that list as **changed
-  since verified** (or "none"; "unknown" if the CLAUDE.md has no `Verified at`), plus the path of `context.md` in the
-  draft folder. More than 20 changed files in a unit → suggest `/pl-onboard <unit>` first. Never research the code
-  yourself to fill gaps — the helpers do, and record what they find in `context.md`.
+- **Project memory:** the CLAUDE.md files are the single source of truth for the project, kept current after every
+  merge by `/pl-doc`. Helpers work from them and from the JIRA ticket; they open code only for the files they change
+  or review. Never research the code yourself. Collect what helpers report as "Add to CLAUDE.md" or "CLAUDE.md out
+  of date" and list it in the hand-over for `/pl-doc`.
 - **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
   (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
   the rest in the hand-over.
@@ -48,7 +47,7 @@ story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether 
 minutes from start to hand-over (run `date +%s` once at the start and once at the hand-over), and leave
 `human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
 The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-sm` can summarise it.
-**Files:** create every draft, tracker and metrics file with your write tool — it creates missing folders. Never
+**Files:** create every draft and metrics file with your write tool — it creates missing folders. Never
 `mkdir`, `echo`, `printf` or redirection: permission settings block them.
 
 ## Step 1 — Settings
@@ -79,7 +78,7 @@ exactly, never smoothed over.
 ## Step 3 — Each unit, one at a time (helpers run in the foreground)
 For attempt = 1, 2, 3:
 1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md path, the unit's test recipe
-   from Step 2b, the current commit (`git rev-parse --short HEAD`) and today's date for its `Verified at` line, and on attempts 2–3 the judge's findings from the previous attempt (verbatim JSON).
+   from Step 2b, the current commit (`git rev-parse --short HEAD`) and today's date for its `Last updated` line, and on attempts 2–3 the judge's findings from the previous attempt (verbatim JSON).
 2. **Judge** — start `plumbline-judge` with exactly:
    - *Review:* the CLAUDE.md path, the unit folder, and "compare with `git diff -- <CLAUDE.md path>`: text outside the
      plumbline markers must be unchanged";
@@ -105,8 +104,8 @@ and move on.
 7. Rules and Must-never items are each traceable to code or the root CLAUDE.md.
 8. Tech debt states the TODO/FIXME count and top files; other debt as counts plus up to 10 locations. Debt recorded
    truthfully passes.
-9. All 13 sections present ("None found" is fine); the file is at most 30 KB; a `Verified at: <commit> (<date>)`
-   line with the commit given in the request.
+9. All 13 sections present ("None found" is fine); the file is at most 30 KB; a `Last updated: <commit> (<date>,
+   /pl-onboard)` line with the commit given in the request.
 10. Text outside the plumbline markers is unchanged.
 11. Decisions & trade-offs: each one names its source (code comment, README, ADR, commit message, config) — none is
     invented; "None found" is fine.

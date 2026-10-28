@@ -66,14 +66,24 @@ Every command ends with a hand-over whose first line is `PASS`, `FAIL after 3 at
 your yes.
 
 ## How the commands work together
-- **Feature tracker** — `.plumbline-drafts/features.md`: one row per story with its story file, design file, branch
-  and status. `/pl-ba`, `/pl-arch` and `/pl-dev` fill it; `/pl-code-review`, `/pl-qa` and `/pl-doc` read it.
-- **Honest test status** — if the build or tests could not run, `/pl-dev` says **UNVERIFIED** first and marks the
-  story `built, tests not run`. Work a judge passed by reading is not called tested.
+Two rules keep agents from spending tokens rediscovering what is already known:
+- **CLAUDE.md is the single source of truth for the project.** `/pl-onboard` reads the code once and writes purpose,
+  architecture and stack, units, endpoints, data, rules, must-nevers, decisions and trade-offs, and how to run the
+  tests. Every other agent works from it and opens code only for the files it changes or reviews. After each merge,
+  `/pl-doc` updates CLAUDE.md with the new endpoints, business rules and design decisions, in a docs PR the architect
+  approves. Anything an agent had to look up is reported as "Add to CLAUDE.md" and added then.
+- **JIRA is the hand-off between roles, with one SME per role.** The PRD is the epic, stories are stories, and the
+  design, dev result, review verdict and QA evidence are comments on the story. Each role's SME approves with a label
+  (`plumbline-prd-approved`, `plumbline-dor-ready`, `plumbline-arch-approved`, `plumbline-review-passed`,
+  `plumbline-qa-passed`), and the next command starts only when that label is there.
+
+Also:
+- **Honest test status** — if the build or tests could not run, `/pl-dev` says **UNVERIFIED** first, also in its JIRA
+  comment. Work a judge passed by reading is not called tested.
 - **Metrics** — every command appends a line to `.plumbline-drafts/metrics.csv` (attempts, verdict, tests run, your
   decision). `/pl-sm metrics` summarises it.
-- **Drafts** — PRDs, stories, designs, evidence and logs live in `.plumbline-drafts/`, which ignores itself
-  (`.gitignore` = `*`). They stay on your machine.
+- **Drafts** — `.plumbline-drafts/` is scratch before posting to JIRA; it ignores itself (`.gitignore` = `*`) and no
+  command reads another's drafts.
 
 ## Permissions
 Plumbline runs with Claude Code's normal permission prompts. The example settings:

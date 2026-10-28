@@ -1,7 +1,7 @@
 # order-desk
 
 <!-- plumbline:begin unit -->
-Verified at: VERIFIED_COMMIT (2026-10-28)
+Last updated: VERIFIED_COMMIT (2026-10-28, /pl-onboard)
 
 ## 1. Purpose
 REST API for customer orders: create, read, list, pay, ship, cancel. Package `com.example.orderdesk`.

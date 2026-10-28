@@ -60,8 +60,10 @@ def severity(u):
 
 
 def mentions(u, files, keywords):
+    """True when the finding names one of the files (with or without the extension) and one keyword."""
     low = u.lower()
-    return any(f.lower() in low for f in files) and any(k.lower() in low for k in keywords)
+    names = {f.lower() for f in files} | {f.lower().rsplit(".", 1)[0] for f in files}
+    return any(n in low for n in names) and any(k.lower() in low for k in keywords)
 
 
 def verdict(text):

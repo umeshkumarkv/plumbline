@@ -26,11 +26,10 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
   judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
   unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
-- **Project memory:** before the first helper, for each unit involved take the `Verified at` commit from its
-  CLAUDE.md and run `git diff --name-only <commit>..HEAD -- <unit folder>` (ignore the CLAUDE.md files themselves). Give every helper that list as **changed
-  since verified** (or "none"; "unknown" if the CLAUDE.md has no `Verified at`), plus the path of `context.md` in the
-  draft folder. More than 20 changed files in a unit → suggest `/pl-onboard <unit>` first. Never research the code
-  yourself to fill gaps — the helpers do, and record what they find in `context.md`.
+- **Project memory:** the CLAUDE.md files are the single source of truth for the project, kept current after every
+  merge by `/pl-doc`. Helpers work from them and from the JIRA ticket; they open code only for the files they change
+  or review. Never research the code yourself. Collect what helpers report as "Add to CLAUDE.md" or "CLAUDE.md out
+  of date" and list it in the hand-over for `/pl-doc`.
 - **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
   (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
   the rest in the hand-over.
@@ -45,6 +44,30 @@ unchanged, then continue — but only for a path you gave that helper; any other
 Drafts go in `.plumbline-drafts/<slug>/` at the repository root (slug = a short kebab-case name for the idea). Before
 the first draft, make sure `.plumbline-drafts/.gitignore` exists with the single line `*` (write it with your write tool; it keeps the folder out of git without touching `.git/`, which Claude Code protects).
 
+## JIRA hand-off
+Roles pass work to each other only through JIRA — never through files on someone's machine — so no agent works out
+again what an earlier role settled. The person running a command is that role's SME; their yes at the hand-over is the
+approval.
+
+| Step | Lives in JIRA as | Approval label (added on the SME's yes) |
+|---|---|---|
+| `/pl-pm` | epic — the PRD in its description | `plumbline-prd-approved` |
+| `/pl-ba` | stories under the epic — criteria, points, `Blocks` links | `plumbline-dor-ready` |
+| `/pl-arch` | comment on the story — the design | `plumbline-arch-approved` |
+| `/pl-dev` | comment on the story — branch, PR, test result | — (the PR is reviewed next) |
+| `/pl-code-review` | PR review + comment on the story — verdict and findings | `plumbline-review-passed` |
+| `/pl-qa` | comment on the story — evidence per criterion | `plumbline-qa-passed` |
+| `/pl-doc` | docs PR updating CLAUDE.md + comment on the story | the architect approves the docs PR |
+
+- **Input:** read the ticket — description, labels, links, and the latest comment of each kind that starts
+  `[Plumbline /pl-<role>]`. Do not redo an earlier role's work; if it is wrong, stop and say which role must fix it.
+- **Gate:** start only when the previous step's label is on the ticket. Missing → `STOPPED: <label> not on <KEY>`
+  (the SME adds it, or tells you to go on).
+- **Output:** post it as the table says, starting `[Plumbline /pl-<role>] <date>`, and add the label — both only
+  after the SME's yes, with the exact text shown first.
+- `.plumbline-drafts/` is scratch before posting; no other command reads it. No JIRA tools connected → give the
+  output as text for the SME to paste, and say the hand-off is manual.
+
 ## Metrics
 At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
 `date,command,target,attempts,verdict,tests_run,minutes,human_decision` if missing): today's date, this command, the
@@ -52,7 +75,7 @@ story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether 
 minutes from start to hand-over (run `date +%s` once at the start and once at the hand-over), and leave
 `human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
 The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-sm` can summarise it.
-**Files:** create every draft, tracker and metrics file with your write tool — it creates missing folders. Never
+**Files:** create every draft and metrics file with your write tool — it creates missing folders. Never
 `mkdir`, `echo`, `printf` or redirection: permission settings block them.
 
 ## Step 1 — Context

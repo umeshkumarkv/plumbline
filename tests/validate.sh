@@ -20,7 +20,7 @@ for c in $CMDS; do
   grep -qiE '^## Step [0-9]+ — (Hand over|Report|Summary)' "$f" && ok || bad "$f: no hand-over/report/summary step"
   n=$(wc -l < "$f"); [ "$n" -le 140 ] && ok || bad "$f: $n lines (budget 140) — long commands are followed less reliably"
   # every agent a command names must exist
-  for a in $(grep -oE 'plumbline-[a-z]+(-[a-z]+)*' "$f" | sort -u | grep -vE '^plumbline-(drafts|policy-change|checks|prd-approved|dor-ready|arch-approved|test)$'); do
+  for a in $(grep -oE 'plumbline-[a-z]+(-[a-z]+)*' "$f" | sort -u | grep -vE '^plumbline-(drafts|policy-change|checks|prd-approved|dor-ready|arch-approved|review-passed|qa-passed|test)$'); do
     [ -f ".claude/agents/$a.md" ] && ok || bad "$f: names agent '$a' that does not exist"
   done
 done
@@ -42,7 +42,7 @@ for p in .github/agents/*.agent.md; do a=$(basename "$p" .agent.md); [ -f ".clau
 
 # 3. Shared blocks must be identical in every command that has them (they drift otherwise)
 block() { awk -v h="$2" '$0==h{p=1;print;next} p&&/^## /{exit} p' "$1"; }
-for h in '## Every run' '## Metrics' '## Feature tracker'; do
+for h in '## Every run' '## Metrics' '## JIRA hand-off'; do
   ref=""; reff=""
   for c in $CMDS; do
     f=.claude/commands/$c.md; grep -qx "$h" "$f" || continue
@@ -56,7 +56,7 @@ done
 # 4. Stale or forbidden text
 hits=$(grep -rnE '(^|[ `(])/plumbline-(onboard|pm|ba|arch|dev|qa|doc|devops|sm|code-review)([^-a-z]|$)' .claude .github README.md PILOT.md 2>/dev/null)
 [ -z "$hits" ] && ok || bad "old /plumbline-<role> command names (now /pl-<role>): $hits"
-stale=( 'info/exclude' 'dangerously-skip-permissions' 'run_in_background: true' )
+stale=( 'info/exclude' 'dangerously-skip-permissions' 'run_in_background: true' 'features.md' 'context.md' 'changed since verified' )
 for s in "${stale[@]}"; do
   hits=$(grep -rlF -- "$s" .claude .github README.md PILOT.md 2>/dev/null)
   [ -z "$hits" ] && ok || bad "stale text '$s' in: $hits"
