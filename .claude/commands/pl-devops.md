@@ -24,15 +24,16 @@ If a helper replies with `FILE: <path>` and the content instead of writing the f
 unchanged, then continue.
 
 ## Drafts
-Logs and diagnoses go in `.plumbline-drafts/ci-<branch>/`. Make sure the line
-`.plumbline-drafts/` is in `.git/info/exclude` — read and edit that file with your file tools (no shell `echo`/`mkdir`).
+Logs and diagnoses go in `.plumbline-drafts/ci-<branch>/`. Make sure `.plumbline-drafts/.gitignore` exists with the single line `*` (write it with your write tool; it keeps the folder out of git without touching `.git/`, which Claude Code protects).
 
 ## Metrics
 At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
 `date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
 story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
 `human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
-The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
+The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-sm` can summarise it.
+**Files:** create every draft, tracker and metrics file with your write tool — it creates missing folders. Never
+`mkdir`, `echo`, `printf` or redirection: permission settings block them.
 
 ## Step 1 — The failure
 1. Find the latest failed run for the PR/branch (`gh run list --branch <b>`, `gh run view <id> --log-failed`, or the

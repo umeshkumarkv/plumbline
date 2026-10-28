@@ -24,7 +24,11 @@
       "Bash(mvn test:*)",
       "Bash(mvn -B test:*)",
       "Bash(npm test:*)",
-      "Bash(npx ng test:*)"
+      "Bash(npx ng test:*)",
+      "Bash(java -version)",
+      "Bash(node -v)",
+      "Bash(mvn -v)",
+      "Bash(./mvnw -v)"
     ],
     "deny": [
       "Bash(git push:*)",

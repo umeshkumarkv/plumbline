@@ -24,15 +24,16 @@ unchanged, then continue.
 
 ## Drafts
 Drafts go in `.plumbline-drafts/<slug>/` at the repository root (slug = a short kebab-case name for the idea). Before
-the first draft, make sure the line `.plumbline-drafts/` is in `.git/info/exclude` (add it with your edit tool if
-missing) so drafts never show up in `git status`.
+the first draft, make sure `.plumbline-drafts/.gitignore` exists with the single line `*` (write it with your write tool; it keeps the folder out of git without touching `.git/`, which Claude Code protects).
 
 ## Metrics
 At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
 `date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
 story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
 `human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
-The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
+The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-sm` can summarise it.
+**Files:** create every draft, tracker and metrics file with your write tool — it creates missing folders. Never
+`mkdir`, `echo`, `printf` or redirection: permission settings block them.
 
 ## Step 1 — Context
 Read the root `CLAUDE.md` (solution, units, out-of-scope list, Plumbline settings) and the CLAUDE.md of the units the

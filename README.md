@@ -103,7 +103,7 @@ Don't want it? Delete that file.
 .github/plumbline/  semgrep-java.yml      (rules for the CI check)
 ```
 To change how a command behaves, edit its file in `.claude/` — Copilot uses the same file. Commands that need scratch
-space (PRDs, stories, designs, QA evidence, CI logs) use `.plumbline-drafts/`, which they add to `.git/info/exclude`
+space (PRDs, stories, designs, QA evidence, CI logs) use `.plumbline-drafts/`, which holds its own `.gitignore` (`*`)
 so it never shows in `git status`.
 
 ## Remove

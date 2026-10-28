@@ -27,7 +27,9 @@ At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it 
 `date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
 story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
 `human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
-The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
+The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-sm` can summarise it.
+**Files:** create every draft, tracker and metrics file with your write tool — it creates missing folders. Never
+`mkdir`, `echo`, `printf` or redirection: permission settings block them.
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. If it has no **Plumbline settings** (JIRA project, Confluence space, base
@@ -46,7 +48,8 @@ Show the user the list (name, folder, kind, CLAUDE.md) in one table and continue
 ## Step 2b — Do the tests run here? (one run per unit)
 For each unit, take its test command from the build files (`./mvnw test` / `mvnw.cmd test`, `mvn test`,
 `./gradlew test`, `npm test -- --watch=false`; the command the README or an existing CLAUDE.md gives wins). Note the
-runtime the build files ask for (Java version, Node engines). Run the command once, with a 15-minute limit, and keep
+runtime the build files ask for (Java version, Node engines). Run it once from the unit's folder as `cd <folder> && <command>` (not `--prefix` or `-f` flags, which permission
+rules do not match), with a 15-minute limit; check the runtime with `java -version` / `node -v`. Keep
 only: the exact command, the runtime actually used (`java -version`, `node -v`), the result (`N tests, M failed` or
 the first error line), and the duration. Do not change any file to make it pass. If running it needs something you
 must not do (install software, network the user has not allowed), do not run it and record why.
