@@ -26,8 +26,8 @@ and **sm** every morning. Each command also works on its own.
 **Nothing to install.** Plumbline is two folders of markdown: `.claude/` (Claude Code) and `.github/` (Copilot +
 an optional CI check). Same on Windows, macOS and Linux.
 
-**Tested:** every command on two real codebases; two features end to end (broker-dealer's backend tests run green:
-411 passing, 0 failures); every judge against deliberately flawed work (47/47), plus a blind test where a separate
+**Tested:** every command on two real codebases; two features end to end, with both repos' backend tests run green
+(411 and 75 passing, 0 failures); every judge against deliberately flawed work (47/47), plus a blind test where a separate
 agent hid the defects (8/8 found, no false alarms) — see [TEST-REPORT.md](TEST-REPORT.md). Planning a team trial?
 See [PILOT.md](PILOT.md).
 

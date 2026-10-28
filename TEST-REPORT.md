@@ -109,13 +109,13 @@ After the first round we listed what the tests above could **not** prove, fixed 
 
 | # | Gap | What changed | Result |
 |---|---|---|---|
-| 1 | Backend tests never ran | Ran on a developer Mac with Maven (JDK picked per repo; the default JDK 24 cannot run Lombok) | **broker-dealer: 234 tests before → 411 after, 0 failures; all 194 tests of the feature green.** candidate-review-system: pending (needs JDK 17 on that Mac) |
+| 1 | Backend tests never ran | Ran on a developer Mac with Maven (JDK picked per repo; the default JDK 24 cannot run Lombok) | **broker-dealer: 234 before → 411 after, 0 failures (194 feature tests). candidate-review-system: 31 before → 75 after, 0 failures (44 feature tests)** — after fixing 2 broken tests that only running exposed (§5.3) |
 | 2 | We graded our own work | A separate agent built a plausible PR and hid defects; the answer key was opened only after the review | **8/8 found, decoy not flagged, 0 false alarms** (§5.2) |
 | 3 | Dev judge ignored the design's test plan | Dev reads the design; judge item 7 lists `design test → test name`; code review item 10 checks it too | Code review on the old CRS branch now **FAILs**: 7 design tests missing (C-5…C-9, S-P7, S-V10) — confirmed by hand. The 2.3 dev run wrote them: UI 48/48 green |
 | 4 | Nothing carried context between steps | `.plumbline-drafts/features.md` (story → design → branch → status), read and updated by every command | Code review found all 3 stories of the branch from the tracker with no hint in the prompt |
 | 5 | QA stopped at the environment | `/pl-qa` checks the URLs; offers start-here (with a yes), another URL, or stop; unattended → stop | Unattended run with nothing running: "QA not run", no PASS/FAIL invented, also refused because the branch's code review had failed |
 | 6 | JIRA never written | `/pl-ba` hand-over: parent epic, points field, plain bullets, `Blocks` links, read-back | Epic **SCRUM-210** + stories **SCRUM-211…215** created in the real JIRA (label `plumbline-test`), points and parent confirmed by read-back, 5 blocked-by links |
-| 7 | One run per number | PM and Arch run 3× each on fresh copies | PM 1.8–2.6 min, $0.55–0.81, all PASS at attempt 1; 2 of 3 chose the same gap (§5.3). Arch 2.5–4.6 min, $0.76–1.33; 1 of 3 needed attempt 2; all 3 designs made the same key decisions |
+| 7 | One run per number | PM and Arch run 3× each on fresh copies | PM 1.8–2.6 min, $0.55–0.81, all PASS at attempt 1; 2 of 3 chose the same gap (§5.4). Arch 2.5–4.6 min, $0.76–1.33; 1 of 3 needed attempt 2; all 3 designs made the same key decisions |
 | 8 | Only tested with permissions bypassed | `examples/claude-settings.json` allowlist; runs with `--permission-mode default`/`acceptEdits` | Code review, dev, QA and SM all completed. Blocked only: shell file-writing, `git -C`, `curl` with an extra flag, `mkdir` — the commands now avoid each |
 | 9 | No outcome metrics | Every command appends to `.plumbline-drafts/metrics.csv`; `/pl-sm metrics` summarises; [PILOT.md](PILOT.md) | `/pl-sm metrics` produced correct per-command tables from the file |
 
@@ -143,7 +143,20 @@ Branch `feature/opt-closure-summary`: two new summary endpoints, 7 files, +198 /
 
 0.9 minutes, $0.29.
 
-### 5.3 PM variance
+### 5.3 What running the tests exposed (candidate-review-system)
+Read-only checks had passed every backend test. Running them on a Mac found:
+- **2 of 44 feature tests were wrong:** a test helper built positions without their opportunity (NOT NULL in the
+  schema); the response mapper hit an NPE that the service reports as "DET save failed". Production code was fine.
+  Fixed in the test (4 lines); 75/75 then passed.
+- **The repo's own tests do not run on a Mac as they are:** `logback-spring.xml` logs to an Azure-only path
+  (`/home/site/wwwroot/DetLogs`), which fails every Spring test (9 errors on the untouched baseline), and the pinned
+  `sqlite-jdbc 3.25.2` has no Apple Silicon library. The run used a test-only shim (console `logback-test.xml`,
+  `sqlite-jdbc 3.46.1.0`) applied before the baseline, plus JDK 21 with `-Dlombok.version=1.18.34` (the default
+  JDK 24 cannot run the projects' Lombok). Worth a story for the team.
+
+This is the case the 2.3.0 rule exists for: work that a judge passed by reading is **UNVERIFIED** until it runs.
+
+### 5.4 PM variance
 Asked three times for "the most important domain gap", PM chose the Opportunity Lost loss-reason rule twice and the
 bench-to-allocation loop once (where the loss-reason rule was listed 5th). Both are real, evidence-backed gaps; the
 choice of "highest impact" is a judgement. The PRD's ranked gap table is what a person should decide from.
@@ -160,8 +173,8 @@ choice of "highest impact" is a judgement. The PRD's ranked gap table is what a 
 
 ## 7. Not tested
 - **GitHub Copilot** (no Copilot login here; VS Code allows clicks only). Files match VS Code's documented format.
-- **Backend builds** in the test environment (Maven Central blocked) — broker-dealer's were run on a developer Mac
-  instead (§5); candidate-review-system's are pending.
+- **Backend builds inside the agent's environment** (Maven Central blocked there) — both repos' tests were run on a
+  developer Mac instead (§5): all green.
 - **Windows.**
 - QA ran against the real frontend with a **stand-in API** for the Java services; `/pl-qa`'s new "start it here" path
   (a) has not been run with a real stack.

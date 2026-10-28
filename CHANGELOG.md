@@ -16,7 +16,8 @@
   decision); `/pl-sm metrics` summarises it. [PILOT.md](PILOT.md) describes a two-sprint team trial.
 - **Permissions:** `examples/claude-settings.json` — a tested allowlist so Plumbline runs with normal permission
   prompts. Helpers write files only with edit tools; commands run git without `-C`.
-- **Tested:** broker-dealer backend tests on a developer Mac (234 → 411 passing, 0 failures); a blind code review
+- **Tested:** backend tests run on a developer Mac — broker-dealer 234 → 411 passing, candidate-review-system 31 → 75
+  passing, 0 failures (running them exposed 2 wrong tests, now fixed); a blind code review
   (8/8 hidden defects, no false alarms); repeat runs of PM and Arch; JIRA epic + 5 stories created for real; runs
   with permissions on. Details: `TEST-REPORT.md` section 5.
 
