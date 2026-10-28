@@ -97,7 +97,8 @@ decision first); the merged code contradicts the existing API spec in a way that
 library arrived without the root CLAUDE.md allowing it.
 
 ## Step 2 — Attempts (1, 2, 3)
-1. **Writer** — start `plumbline-doc-writer` with: the commit range, the list from Step 1, the files it may edit (the
+1. **Writer** — start `plumbline-doc-writer` with: the commit range, the output of `git diff <range>` saved with your
+   write tool as `.plumbline-drafts/doc-<KEY or pr-n>/change.diff`, the list from Step 1, the files it may edit (the
    API spec files, and the CLAUDE.md and CLAUDE.reference.md files of the touched units; the root CLAUDE.md only if the architecture changed); on
    attempts 2–3 the judge's findings.
 2. **Scope check** — `git status --porcelain`: only documentation files changed. Anything else → finding, next attempt.
