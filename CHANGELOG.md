@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.6.0 — 2026-10-28 — check it yourself: public eval set, team test plan, time in metrics
+- **Eval set** (`eval/`): an original sample service (Order Desk) and ten pull requests — five with 13 planted
+  defects and an answer key, plus a decoy; five clean changes. `setup-case.sh` builds any case as a git repo for
+  Claude Code or Copilot; `score.py` scores a saved review (recall, false alarms, decoy); `run.sh` runs all ten
+  headless; `check-cases.sh` compiles and tests the cases. First run published in `eval/published/`: **13/13 found,
+  0 false alarms, decoy untouched, $1.78**.
+- **TEAM-TEST.md:** a half-day plan for teams to test Plumbline on the eval set and on their own repository, with
+  Copilot-specific checks and a results table.
+- **Metrics:** `minutes` per run in `.plumbline-drafts/metrics.csv`; `/pl-sm metrics` shows the median. The example
+  settings allow `date +%s`.
+- **Self-test** now also checks every eval case applies and every doc link (incl. TEAM-TEST, eval README) resolves:
+  202 checks.
+
 ## 2.5.0 — 2026-10-28 — release hardening
 No new commands or tools; the same markdown commands, agents, settings and CI, made safer to run and to release.
 - **"Every run" rules in all ten commands** (one shared block, kept identical by the self-test): a judge reply that

@@ -1,4 +1,4 @@
-# Plumbline 2.5.0 — test report (2026-10-27; rounds two to four 2026-10-28)
+# Plumbline 2.6.0 — test report (2026-10-27; rounds two to five 2026-10-28)
 
 Claude Code 2.1.309, headless (`claude -p`, default model `claude-sonnet-5-5` for writers, judges and orchestrators), on clean git copies of two real repositories:
 **candidate-review-system** (Spring Boot + SQLite backend at the repo root, Angular `ui/`) and **broker-dealer**
@@ -192,6 +192,26 @@ transcripts kept. Self-test `tests/validate.sh`: 173/173; negative-tested with 4
 Every judge item now carries what was checked (e.g. "Searched the design for a tests section. It goes from section 6
 straight to section 8"), so a skipped check is visible. Remaining permission denials were the orchestrator's own
 `sed`/`for` shell calls, which the commands forbid; each run recovered with its file tools.
+
+## 6b. Round five (2.6.0): the public eval set
+
+A sample service written for this purpose (`eval/sample-app`, no company code) and ten pull requests: five with 13
+planted defects plus one decoy, five clean. `/pl-code-review` headless on every case, recommended permission settings,
+`claude-sonnet-5-5`, Claude Code 2.1.309. The reviews, scores and summary are published in
+`eval/published/2026-10-28-claude-code/` so anyone can read them; `bash eval/run.sh` reproduces the run.
+
+| | Result |
+|---|---|
+| Recall | **13/13** planted defects found (every match checked by hand against the review text) |
+| False alarms | **0** blocker/major findings on the 5 clean changes (7 minor notes, e.g. "the new endpoint is not yet listed in `src/CLAUDE.md`", "no HTTP-level test") |
+| Decoy | not flagged |
+| Verdicts | 5 × FAIL on defect cases, 5 × PASS on clean cases |
+| Extra true findings | e.g. repeated refunds can exceed the order total (d2); no null/duplicate-id validation in the batch endpoint (d3) |
+| Time / cost | 40–70 s per review; **$1.78** for all ten |
+
+Limits: the cases were written by Plumbline's author; the defects are common, textbook classes; one model. The
+eval set exists so others can add harder cases and run it on other models and on Copilot — see
+[TEAM-TEST.md](TEAM-TEST.md).
 
 ## 7. Independent critique (2026-10-28) and evidence status
 

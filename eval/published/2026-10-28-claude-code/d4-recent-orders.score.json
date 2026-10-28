@@ -1,0 +1,1 @@
+{"case": "d4-recent-orders", "kind": "defects", "verdict": "FAIL", "findings_blocker_major": 4, "findings_minor": 1, "defects": [{"id": "D4-1", "found": true, "desc": "listRecent does not cap limit at max-limit"}, {"id": "D4-2", "found": true, "desc": "Existing test listCapsLimitAtMaximum deleted"}], "found": 2, "planted": 2, "decoys_flagged": 0}
