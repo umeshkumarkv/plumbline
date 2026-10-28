@@ -226,7 +226,7 @@ anything missing as `Add to CLAUDE.md` for `/pl-doc`.
 | Self-test | 209/209 |
 | Eval set, 2.7 instructions (run before the final wording; re-scored with the fixed scorer) | Recall **13/13**, decoy not flagged. **2 false alarms**: on two clean changes (c2, c4) the judge rated "nothing tests the ADMIN-only rule" as *major*; in 2.6 the same observation was a *minor* note. The sample's CLAUDE.md does say "every change comes with tests that would fail without it", so the finding is defensible; it is counted as a false alarm because those cases are defined as clean |
 | BA code reads, 2.7 instructions (one partial run, cut off before the end — indicative only) | **56** code-reading calls (`Read` 31, `Grep` 21, `Glob` 4) vs 108 in round four, with context tokens roughly halved for the writer (2.3 M vs 4.2 M) and judge (0.45 M vs 0.78 M) |
-| Final 2.7.0 eval and a full A/B BA run (2.6 vs 2.7 on the same repository and PRD) | **Not run**: the account hit its usage limit. Re-run with `bash eval/run.sh` and `runs/ab2.sh` |
+| Final 2.7.0 eval and a full A/B BA run (2.6 vs 2.7 on the same repository and PRD) | **Not run**: the account hit its usage limit. Re-run with `bash eval/run.sh` and the same `/pl-ba` on both versions |
 
 **Scorer fixes found this round:** a finding naming `OrderService.applyDiscount` without `.java` was missed (file stems
 now match); "No blocker…" text counted as a finding (only a finding's own severity label counts now). `run.sh` used to
