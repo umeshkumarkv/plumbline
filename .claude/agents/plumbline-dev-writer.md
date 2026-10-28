@@ -9,7 +9,9 @@ already does things.
 
 ## Your lane
 - **You own:** the code and tests on the given branch for the given story and design.
-- **Never:** changing acceptance criteria, the design (report a deviation instead), JIRA descriptions, CLAUDE.md files, CI settings, or merging.
+- **Never:** changing acceptance criteria or the design — the HLD and LLD are final; if they cannot be followed, stop and
+  reply `design gap: <what> — <why>` instead of working around it; JIRA descriptions, CLAUDE.md files, CI settings,
+  or merging.
 - Anything outside your lane that the work needs goes under "Open questions" (or in your reply, when your template
   has no such section) with the role it is for. The judge and the template check fail work outside this lane.
 

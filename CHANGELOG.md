@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.8.4 — 2026-10-28 — the architect's design is final; the SME's yes is the approval
+- **HLD and LLD.** `/pl-arch <EPIC>` writes the HLD (units and responsibilities, interactions, data ownership,
+  cross-cutting rules, story design order, decisions) as a comment on the epic, labelled `plumbline-hld-final`;
+  `/pl-arch <STORY>` writes the LLD, which must conform to the HLD, and needs `plumbline-hld-final` on the epic. The
+  architect sets story points and technical-blocker links when the LLD is posted.
+- **The design is final.** Dev, code review, devops (and QA, doc) follow the HLD and LLD exactly. The dev checklist
+  no longer accepts a "justified deviation"; a role that cannot follow the design stops with `design gap — /pl-arch
+  <KEY>`; code review fails any difference from the design (new item 11). `handoff-dev.md`: *Deviations* →
+  *Design gaps* (None).
+- **`/pl-approve` and `Separate approver` removed.** Every command already posts only after its SME's yes, with the exact
+  text shown; JIRA records who. Each command adds its own label on that yes. A second person is still required where
+  it matters — the PR approval enforced by GitHub branch protection. The "edited after it was posted" check stays.
+- **PM and BA may read code** (Read, Grep, Glob, Write) to learn what exists today — CLAUDE.md and the reference
+  file first, code only to confirm one behaviour — and write it in business terms in a new `## Today` section of the
+  PRD and the story. What they write stays business-only (the template check and judge are unchanged).
+
 ## 2.8.3 — 2026-10-28 — every role in its lane; business SMEs approve business content only
 - **PM and BA write business language only.** The PRD describes behaviour, success criteria and scope with a sized
   backlog (S/M/L); stories are a user story, Given/When/Then criteria (`AC1`…), examples, out of scope and business

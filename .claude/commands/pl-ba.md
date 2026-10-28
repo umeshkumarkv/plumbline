@@ -52,36 +52,32 @@ Drafts go in `.plumbline-drafts/<KEY or slug>/`. Make sure `.plumbline-drafts/.g
 Roles pass work to each other only through JIRA — tickets, comments and labels — never through files on someone's
 machine, so no agent redoes what an earlier role settled. Only the PRD is a Confluence page (under the `Confluence
 parent page` in the Plumbline settings), linked from the epic; every other hand-off is the ticket or a comment on it.
+The person running a command is that role's SME: their yes at the hand-over is the approval, and JIRA records who.
 
-| Step | Posts | Template | Approval label |
+| Step | Posts | Template | Label added on the SME's yes |
 |---|---|---|---|
 | `/pl-pm` | PRD page; the epic, with summary + PRD link | `prd.md`, `epic.md` | `plumbline-prd-approved` |
-| `/pl-ba` | stories under the epic — criteria, points, `Blocks` links | `story.md` | `plumbline-dor-ready` |
-| `/pl-arch` | story comment — the full design | `handoff-arch.md` | `plumbline-arch-approved` |
+| `/pl-ba` | stories under the epic — business criteria | `story.md` | `plumbline-dor-ready` |
+| `/pl-arch <EPIC>` | epic comment — the HLD | `handoff-hld.md` | `plumbline-hld-final` |
+| `/pl-arch <STORY>` | story comment — the LLD; story points set | `handoff-arch.md` | `plumbline-arch-approved` |
 | `/pl-dev` | story comment — branch, PR, test result | `handoff-dev.md` | — (the PR is reviewed next) |
 | `/pl-code-review` | PR review + story comment — verdict and findings | `handoff-review.md` | `plumbline-review-passed` |
 | `/pl-qa` | story comment — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
 | `/pl-doc` | docs PR updating CLAUDE.md + story comment | `handoff-doc.md` | the architect approves the docs PR |
 | `/pl-devops`, `/pl-sm` | comment on the story / sprint issue | `handoff-devops.md`, `sprint-report.md` | — |
-| `/pl-approve` | the approver's decision on one step + its label | `approval.md` | (adds the step's label) |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]` (JIRA returns them as `\[Plumbline …\]`: ignore
-  backslashes), and for an epic the PRD page it links, **at the version
-  it names** (no version from the tools → compare last-modified times; neither → say so in the hand-over). A PRD page
-  or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
-  role's work; if it is wrong, say which role must fix it.
-- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
-  the approval must come from someone other than the **author** of that step's hand-off (the comment's author; for
-  an epic or story description, the issue's creator): a `[Plumbline approve /pl-<role>]` comment by them, else the
-  issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <KEY>
-  self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first. JIRA
-  records who posted it. `Separate approver: yes` → no label; tell the SME `/pl-approve <KEY> <role>` must be run by
-  another person. `no` → add the label after the yes.
+  `[Plumbline /pl-<role>]` (JIRA returns `\[Plumbline …\]`: ignore backslashes), the epic's HLD for a story, and for
+  an epic the PRD page it links, **at the version it names** (no version → compare last-modified times).
+- **Gate:** start only when the previous step's label is on the ticket (a story's design also needs
+  `plumbline-hld-final` on its epic). A hand-off edited after it was posted (comment `updated` later than `created`;
+  PRD page past the pinned version) → `STOPPED: <what> changed after approval — re-run <command>`.
+- **The architect's word is final:** later roles follow the HLD and LLD exactly. A role that cannot → `STOPPED:
+  design gap — /pl-arch <KEY>`; never work around it. Do not redo an earlier role's work.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first; then
+  add the label.
 - No Confluence tools or no parent page → the PRD goes in the epic description. A comment must stay under 30,000
-  characters (JIRA's limit is 32,767): longer → stop and say the story should be split.
-  No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
+  characters (JIRA's limit is 32,767): longer → split. No JIRA tools → output as text to paste. Drafts are scratch.
 
 ## Metrics
 At the hand-over append to `.plumbline-drafts/metrics.csv` (header, if new:
@@ -98,14 +94,15 @@ redirection, which permission settings block.
   user names an epic at the hand-over (suggest `/pl-pm` for a new epic).
 - No JIRA tools: ask the user to paste the epic/PRD.
 
-Read the root `CLAUDE.md` only (solution, rules, out-of-scope list) — BA does not read code or unit CLAUDE.md files.
+Read the root `CLAUDE.md` (solution, rules, out-of-scope list); the writer may read unit CLAUDE.md files and code to
+learn what exists today, but writes business language only.
 Split the work into stories, each one piece of user value that can be checked on its own. Show the list (title, rough
 size S/M/L) and continue. Which unit builds a story, its points and technical blockers are `/pl-arch`'s.
 
 **Stop and ask the user** if a story is in the root CLAUDE.md out-of-scope list or contradicts a rule there.
 
 ## Step 2 — Each story, attempts (1, 2, 3)
-1. **Writer** — start `plumbline-ba-writer` with: the requirement/PRD, the story title, the root CLAUDE.md path, the
+1. **Writer** — start `plumbline-ba-writer` with: the requirement/PRD, the story title, the CLAUDE.md paths, the
    draft path `.plumbline-drafts/<KEY>/story-<n>.md`; on attempts 2–3 the judge's findings.
 2. **Judge** — start `plumbline-judge` with exactly: *Review:* the story path and the root CLAUDE.md path (writer:
    `plumbline-ba-writer`);
@@ -115,7 +112,7 @@ After 3 failed attempts: mark the story ESCALATED with its last findings and mov
 criteria after attempt 3 must be split — say so.
 
 ### Story checklist
-1. User story is "As a <specific business role> / I want / So that".
+1. User story is "As a <specific business role> / I want / So that"; *Today* states the current situation in business terms.
 2. Acceptance criteria are numbered `AC1`, `AC2`, … and written as Given / When / Then about what a user does and sees;
    each can be checked on its own by watching the system.
 3. They cover the normal case, missing or not found, invalid input, and who may not do it — where they apply.

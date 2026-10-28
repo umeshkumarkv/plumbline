@@ -44,18 +44,18 @@ Plan as if anything only instructed can fail.
 ## Reporting a problem
 Open a GitHub issue (no secrets or customer code in it), or contact the maintainer privately for anything sensitive.
 
-## Approvals and separation of duties
-JIRA records who posted each hand-off (the comment's author; for an epic or story, the issue's creator). With
-`Separate approver: yes` in the Plumbline settings (the default), a command never adds an approval label itself, and
-the next command stops unless the approval came from someone other than that author: a `[Plumbline approve /pl-<role>]`
-comment written by `/pl-approve` (the comment's author is always readable), or else JIRA's change history for the
-label. The doc writer has no shell (2.8.1): it reads the diff the command saves.
+## Approvals
+The person who runs a command is that role's SME: Plumbline posts only after their yes, with the exact text shown
+first, and JIRA records who posted it. The next command starts only when the step's label is there, and stops if the
+PRD page or the hand-off comment was edited after it was posted. The architect's HLD and LLD are final: later roles
+cannot change them (a gap stops the work and goes back to `/pl-arch`).
 
 | Control | Enforced by | Notes |
 |---|---|---|
-| The runner does not approve their own step | **Instructed**: the next command reads the issue history | A person can still add the label from a second account, or remove the check by editing the command (CI protects the commands) |
-| Only the right role can approve | **Not enforced by Plumbline.** Use JIRA: workflow transitions with conditions restricted to a role group, and/or an Automation rule that removes a `plumbline-*` label added by anyone outside the approver group | Needed for regulated clients |
-| A spec cannot change after approval unnoticed | **Instructed**: the epic pins the PRD page version; a PRD page or hand-off comment edited after its approval stops the next command | Confluence and JIRA keep edit history for audit |
+| Nothing posted without the role's SME | **Instructed** (exact text shown, yes required) + JIRA/Confluence write tools on **ask** | Keep the Atlassian write tools on ask |
+| A second person approves code | GitHub branch protection (required PR approval) | Plumbline never approves or merges |
+| Only the right role adds a label | **Not enforced by Plumbline.** Use JIRA workflow transitions or an Automation rule restricted to a role group | Needed for regulated clients |
+| A spec does not change after approval unnoticed | **Instructed**: PRD page version pinned; comment `updated` vs `created` | Confluence and JIRA keep edit history |
 | The architect owns CLAUDE.md | GitHub CODEOWNERS (see `examples/CODEOWNERS`) + branch protection requiring code-owner review | Without branch protection, only instructed |
 
 When Plumbline posts to a client's JIRA or Confluence, the client's AI-use policy applies: confirm it before a pilot.

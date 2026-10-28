@@ -25,7 +25,6 @@ None recorded beyond `src/CLAUDE.md` §7.
 - Confluence space: OD
 - Confluence parent page: Order Desk features
 - Base branch: main
-- Separate approver: yes
 - PR target: main
 - Branch pattern: ai/OD-<n>-<slug>
 - API URL: http://localhost:8085

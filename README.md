@@ -1,7 +1,7 @@
 # Plumbline
 
 **AI agents for existing codebases, with a second pair of eyes.** Plumbline gives Claude Code (and, in preview, GitHub
-Copilot) ten commands, one per SDLC role, plus `/pl-approve` for the person who signs each step off. In each, a *writer* agent does the work and a separate *judge* agent — fresh
+Copilot) ten commands, one per SDLC role. In each, a *writer* agent does the work and a separate *judge* agent — fresh
 context, never saw how the work was done — checks it against your project's rules. Up to 3 attempts, then it hands
 over to you. Nothing is committed, pushed or posted without your yes.
 
@@ -10,20 +10,18 @@ over to you. Nothing is committed, pushed or posted without your yes.
 | `/pl-onboard` | Documents the codebase: per service/frontend a short `CLAUDE.md` + a `CLAUDE.reference.md` catalogue, and a master `CLAUDE.md`; checks the tests run | CLAUDE.md files |
 | `/pl-pm "idea"` | Feature idea → PRD in business language (problem, behaviour, success criteria, scope, sized backlog) | Confluence page + JIRA epic* |
 | `/pl-ba CRS-40` | Epic → stories in business language (Given/When/Then criteria, examples) — no APIs, units or points | JIRA stories* |
-| `/pl-arch CRS-12` | Story → technical design: the unit, how each criterion is checked, API, data, logic, access, tests, suggested points | JIRA comment* |
+| `/pl-arch CRS-40` / `CRS-12` | The architect's final design: epic → HLD; story → LLD (unit, how each criterion is checked, API, data, logic, tests, points) | JIRA comment* |
 | `/pl-dev CRS-12` | Implements the story and the design's tests on a new branch | branch* |
 | `/pl-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules and its stories | PR comment* |
 | `/pl-qa CRS-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
 | `/pl-doc 42` | After merge: updates the API spec and CLAUDE.md files to match the code | docs PR* |
 | `/pl-devops 42` | Fixes a red CI run (code/tests/coverage) or proposes the fix (pipeline/config) | branch* |
 | `/pl-sm` | Daily sprint health: stuck, blocked, Definition of Done, velocity; `/pl-sm metrics` | JIRA comments* |
-| `/pl-approve CRS-12 arch` | A second person approves (or rejects) one step's hand-off; adds the label the next step waits for | JIRA comment + label* |
 
 \* only after you say yes — you see the exact content first.
 
 The usual flow: **onboard** once → **pm → ba → arch → dev → code-review → qa → doc**, with **devops** when CI is red
-and **sm** every morning. After pm, ba, arch, code-review and qa, someone other than the person who ran it runs
-`/pl-approve`. Each command also works on its own. Testing it? [TEST-PLAN.md](TEST-PLAN.md) runs everything in one go.
+and **sm** every morning; arch runs once per epic (HLD) and once per story (LLD). Each command also works on its own. Testing it? [TEST-PLAN.md](TEST-PLAN.md) runs everything in one go.
 
 ## Status
 
@@ -61,7 +59,7 @@ without them, paste the story text instead.
 ## Use
 
 Type `/pl-onboard` first — the other commands read the `CLAUDE.md` files it writes. It asks for your JIRA project,
-Confluence space and parent page, base branch and whether approvals need a second person (`Separate approver`), runs each unit's tests once, and asks you to settle any rule the repository
+Confluence space and parent page and base branch, runs each unit's tests once, and asks you to settle any rule the repository
 contradicts itself on (for example, which branch PRs target). Review its changes with `git diff`, then commit on a
 branch and open a PR.
 
@@ -77,20 +75,24 @@ your yes.
   `[decided <source>]` (what a person decided). After each merge `/pl-doc` adds the new durable rules and design
   decisions, keeps the core under 8 KB, and proposes removals for the architect, who approves the docs PR. Before
   each run, commands check whether the code changed since CLAUDE.md's `Last updated` commit and warn the agents.
-- **JIRA is the hand-off.** Only the PRD is a Confluence page, linked from the epic. Everything else lives in JIRA:
-  the epic, the stories, a `[Plumbline /pl-<role>]` comment per step (the design is the full arch comment), and the
-  approval labels
-  (`plumbline-prd-approved`, `plumbline-dor-ready`, `plumbline-arch-approved`, `plumbline-review-passed`,
-  `plumbline-qa-passed`). The next command starts only when the label is there — and, with `Separate approver: yes`,
-  only if someone other than the person who ran the step added it. A PRD page or hand-off comment edited after approval stops the next step.
+- **JIRA is the hand-off; the SME's yes is the approval.** Only the PRD is a Confluence page, linked from the epic.
+  Everything else lives in JIRA: the epic, the stories, and one `[Plumbline /pl-<role>]` comment per step — the HLD on
+  the epic, the LLD on each story. Each command posts only after its SME's yes and then adds its label
+  (`plumbline-prd-approved`, `plumbline-dor-ready`, `plumbline-hld-final`, `plumbline-arch-approved`,
+  `plumbline-review-passed`, `plumbline-qa-passed`); JIRA records who posted it. The next command starts only when the
+  label is there, and stops if a PRD page or hand-off comment was edited after it was posted. Code still needs a second
+  person: the PR approval your GitHub branch protection requires.
+- **The architect's design is final.** Dev, code review, QA, doc and devops follow the HLD and LLD exactly; a role that
+  cannot stops with `design gap — /pl-arch <KEY>` instead of working around it, and code review fails any difference.
 - **Same shape everywhere.** Everything posted is written on a template in `.github/plumbline/templates/`;
   `check-template.sh` checks headings and fields before any judge runs. Acceptance criteria carry ids (`AC1`, `AC2`,
   …) that design, tests and QA evidence cite.
 - **Every agent stays in its lane.** Each writer has a *Your lane* section (what it owns, what it must never do);
   the template check rejects what other roles own (an API path or points in a BA story, code in a design), the judge
-  fails anything else outside the lane, and the PM, BA and SM writers have no search tools, so they cannot read code.
-  Business SMEs approve business content only; the architect owns units, technical checks and blockers; the team sets
-  points at `/pl-approve … arch`; branch and PR target come from the repository settings.
+  fails anything else outside the lane, and the PM, BA and SM writers cannot edit files or run commands.
+  PM and BA agents may read code to learn what exists today, but write business language only. Business SMEs approve
+  business content; the architect owns units, technical checks, blockers and points; branch and PR target come from the
+  repository settings.
 - **Independent judging.** For code changes the judge reads the changed files, their callers, tests and entities
   itself — it does not take CLAUDE.md's word for what the code does.
 
@@ -131,7 +133,7 @@ Compare with `eval/ab.sh` before and after.
 
 ## What's in the box
 ```
-.claude/commands/   pl-<role>.md          one per command: the steps + the judge's checklist; pl-approve.md
+.claude/commands/   pl-<role>.md          one per command: the steps + the judge's checklist
 .claude/agents/     plumbline-<role>-writer.md, plumbline-qa-runner.md, plumbline-devops-fixer.md,
                     plumbline-judge.md (shared by every command)
 .github/prompts/    the commands for Copilot (each points at .claude/commands)
@@ -149,8 +151,8 @@ Check your version in `.github/plumbline/VERSION`, read [CHANGELOG.md](CHANGELOG
 `.github` folders again (step 2 of Install) and re-merge `examples/claude-settings.json`. Your `CLAUDE.md` files and
 `.plumbline-drafts/` are not touched.
 - From 2.7 or earlier: run `/pl-onboard` again so each unit's CLAUDE.md is split into the core and
-  `CLAUDE.reference.md`, rules get their `[code]`/`[decided]` tags, and the settings gain `Confluence parent page` and
-  `Separate approver`. Stories posted before 2.8 have no AC ids; new ones do.
+  `CLAUDE.reference.md`, rules get their `[code]`/`[decided]` tags, and the settings gain `Confluence parent page`.
+  Stories posted before 2.8 have no AC ids; new ones do.
 - From 2.0 / 2.1: also delete the old `.claude/commands/plumbline-*.md` and `.github/prompts/plumbline-*.prompt.md`
   (commands were renamed to `/pl-<role>` in 2.2).
 - From 1.x: delete `.plumbline/` (or run `python3 .plumbline/init.py --uninstall --yes`). The 1.x framework is kept at

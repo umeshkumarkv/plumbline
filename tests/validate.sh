@@ -16,12 +16,11 @@ for c in $CMDS; do
   head -1 "$f" | grep -qx -- '---' && grep -q '^description: Plumbline — ' "$f" && grep -q '^argument-hint: ' "$f" \
     && ok || bad "$f: frontmatter needs description (starting 'Plumbline — ') and argument-hint"
   for s in '## Every run' '## Metrics'; do grep -qx "$s" "$f" && ok || bad "$f: missing section '$s'"; done
-  # /pl-approve is the human's decision: the one command with no judge
-  [ "$c" = pl-approve ] && ok || { grep -q 'plumbline-judge' "$f" && ok || bad "$f: never starts plumbline-judge"; }
+  grep -q 'plumbline-judge' "$f" && ok || bad "$f: never starts plumbline-judge"
   grep -qiE '^## Step [0-9]+ — (Hand over|Report|Summary)' "$f" && ok || bad "$f: no hand-over/report/summary step"
   n=$(wc -l < "$f"); [ "$n" -le 140 ] && ok || bad "$f: $n lines (budget 140) — long commands are followed less reliably"
   # every agent a command names must exist
-  for a in $(grep -oE 'plumbline-[a-z]+(-[a-z]+)*' "$f" | sort -u | grep -vE '^plumbline-(drafts|policy-change|checks|prd-approved|dor-ready|arch-approved|review-passed|qa-passed|test)$'); do
+  for a in $(grep -oE 'plumbline-[a-z]+(-[a-z]+)*' "$f" | sort -u | grep -vE '^plumbline-(drafts|policy-change|checks|prd-approved|dor-ready|hld-final|arch-approved|review-passed|qa-passed|test)$'); do
     [ -f ".claude/agents/$a.md" ] && ok || bad "$f: names agent '$a' that does not exist"
   done
 done
@@ -57,7 +56,7 @@ done
 # 4. Stale or forbidden text
 hits=$(grep -rnE '(^|[ `(])/plumbline-(onboard|pm|ba|arch|dev|qa|doc|devops|sm|code-review)([^-a-z]|$)' .claude .github README.md PILOT.md 2>/dev/null)
 [ -z "$hits" ] && ok || bad "old /plumbline-<role> command names (now /pl-<role>): $hits"
-stale=( 'Run by:' '`Run by`' 'Context for the developer' 'All 13 sections' 'Feature tracker' 'info/exclude' 'dangerously-skip-permissions' 'run_in_background: true' 'features.md' 'context.md' 'changed since verified' )
+stale=( 'pl-approve' 'Separate approver' 'Run by:' '`Run by`' 'Context for the developer' 'All 13 sections' 'Feature tracker' 'info/exclude' 'dangerously-skip-permissions' 'run_in_background: true' 'features.md' 'context.md' 'changed since verified' )
 for s in "${stale[@]}"; do
   hits=$(grep -rlF -- "$s" .claude .github README.md PILOT.md 2>/dev/null)
   [ -z "$hits" ] && ok || bad "stale text '$s' in: $hits"
@@ -127,7 +126,7 @@ fi
 
 # 10. Templates: every template a command or agent names exists; the template checker passes a good draft and fails a bad one
 for t in $(grep -rhoE 'templates/[a-z-]+\.md|`[a-z-]+\.md`' .claude | grep -oE '[a-z-]+\.md' | sort -u); do
-  case "$t" in pl-*|plumbline-*|story-*|prd.md|design.md|epic.md|story.md|handoff-*|sprint-report.md|approval.md) ;; *) continue;; esac
+  case "$t" in pl-*|plumbline-*|story-*|prd.md|design.md|epic.md|story.md|handoff-*|sprint-report.md) ;; *) continue;; esac
   case "$t" in pl-*|plumbline-*) continue;; esac
   [ -f ".github/plumbline/templates/$t" ] && ok || bad "a command names template '$t' that does not exist"
 done
@@ -147,7 +146,7 @@ for a in pm ba arch dev qa doc sm onboard; do
   f=.claude/agents/plumbline-$a-writer.md; [ -f "$f" ] || f=.claude/agents/plumbline-$a-runner.md
   grep -q '^## Your lane$' "$f" && ok || bad "$f: needs a '## Your lane' section"
 done
-for a in pm ba sm; do grep -q '^tools: Read, Write$' .claude/agents/plumbline-$a-writer.md && ok || bad "plumbline-$a-writer must have only Read, Write"; done
+for a in pm ba sm; do grep -qE '^tools: Read, (Grep, Glob, )?Write$' .claude/agents/plumbline-$a-writer.md && ok || bad "plumbline-$a-writer: read and write only (no Edit, no Bash)"; done
 
 echo "Plumbline self-test: $((checks-fail))/$checks checks passed."
 [ "$fail" -eq 0 ]

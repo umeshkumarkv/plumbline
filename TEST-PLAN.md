@@ -8,7 +8,7 @@ and send it back with the hand-overs (copy the text) and any `STOPPED` lines.
   secrets you have not denied (SECURITY.md).
 - **JIRA + Confluence:** a *test* JIRA project, and a Confluence space with a page to hold PRDs (the `Confluence
   parent page`) — the PRD is the only Confluence page. The Atlassian connector connected in Claude Code; its write tools on **ask**.
-- **Two people** (or two Atlassian accounts): **A** runs the commands; **B** approves with `/pl-approve`.
+- **People:** one per role is ideal (PM, BA, architect, developer, QA); one person playing every role also works.
 - **Install:** copy `.claude` and `.github` from Plumbline `main` (README → Install), merge
   `examples/claude-settings.json`. Note `claude --version` and the model.
 
@@ -22,36 +22,31 @@ and send it back with the hand-overs (copy the text) and any `STOPPED` lines.
 ## Part 2 — onboarding (≈ 30 min)
 | # | Run | Pass when |
 |---|---|---|
-| 2.1 | `/pl-onboard` (answer: JIRA project, Confluence space, parent page, base branch, `Separate approver: yes`) | each unit has `CLAUDE.md` ≤ 8 KB and `CLAUDE.reference.md` ≤ 30 KB; every Rule is tagged `[code: …]` or `[decided …]`; 10 spot-checked endpoints/tables are real; the settings hold all values. Commit it on a branch. |
+| 2.1 | `/pl-onboard` (answer: JIRA project, Confluence space, parent page, base branch) | each unit has `CLAUDE.md` ≤ 8 KB and `CLAUDE.reference.md` ≤ 30 KB; every Rule is tagged `[code: …]` or `[decided …]`; 10 spot-checked endpoints/tables are real; the settings hold all values. Commit it on a branch. |
 
 ## Part 3 — one feature end to end (≈ 4 h)
 Use one small real backlog idea. After each step, open JIRA and Confluence and look at what was posted.
 
-| # | Who | Run | Pass when |
-|---|---|---|---|
-| 3.1 | A | `/pl-pm "<idea>"` | a Confluence PRD page under the parent page; the epic's description is `epic.md` (summary, link, version); the PRD is business-only (no APIs, units or points) and ends with the footer; **no label yet** |
-| 3.2 | A | `/pl-ba <EPIC>` | stops: `STOPPED: plumbline-prd-approved not on <EPIC>` |
-| 3.3 | A | `/pl-approve <EPIC> pm` | stops: you ran this step; another person must approve it |
-| 3.4 | B | `/pl-approve <EPIC> pm` | an `[Plumbline approve /pl-pm]` comment by B, and the label |
-| 3.5 | A | `/pl-ba <EPIC>` | stories in business language: Given/When/Then `AC1`, `AC2`, …, no APIs/units/points (a planted API path fails the template check); no label |
-| 3.6 | B | `/pl-approve <STORY> ba` | approved, label added |
-| 3.7 | A | `/pl-arch <STORY>` | one `[Plumbline /pl-arch]` comment: unit, technical blockers, suggested points, and every AC id mapped to its technical check |
-| 3.7b | B | `/pl-approve <STORY> arch` | asks B for points (default the suggestion), sets the story-points field and the blocker links |
-| 3.8 | — | edit one word of the PRD page in Confluence, then A: `/pl-ba <EPIC>` again | stops: the PRD page changed after approval |
-| 3.9 | A | `/pl-dev <STORY>` | a branch; the comment maps every AC id to a test; tests ran (or the first line says UNVERIFIED) |
-| 3.10 | A | `/pl-code-review <branch>` | the review cites code it read (callers, tests), not only CLAUDE.md; findings use blocker/major/minor as the judge's severity lines say |
-| 3.11 | B | `/pl-approve <STORY> review` | approved, label added |
-| 3.12 | A | `/pl-qa <STORY>` with the system running | evidence per AC id; stops cleanly if the system is not reachable |
-| 3.13 | B | `/pl-approve <STORY> qa` | approved, label added |
-| 3.14 | A | merge the branch in your clone, then `/pl-doc <STORY or PR>` | the docs PR adds only durable rules as `[decided <STORY>]`, the design's Decisions, the "Add to CLAUDE.md" notes; core still ≤ 8 KB; `Last updated:` is the merge commit |
+| # | Run | Pass when |
+|---|---|---|
+| 3.1 | `/pl-pm "<idea>"` | a Confluence PRD page under the parent page, business-only, with a *Today* section; the epic links it with its version; after your yes, `plumbline-prd-approved` |
+| 3.2 | `/pl-ba <EPIC>` | stories in business language: *Today*, Given/When/Then `AC1`…, no APIs/units/points (plant an API path in a draft: the template check fails it); `plumbline-dor-ready` |
+| 3.3 | `/pl-arch <STORY>` before the HLD | stops: `plumbline-hld-final` not on the epic |
+| 3.4 | `/pl-arch <EPIC>` | an HLD comment on the epic: units, interactions, data ownership, cross-cutting, story design order; `plumbline-hld-final` |
+| 3.5 | `/pl-arch <STORY>` | an LLD comment conforming to the HLD: unit, blockers, story points (field set), every AC id mapped to its technical check; `plumbline-arch-approved` |
+| 3.6 | edit one word of the LLD comment, then `/pl-dev <STORY>` | stops: changed after approval — re-run `/pl-arch` |
+| 3.7 | `/pl-dev <STORY>` | a branch; the comment maps every AC id to a test; *Design gaps* None; tests ran (or the first line says UNVERIFIED) |
+| 3.8 | `/pl-code-review <branch>` | cites code it read (callers, tests); any difference from the LLD is a major finding |
+| 3.9 | `/pl-qa <STORY>` with the system running | evidence per AC id, checked as the LLD maps it; stops cleanly if the system is not reachable |
+| 3.10 | merge the branch in your clone, then `/pl-doc <STORY or PR>` | only durable rules as `[decided <STORY>]`, the LLD's Decisions, the "Add to CLAUDE.md" notes; core ≤ 8 KB |
 
 ## Part 4 — deliberate breakage (≈ 1 h)
 | # | Do | Pass when |
 |---|---|---|
 | 4.1 | Change a line in code that CLAUDE.md describes (e.g. an endpoint's role), commit, then `/pl-code-review` a branch touching that file | the judge flags the defect from the code and adds `CLAUDE.md out of date`; every command warns "CLAUDE.md may be stale for: …" |
 | 4.2 | Hand-edit a hand-off draft to drop a heading, then let the command continue | `check-template.sh` fails it before any judge runs |
-| 4.3 | Set `Separate approver: no`, run `/pl-arch` on a new story | A's yes adds the label; `Approval: self — A` |
-| 4.4 | On a team where the connector cannot read issue history: label a story by hand without `/pl-approve`, run the next command | `STOPPED: cannot verify who approved <KEY> — run /pl-approve` |
+| 4.3 | Give `/pl-dev` a story whose LLD cannot be built as written (e.g. names a method that cannot exist) | stops: `design gap — /pl-arch <KEY>`; no workaround in the code |
+| 4.4 | Edit one word of the PRD page, then `/pl-ba <EPIC>` | stops: PRD page changed after approval |
 
 ## Results (copy into your reply)
 | # | Pass / Fail | What happened (one line; paste the STOPPED line or hand-over first line) |

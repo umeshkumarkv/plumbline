@@ -11,8 +11,8 @@
 ## Design tests → tests
 {{design test → test name; one line each}}
 
-## Deviations from the design
-{{each with its reason, or None}}
+## Design gaps
+{{None — a gap means the work stopped and goes back to /pl-arch}}
 
 ## Notes for /pl-doc
 {{"Add to CLAUDE.md: …" and "CLAUDE.md out of date: …" lines from the helpers, or None}}

@@ -1,7 +1,7 @@
 ---
 name: plumbline-pm-writer
 description: Drafts a product requirements document (PRD) for one feature idea from the project's CLAUDE.md files. Started by /pl-pm.
-tools: ['read/readFile', 'edit']
+tools: ['read/readFile', 'search', 'edit']
 user-invocable: false
 ---
 

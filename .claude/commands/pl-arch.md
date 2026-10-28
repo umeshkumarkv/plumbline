@@ -1,15 +1,15 @@
 ---
-description: Plumbline — technical design for one story (API, data, logic, integrations, security, tests), checked by an independent judge before any code
-argument-hint: "<story key, e.g. CRS-12, or a pasted story>"
+description: Plumbline — the architect's final design: HLD for an epic, LLD for a story, checked by an independent judge before any code
+argument-hint: "<epic key → HLD, or story key → LLD>"
 ---
 
 # /pl-arch
 
-Write the technical design a developer (or `/pl-dev`) builds from: endpoint, data changes, service logic,
-calls and events, security, tests, API-spec delta. A **writer** subagent drafts it; an independent **judge** checks it
-against the story and the code. Up to 3 attempts, then it is handed to the user. Nothing is posted without a yes.
+The architect's final word, which every later role follows exactly: the **HLD** for an epic (units, interactions,
+data, cross-cutting decisions) and the **LLD** for each story (endpoint, data, logic, tests, points). A **writer**
+drafts, an independent **judge** checks. Up to 3 attempts. Nothing is posted without the architect's yes.
 
-Story: $ARGUMENTS
+Input: $ARGUMENTS
 
 ## How subagents are started
 - **Claude Code:** the Agent tool with `subagent_type: plumbline-arch-writer` or `plumbline-judge` — in the foreground (`run_in_background: false`): wait for each result before the next step.
@@ -53,36 +53,32 @@ and judge of this run.
 Roles pass work to each other only through JIRA — tickets, comments and labels — never through files on someone's
 machine, so no agent redoes what an earlier role settled. Only the PRD is a Confluence page (under the `Confluence
 parent page` in the Plumbline settings), linked from the epic; every other hand-off is the ticket or a comment on it.
+The person running a command is that role's SME: their yes at the hand-over is the approval, and JIRA records who.
 
-| Step | Posts | Template | Approval label |
+| Step | Posts | Template | Label added on the SME's yes |
 |---|---|---|---|
 | `/pl-pm` | PRD page; the epic, with summary + PRD link | `prd.md`, `epic.md` | `plumbline-prd-approved` |
-| `/pl-ba` | stories under the epic — criteria, points, `Blocks` links | `story.md` | `plumbline-dor-ready` |
-| `/pl-arch` | story comment — the full design | `handoff-arch.md` | `plumbline-arch-approved` |
+| `/pl-ba` | stories under the epic — business criteria | `story.md` | `plumbline-dor-ready` |
+| `/pl-arch <EPIC>` | epic comment — the HLD | `handoff-hld.md` | `plumbline-hld-final` |
+| `/pl-arch <STORY>` | story comment — the LLD; story points set | `handoff-arch.md` | `plumbline-arch-approved` |
 | `/pl-dev` | story comment — branch, PR, test result | `handoff-dev.md` | — (the PR is reviewed next) |
 | `/pl-code-review` | PR review + story comment — verdict and findings | `handoff-review.md` | `plumbline-review-passed` |
 | `/pl-qa` | story comment — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
 | `/pl-doc` | docs PR updating CLAUDE.md + story comment | `handoff-doc.md` | the architect approves the docs PR |
 | `/pl-devops`, `/pl-sm` | comment on the story / sprint issue | `handoff-devops.md`, `sprint-report.md` | — |
-| `/pl-approve` | the approver's decision on one step + its label | `approval.md` | (adds the step's label) |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]` (JIRA returns them as `\[Plumbline …\]`: ignore
-  backslashes), and for an epic the PRD page it links, **at the version
-  it names** (no version from the tools → compare last-modified times; neither → say so in the hand-over). A PRD page
-  or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
-  role's work; if it is wrong, say which role must fix it.
-- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
-  the approval must come from someone other than the **author** of that step's hand-off (the comment's author; for
-  an epic or story description, the issue's creator): a `[Plumbline approve /pl-<role>]` comment by them, else the
-  issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <KEY>
-  self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first. JIRA
-  records who posted it. `Separate approver: yes` → no label; tell the SME `/pl-approve <KEY> <role>` must be run by
-  another person. `no` → add the label after the yes.
+  `[Plumbline /pl-<role>]` (JIRA returns `\[Plumbline …\]`: ignore backslashes), the epic's HLD for a story, and for
+  an epic the PRD page it links, **at the version it names** (no version → compare last-modified times).
+- **Gate:** start only when the previous step's label is on the ticket (a story's design also needs
+  `plumbline-hld-final` on its epic). A hand-off edited after it was posted (comment `updated` later than `created`;
+  PRD page past the pinned version) → `STOPPED: <what> changed after approval — re-run <command>`.
+- **The architect's word is final:** later roles follow the HLD and LLD exactly. A role that cannot → `STOPPED:
+  design gap — /pl-arch <KEY>`; never work around it. Do not redo an earlier role's work.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first; then
+  add the label.
 - No Confluence tools or no parent page → the PRD goes in the epic description. A comment must stay under 30,000
-  characters (JIRA's limit is 32,767): longer → stop and say the story should be split.
-  No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
+  characters (JIRA's limit is 32,767): longer → split. No JIRA tools → output as text to paste. Drafts are scratch.
 
 ## Metrics
 At the hand-over append to `.plumbline-drafts/metrics.csv` (header, if new:
@@ -93,25 +89,34 @@ answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` su
 redirection, which permission settings block.
 
 ## Step 1 — Pre-flight
-Fetch the story with the connected JIRA tools (or ask the user to paste it). Read the root `CLAUDE.md` and the unit's
-CLAUDE.md.
-
-**Stop and ask the user** if: the story has no acceptance criteria; a blocked-by ticket is not Done; the design would
-need another unit's database, a new unit, an out-of-scope feature, or a new library the root CLAUDE.md does not allow.
+An **epic** key → the **HLD**: the epic, its PRD and its stories; draft `.plumbline-drafts/<KEY>/hld.md` on
+`handoff-hld.md`; checklist: **HLD checklist**. A **story** key → the **LLD**: the story and its epic's HLD (the gate
+needs `plumbline-hld-final` on the epic; a story with no epic is designed against the root CLAUDE.md only); draft
+`.plumbline-drafts/<KEY>/design.md` on `handoff-arch.md`; checklist: **Design checklist**. Read the root `CLAUDE.md`
+and the CLAUDE.md of each unit involved. **Stop and ask the user** if: the story has no acceptance criteria; a
+blocker is not Done; the design would need another unit's database, a new unit, an out-of-scope feature, or a new
+library the root CLAUDE.md does not allow.
 
 ## Step 2 — Attempts (1, 2, 3)
-1. **Writer** — start `plumbline-arch-writer` with: the story path, the unit, the CLAUDE.md paths, the draft path
-   `.plumbline-drafts/<KEY>/design.md` (on `handoff-arch.md`); on attempts 2–3 the judge's findings.
-2. **Judge** — start `plumbline-judge` with exactly: *Review:* the design path, the story path, the CLAUDE.md paths and
-   the unit folder (writer: `plumbline-arch-writer`); *Checklist:* the **Design checklist** below, verbatim. PASS → Step 3. FAIL → next attempt.
+1. **Writer** — start `plumbline-arch-writer` with: HLD or LLD, the input paths, the CLAUDE.md paths, the draft path;
+   on attempts 2–3 the judge's findings.
+2. **Judge** — start `plumbline-judge` with exactly: *Review:* the draft, the input paths, the CLAUDE.md paths and the
+   unit folders (writer: `plumbline-arch-writer`); *Checklist:* the HLD or Design checklist, verbatim. PASS → Step 3.
 
 After 3 failed attempts: stop, show the last findings, and hand over (usually the story needs the BA to clarify).
+
+### HLD checklist
+1. Every story of the epic is in *Story design order* with exactly one unit; units exist in the root CLAUDE.md.
+2. Interactions name each call/event with its failure behaviour; consumed events have a producer.
+3. Data: each piece has one owning unit; no unit reads another's database.
+4. Cross-cutting covers security/roles, errors, transactions/idempotency and audit — or says "not affected".
+5. Every decision has its reason; nothing contradicts the root CLAUDE.md rules; no production code.
 
 ### Design checklist
 1. *Acceptance criteria → design* maps every AC id to how it is met **and checked** (endpoint, status, fields, error
    code, or UI behaviour) — none left out; no criterion is changed (questions for BA go under Open questions).
-1b. *Ownership and estimate*: one unit that exists in the root CLAUDE.md (several → Open question "for BA: split");
-   technical blockers named or None; suggested points 1/2/3/5/8.
+1b. Conforms to the epic's HLD: the unit, interactions, data ownership and decisions are the HLD's (a needed change
+   → stop: the HLD must change first). Technical blockers named or None; story points 1/2/3/5/8.
 2. Endpoint: method, path, auth/roles, request and response fields with types, and the unit and port match the CLAUDE.md
    files (and any code the design cites).
 3. Every error path in the criteria has a status and an error code in the project's error format.
@@ -128,6 +133,8 @@ After 3 failed attempts: stop, show the last findings, and hand over (usually th
 10. API-spec delta (e.g. openapi.yaml) stated, or "no change". No placeholders left.
 
 ## Step 3 — Hand over
-Show the design. Ask before posting it as the story comment (it is already on `handoff-arch.md`, starting
-`[Plumbline /pl-arch] <date>`) — show the exact text first and wait for a yes; the approval follows the JIRA hand-off.
-A design covering several stories is posted on the first and linked from the others. Next step: `/pl-dev <KEY>`.
+Show the HLD or LLD. Ask before posting it as the epic or story comment (already on its template) — exact text
+first, then a yes; then add the label (`plumbline-hld-final` / `plumbline-arch-approved`) and, for an LLD, set the
+story-points field and one `Blocks` link per technical blocker. The architect's yes makes it final: later roles
+follow it exactly. A design covering several stories is posted on the first and linked from the others. Next step:
+`/pl-arch <STORY>` for each story in *Story design order*, then `/pl-dev <KEY>`.

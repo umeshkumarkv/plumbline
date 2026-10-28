@@ -3,6 +3,9 @@ Cancel all open orders of one account in one action — stop further fills durin
 ## User story
 As an operations user handling a client incident / I want to cancel all open orders of one account in one action / So that no further fills happen while the incident is handled
 
+## Today
+Operations can cancel one order at a time; there is no account-level action.
+
 ## Acceptance criteria
 - AC1: Given an account with orders that are new, validated, sent for execution or partly filled, When operations cancels all, Then every one of them is cancelled and operations sees how many were cancelled.
 - AC2: Given an account that also has filled, cancelled or rejected orders, When operations cancels all, Then those orders are unchanged.

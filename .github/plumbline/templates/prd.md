@@ -4,6 +4,9 @@
 ## Problem
 {{who has it (a specific business role), what they cannot do today, the business impact}}
 
+## Today
+{{what users can and cannot do now, in business terms — learned from CLAUDE.md and the code}}
+
 ## Solution
 {{what the user will be able to do and see, step by step, in business language — no APIs, services, data model or how to build it}}
 

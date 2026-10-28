@@ -2,6 +2,9 @@
 ## User story
 As a {{specific business role}} / I want {{…}} / So that {{…}}
 
+## Today
+{{what this user can and cannot do now, in business terms}}
+
 ## Acceptance criteria
 {{AC1: Given … When … Then …  — one per line, in business language, each checkable by watching what the system does; numbered AC1, AC2, … and never renumbered once posted}}
 

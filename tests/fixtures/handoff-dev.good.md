@@ -11,7 +11,7 @@ AC1 → RefundTest.refundsPart
 ## Design tests → tests
 refund partial → RefundTest.refundsPart
 
-## Deviations from the design
+## Design gaps
 None
 
 ## Notes for /pl-doc

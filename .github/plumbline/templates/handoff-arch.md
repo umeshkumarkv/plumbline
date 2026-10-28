@@ -5,9 +5,9 @@
 {{AC1 → how it is met and checked technically: endpoint, status, fields, error code or UI behaviour; one line per AC — QA tests against this}}
 
 ## Ownership and estimate
-- Unit: {{the one unit that builds this story — spans units → stop and ask BA to split}}
+- Unit: {{the one unit that builds this story, as the epic's HLD assigns it}}
 - Technical blockers: {{keys of stories/changes needed first, or None}}
-- Suggested points: {{1 | 2 | 3 | 5 | 8 — the team confirms at /pl-approve}}
+- Story points: {{1 | 2 | 3 | 5 | 8 — set by the architect; 13+ means split the story}}
 
 ## Endpoint
 {{method, path, auth and roles, unit and port, routing; request fields; response fields; every error (status, code, condition)}}
