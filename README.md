@@ -10,7 +10,7 @@ over to you. Nothing is committed, pushed or posted without your yes.
 | `/pl-onboard` | Documents the codebase: per service/frontend a short `CLAUDE.md` + a `CLAUDE.reference.md` catalogue, and a master `CLAUDE.md`; checks the tests run | CLAUDE.md files |
 | `/pl-pm "idea"` | Feature idea → PRD (problem, solution, success criteria, scope, backlog) | Confluence page + JIRA epic* |
 | `/pl-ba CRS-40` | Epic → stories with testable acceptance criteria | JIRA stories* |
-| `/pl-arch CRS-12` | Story → technical design (API, data, logic, access, tests) | Confluence page + JIRA comment* |
+| `/pl-arch CRS-12` | Story → technical design (API, data, logic, access, tests) | JIRA comment* |
 | `/pl-dev CRS-12` | Implements the story and the design's tests on a new branch | branch* |
 | `/pl-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules and its stories | PR comment* |
 | `/pl-qa CRS-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
@@ -77,11 +77,12 @@ your yes.
   `[decided <source>]` (what a person decided). After each merge `/pl-doc` adds the new durable rules and design
   decisions, keeps the core under 8 KB, and proposes removals for the architect, who approves the docs PR. Before
   each run, commands check whether the code changed since CLAUDE.md's `Last updated` commit and warn the agents.
-- **JIRA and Confluence are the hand-off.** The PRD and each design are Confluence pages; JIRA holds the epic, the
-  stories, a `[Plumbline /pl-<role>]` comment per step with the page link and version, and the approval labels
+- **JIRA is the hand-off.** Only the PRD is a Confluence page, linked from the epic. Everything else lives in JIRA:
+  the epic, the stories, a `[Plumbline /pl-<role>]` comment per step (the design is the full arch comment), and the
+  approval labels
   (`plumbline-prd-approved`, `plumbline-dor-ready`, `plumbline-arch-approved`, `plumbline-review-passed`,
   `plumbline-qa-passed`). The next command starts only when the label is there — and, with `Separate approver: yes`,
-  only if someone other than the person who ran the step added it. A page edited after approval stops the next step.
+  only if someone other than the person who ran the step added it. A PRD page or hand-off comment edited after approval stops the next step.
 - **Same shape everywhere.** Everything posted is written on a template in `.github/plumbline/templates/`;
   `check-template.sh` checks headings and fields before any judge runs. Acceptance criteria carry ids (`AC1`, `AC2`,
   …) that design, tests and QA evidence cite.

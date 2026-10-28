@@ -28,7 +28,7 @@ The story path, the unit, the CLAUDE.md paths, the draft path, and on a retry th
 - Write only the draft file. No code, no other files, no shell commands.
 
 ## Design
-Write it on `.github/plumbline/templates/design.md`: every `## ` heading, in order, with its exact text; every `{{…}}` replaced; `None`
+Write it on `.github/plumbline/templates/handoff-arch.md` — it is posted as the story comment as it is: every `## ` heading, in order, with its exact text; every `{{…}}` replaced; `None`
 where a section has nothing. Cite acceptance criteria by their ids (`AC1`, `AC2`, …). Every error has a status and an
 error code in the project's error format. Put each design choice and its reason under `## Decisions` — `/pl-doc`
 copies them into CLAUDE.md after merge. In `## Record`, write the version, commit and `Run by` you were given; leave

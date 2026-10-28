@@ -55,7 +55,7 @@ label. The doc writer has no shell (2.8.1): it reads the diff the command saves.
 |---|---|---|
 | The runner does not approve their own step | **Instructed**: the next command reads the issue history | A person can still add the label from a second account, or remove the check by editing the command (CI protects the commands) |
 | Only the right role can approve | **Not enforced by Plumbline.** Use JIRA: workflow transitions with conditions restricted to a role group, and/or an Automation rule that removes a `plumbline-*` label added by anyone outside the approver group | Needed for regulated clients |
-| A spec cannot change after approval unnoticed | **Instructed**: comments pin the Confluence page version; a later version stops the next command | Confluence keeps every version for audit |
+| A spec cannot change after approval unnoticed | **Instructed**: the epic pins the PRD page version; a PRD page or hand-off comment edited after its approval stops the next command | Confluence and JIRA keep edit history for audit |
 | The architect owns CLAUDE.md | GitHub CODEOWNERS (see `examples/CODEOWNERS`) + branch protection requiring code-owner review | Without branch protection, only instructed |
 
 When Plumbline posts to a client's JIRA or Confluence, the client's AI-use policy applies: confirm it before a pilot.

@@ -1,13 +1,37 @@
 [Plumbline /pl-arch] {{YYYY-MM-DD}}
 
-## Design
-Design: {{link to the Confluence design page, version n — or "below" when there is no Confluence, then the full design.md content}}
+## Acceptance criteria → design
+{{AC1 → the endpoint, rule, error or UI behaviour that meets it; one line per AC}}
 
-## Summary
-{{3–5 lines: endpoint, data change, the riskiest decision}}
+## Endpoint
+{{method, path, auth and roles, unit and port, routing; request fields; response fields; every error (status, code, condition)}}
+
+## Data
+{{migration file (next free version) and DDL, or "no schema change"; entity fields and types}}
+
+## Logic
+{{class and method signature; numbered steps; error paths}}
+
+## Calls and events
+{{calls to other units (endpoint, timeout/fallback); events produced/consumed — or None}}
+
+## Cache and config
+{{keys, TTL, invalidation, new config or env vars — or None}}
+
+## Identity and access
+{{ownership field, identifier kinds, per-role access for every endpoint, gateway headers}}
+
+## Tests
+{{at least 3 named cases per layer touched, including error paths}}
+
+## API-spec delta
+{{paths and schemas to add or change, or "no change"}}
+
+## Decisions
+{{each design choice and why — /pl-doc copies these into CLAUDE.md "Decisions & trade-offs" — or None}}
 
 ## Open questions
-{{or None}}
+{{anything the story or code does not answer, or None}}
 
 ## Record
 Plumbline: {{version from .github/plumbline/VERSION}}

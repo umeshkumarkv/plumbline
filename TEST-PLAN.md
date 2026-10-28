@@ -6,8 +6,8 @@ and send it back with the hand-overs (copy the text) and any `STOPPED` lines.
 ## Before you start
 - **Repository:** a fresh clone of a test copy of a real service (e.g. broker-dealer). Never one holding production
   secrets you have not denied (SECURITY.md).
-- **JIRA + Confluence:** a *test* JIRA project and a Confluence space you may write to, with a page to hold features
-  (the `Confluence parent page`). The Atlassian connector connected in Claude Code; its write tools on **ask**.
+- **JIRA + Confluence:** a *test* JIRA project, and a Confluence space with a page to hold PRDs (the `Confluence
+  parent page`) — the PRD is the only Confluence page. The Atlassian connector connected in Claude Code; its write tools on **ask**.
 - **Two people** (or two Atlassian accounts): **A** runs the commands; **B** approves with `/pl-approve`.
 - **Install:** copy `.claude` and `.github` from Plumbline `main` (README → Install), merge
   `examples/claude-settings.json`. Note `claude --version` and the model.
@@ -35,8 +35,8 @@ Use one small real backlog idea. After each step, open JIRA and Confluence and l
 | 3.4 | B | `/pl-approve <EPIC> pm` | an `[Plumbline approve /pl-pm]` comment by B, and the label |
 | 3.5 | A | `/pl-ba <EPIC>` | stories with `AC1`, `AC2`, …, the `story.md` headings, points and `Blocks` links; no label |
 | 3.6 | B | `/pl-approve <STORY> ba` | approved, label added |
-| 3.7 | A | `/pl-arch <STORY>` | a design page under the PRD page; a story comment with the page link **and version**; the design maps every AC id |
-| 3.8 | — | edit the design page in Confluence (one word), then B: `/pl-approve <STORY> arch` | B is shown that the page changed since the hand-off (decide: reject, A re-runs `/pl-arch`, B approves) |
+| 3.7 | A | `/pl-arch <STORY>` | the full design is one `[Plumbline /pl-arch]` comment on the story (no Confluence page); it maps every AC id |
+| 3.8 | — | edit one word of the PRD page in Confluence, then A: `/pl-ba <EPIC>` again | stops: the PRD page changed after approval |
 | 3.9 | A | `/pl-dev <STORY>` | a branch; the comment maps every AC id to a test; tests ran (or the first line says UNVERIFIED) |
 | 3.10 | A | `/pl-code-review <branch>` | the review cites code it read (callers, tests), not only CLAUDE.md; findings use blocker/major/minor as the judge's severity lines say |
 | 3.11 | B | `/pl-approve <STORY> review` | approved, label added |

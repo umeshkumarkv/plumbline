@@ -48,15 +48,15 @@ Save the story you read from JIRA (description, criteria, links) as `.plumbline-
 and judge of this run.
 
 ## JIRA hand-off
-Roles pass work to each other only through JIRA and Confluence — never through files on someone's machine — so no
-agent redoes what an earlier role settled. Specs people review and edit (PRD, design) are Confluence pages under the
-`Confluence parent page` (Plumbline settings); JIRA holds the state (labels), a short summary and the page link.
+Roles pass work to each other only through JIRA — tickets, comments and labels — never through files on someone's
+machine, so no agent redoes what an earlier role settled. Only the PRD is a Confluence page (under the `Confluence
+parent page` in the Plumbline settings), linked from the epic; every other hand-off is the ticket or a comment on it.
 
 | Step | Posts | Template | Approval label |
 |---|---|---|---|
 | `/pl-pm` | PRD page; the epic, with summary + PRD link | `prd.md`, `epic.md` | `plumbline-prd-approved` |
 | `/pl-ba` | stories under the epic — criteria, points, `Blocks` links | `story.md` | `plumbline-dor-ready` |
-| `/pl-arch` | design page under the PRD page; story comment with its link and version | `design.md`, `handoff-arch.md` | `plumbline-arch-approved` |
+| `/pl-arch` | story comment — the full design | `handoff-arch.md` | `plumbline-arch-approved` |
 | `/pl-dev` | story comment — branch, PR, test result | `handoff-dev.md` | — (the PR is reviewed next) |
 | `/pl-code-review` | PR review + story comment — verdict and findings | `handoff-review.md` | `plumbline-review-passed` |
 | `/pl-qa` | story comment — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
@@ -65,10 +65,10 @@ agent redoes what an earlier role settled. Specs people review and edit (PRD, de
 | `/pl-approve` | the approver's decision on one step + its label | `approval.md` | (adds the step's label) |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]`, and each page those link to, **at the version the
-  comment names**. Page now at a later version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Tools give
-  no version → compare the page's last-modified time with the approval; neither → say in the hand-over that later
-  page edits cannot be detected. Do not redo an earlier role's work; if it is wrong, say which role must fix it.
+  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]`, and for an epic the PRD page it links, **at the version
+  it names** (no version from the tools → compare last-modified times; neither → say so in the hand-over). A PRD page
+  or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
+  role's work; if it is wrong, say which role must fix it.
 - **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
   the approval must come from someone other than that step's `Run by`: a `[Plumbline approve /pl-<role>]` comment by
   them, else the issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED:
@@ -76,7 +76,8 @@ agent redoes what an earlier role settled. Specs people review and edit (PRD, de
 - **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
   `Run by` is the connected Atlassian user. `Separate approver: yes` → no label: `Approval: pending — /pl-approve
   <KEY> <role> by another person`. `no` → add the label after the yes; `Approval: self — <name> (<date>)`.
-- No Confluence tools or no parent page → the PRD goes in the epic description and the design in the arch comment.
+- No Confluence tools or no parent page → the PRD goes in the epic description. A comment must stay under 30,000
+  characters (JIRA's limit is 32,767): longer → stop and say the story should be split.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
 
 ## Metrics
@@ -96,7 +97,7 @@ need another unit's database, a new unit, an out-of-scope feature, or a new libr
 
 ## Step 2 — Attempts (1, 2, 3)
 1. **Writer** — start `plumbline-arch-writer` with: the story path, the unit, the CLAUDE.md paths, the draft path
-   `.plumbline-drafts/<KEY>/design.md`; on attempts 2–3 the judge's findings.
+   `.plumbline-drafts/<KEY>/design.md` (on `handoff-arch.md`); on attempts 2–3 the judge's findings.
 2. **Judge** — start `plumbline-judge` with exactly: *Review:* the design path, the story path, the CLAUDE.md paths and
    the unit folder; *Checklist:* the **Design checklist** below, verbatim. PASS → Step 3. FAIL → next attempt.
 
@@ -120,7 +121,6 @@ After 3 failed attempts: stop, show the last findings, and hand over (usually th
 10. API-spec delta (e.g. openapi.yaml) stated, or "no change". No placeholders left.
 
 ## Step 3 — Hand over
-Show the design. Ask before (1) publishing it as a Confluence page `<KEY> — <summary> — Design` under the PRD page
-(else the parent page), (2) posting the story comment on `handoff-arch.md` with the page link and version, and (3)
-the approval label as the JIRA hand-off says (`plumbline-arch-approved`) — show the exact content first and wait for a yes. A design covering several stories
-is one page, linked from each story. Next step: `/pl-dev <KEY>`.
+Show the design. Ask before posting it as the story comment (it is already on `handoff-arch.md`, starting
+`[Plumbline /pl-arch] <date>`) — show the exact text first and wait for a yes; the approval follows the JIRA hand-off.
+A design covering several stories is posted on the first and linked from the others. Next step: `/pl-dev <KEY>`.

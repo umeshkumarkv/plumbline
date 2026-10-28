@@ -8,11 +8,11 @@ checks the content.
 
 | Template | Becomes | Written by |
 |---|---|---|
-| `prd.md` | Confluence page (or the epic description without Confluence) | `/pl-pm` writer |
+| `prd.md` | Confluence page (or the epic description without Confluence) — the only Confluence page | `/pl-pm` writer |
 | `epic.md` | JIRA epic description: summary + link to the PRD page | `/pl-pm` |
 | `story.md` | JIRA story description | `/pl-ba` writer |
-| `design.md` | Confluence page under the PRD (or the arch comment without Confluence) | `/pl-arch` writer |
-| `handoff-arch.md` … `handoff-devops.md` | `[Plumbline /pl-<role>]` comment on the story | each command, at the hand-over |
+| `handoff-arch.md` | `[Plumbline /pl-arch]` comment on the story: the full design | `/pl-arch` writer |
+| `handoff-dev.md` … `handoff-devops.md` | `[Plumbline /pl-<role>]` comment on the story | each command, at the hand-over |
 | `sprint-report.md` | sprint report comment or page | `/pl-sm` writer |
 | `approval.md` | `[Plumbline approve /pl-<role>]` comment: the approver's decision | `/pl-approve` |
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.2 — 2026-10-29 — hand-offs in JIRA; Confluence only for the PRD
+- The design is the full `[Plumbline /pl-arch]` comment on the story again (template `handoff-arch.md`, which now holds
+  all design sections; `design.md` removed). Every hand-off is a JIRA ticket or comment; the PRD is the only Confluence
+  page, linked and version-pinned from the epic.
+- A hand-off comment edited after its approval stops the next command, as an edited PRD page does.
+- A comment must stay under 30,000 characters (JIRA's limit 32,767); longer → split the story.
+
 ## 2.8.1 — 2026-10-29 — approvals that do not depend on JIRA history; ready to test in one go
 - **`/pl-approve <KEY> <pm|ba|arch|review|qa>`:** the second person reads the hand-off as the next role will, sees
   any judge FAIL, template failure, open question or page edited since the hand-off, and approves or rejects. It
