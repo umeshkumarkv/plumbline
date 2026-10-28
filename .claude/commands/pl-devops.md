@@ -21,7 +21,7 @@ Never do the fixer's or the judge's work yourself. **Shell:** run only `git` (fr
 command yourself. Do not research the code yourself — the fixer and the judge do; you route,
 check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
-unchanged, then continue.
+unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
 
 ## Every run
 - **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same

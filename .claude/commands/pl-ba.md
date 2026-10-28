@@ -21,7 +21,7 @@ Never do the writer's or the judge's work yourself, and never pass the writer's 
 only `git` (from the repository root — never `git -C`, which permission rules do not match) yourself; read and search files with your file tools. Do not research the code yourself — that is the
 writer's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
-unchanged, then continue.
+unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
 
 ## Every run
 - **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same

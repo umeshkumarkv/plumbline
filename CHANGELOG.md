@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.5.0 — 2026-10-28 — release hardening
+No new commands or tools; the same markdown commands, agents, settings and CI, made safer to run and to release.
+- **"Every run" rules in all ten commands** (one shared block, kept identical by the self-test): a judge reply that
+  is not the expected JSON is asked again once, then counted as FAIL — the orchestrator never decides PASS itself;
+  max 3 attempts per item and a yes before more than 6 items; a defined behaviour for unattended runs; one hand-over
+  format whose first line is `PASS`, `FAIL after 3 attempts`, `STOPPED: <reason>` or `UNVERIFIED: <what did not run>`.
+- **Judge:** every checklist item now says what was checked; an item that could not be checked is FAIL, never PASS.
+- **`FILE: <path>` fallback** only writes to a path the command gave that helper; anything else is a finding.
+- **Self-test** `tests/validate.sh` (+ `plumbline-selftest.yml` in CI, skipped in your projects): command structure,
+  Copilot pointers, agents named exist, shared blocks identical, stale names, settings sanity (no rule both allowed
+  and denied, dangerous git denied, push asks), version, links, workflow syntax. Negative-tested: 4 planted breaks,
+  4 caught.
+- **Release docs:** README rewritten (status per platform, install with permissions as a standard step, upgrade,
+  remove); new [SECURITY.md](SECURITY.md) (what is enforced vs only instructed, threats); new
+  [RELEASING.md](RELEASING.md) (checklist); `.github/plumbline/VERSION`.
+- `/pl-sm` metrics mode moved to its own section; CI protects the self-test workflow too.
+
 ## 2.4.1 — 2026-10-28 — independent critique applied
 - Test report corrected (all runs used `claude-sonnet-5-5`; the "second model" test was a repeat), evidence status
   stated, tighter example permissions, onboarding one unit at a time. See TEST-REPORT.md section 7.

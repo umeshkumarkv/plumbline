@@ -21,7 +21,7 @@ Never do the runner's or the judge's work yourself. **Shell:** run only `git` (f
 `curl` (`curl.exe` on Windows) for the health check and the start commands the user approves in Step 1. Do not research the code yourself — that is the
 writer's/runner's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
-unchanged, then continue.
+unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
 
 ## Every run
 - **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
