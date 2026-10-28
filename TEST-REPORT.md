@@ -208,6 +208,7 @@ planted defects plus one decoy, five clean. `/pl-code-review` headless on every 
 | Verdicts | 5 × FAIL on defect cases, 5 × PASS on clean cases |
 | Extra true findings | e.g. repeated refunds can exceed the order total (d2); no null/duplicate-id validation in the batch endpoint (d3) |
 | Time / cost | 40–70 s per review; **$1.78** for all ten |
+| Eval material | `eval/check-cases.sh` on a developer Mac (Java 21, Maven): all 10 cases compile; the baseline and every clean case's tests pass; the defect cases' own tests also pass — as such defects do in real PRs |
 
 Limits: the cases were written by Plumbline's author; the defects are common, textbook classes; one model. The
 eval set exists so others can add harder cases and run it on other models and on Copilot — see
