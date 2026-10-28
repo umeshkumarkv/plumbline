@@ -17,8 +17,8 @@ Target: $ARGUMENTS (empty = every unit)
   (`.github/agents/`). If subagents are not available in this chat, stop and say so.
 
 Each subagent starts with a clean context. Never do the writer's or the judge's work yourself, and never pass the
-writer's reasoning or your own opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) commands yourself (they work in bash,
-PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
+writer's reasoning or your own opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) commands, and in Step 2b each
+unit's own test command, yourself (they work in bash, PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
 
@@ -43,10 +43,20 @@ unit; a parent build file that only lists modules is not. For each unit decide i
 
 Show the user the list (name, folder, kind, CLAUDE.md) in one table and continue.
 
+## Step 2b — Do the tests run here? (one run per unit)
+For each unit, take its test command from the build files (`./mvnw test` / `mvnw.cmd test`, `mvn test`,
+`./gradlew test`, `npm test -- --watch=false`; the command the README or an existing CLAUDE.md gives wins). Note the
+runtime the build files ask for (Java version, Node engines). Run the command once, with a 15-minute limit, and keep
+only: the exact command, the runtime actually used (`java -version`, `node -v`), the result (`N tests, M failed` or
+the first error line), and the duration. Do not change any file to make it pass. If running it needs something you
+must not do (install software, network the user has not allowed), do not run it and record why.
+The result goes to the writer as the unit's **test recipe**; other commands rely on it, so a failure must be recorded
+exactly, never smoothed over.
+
 ## Step 3 — Each unit (units may run in parallel)
 For attempt = 1, 2, 3:
-1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md path, and on attempts 2–3
-   the judge's findings from the previous attempt (verbatim JSON).
+1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md path, the unit's test recipe
+   from Step 2b, and on attempts 2–3 the judge's findings from the previous attempt (verbatim JSON).
 2. **Judge** — start `plumbline-judge` with exactly:
    - *Review:* the CLAUDE.md path, the unit folder, and "compare with `git diff -- <CLAUDE.md path>`: text outside the
      plumbline markers must be unchanged";
@@ -64,7 +74,10 @@ and move on.
 3. Every entity/table is listed in Data with its key fields; none listed that the code, migrations or SQL scripts do
    not define. Column names are fields, not tables.
 4. Integrations: every outbound HTTP call, messaging topic and cache the code uses is listed; nothing invented.
-5. Build & run commands, port and configuration match the build and config files.
+5. Build & run commands, port and configuration match the build and config files. A **Test recipe** line states the
+   command, the runtime it needs (from the build files), and the result of the Step 2b run as given in the request
+   (passed / failed with the first error / not run and why) — a failure is not hidden or reworded as success.
+   Absolute filesystem paths in config that tests or startup depend on are listed.
 6. Security: authentication, roles and token storage are described as the code does them, with the file.
 7. Rules and Must-never items are each traceable to code or the root CLAUDE.md.
 8. Tech debt states the TODO/FIXME count and top files; other debt as counts plus up to 10 locations. Debt recorded
@@ -76,12 +89,22 @@ and move on.
 Only if at least one unit passed. Writer: `plumbline-onboard-writer` with "root master file: `CLAUDE.md`, units: <the
 table from Step 2 with results>, settings: <from Step 1>". Judge: `plumbline-judge` with the root file and this
 checklist: (1) every unit is in the Units table with the right folder and CLAUDE.md; (2) How they connect matches the
-units' Integrations/API sections; (3) Plumbline settings present (JIRA project, Confluence space, base branch, API URL,
-frontend URL — the URLs match the config); (4) text outside the markers unchanged. Up to 3
-attempts.
+units' Integrations/API sections; (3) Plumbline settings present (JIRA project, Confluence space, base branch, PR
+target, branch pattern, API URL, frontend URL — the URLs match the config); (4) text outside the markers unchanged;
+(5) **Decisions needed** lists every place where the repository's own docs, the settings and the code disagree on how
+work is done (base/PR branch, branch naming, ticket key, test command, environments) — each with both sides and their
+files — or says "None". Up to 3 attempts.
+
+## Step 4b — Settle the decisions
+For each item in **Decisions needed**, ask the user to choose (show both sides and the files). Write each answer into
+the Plumbline settings as the value plus `(decided <date>)`, and remove the item from the list. Every other command
+treats these settings as the rule. When nobody can answer (an unattended run), leave the items listed: other commands
+then use the Plumbline settings value and name the open decision in their hand-over.
 
 ## Step 5 — Summary
-One table: unit · result (PASS / ESCALATED) · attempts · file · open findings. Then:
+One table: unit · result (PASS / ESCALATED) · attempts · file · test recipe result · open findings. If any unit's
+tests did not run or failed on the untouched code, say so first: later `/pl-dev` runs on that unit will be
+**UNVERIFIED** until it is fixed. Then:
 - review the changes with `git diff`; discard one file with `git checkout -- <file>`;
 - commit on a branch and open a PR so the team reviews the docs.
 

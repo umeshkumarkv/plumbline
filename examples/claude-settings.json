@@ -35,7 +35,18 @@
       "Edit(.claude/**)",
       "Write(.claude/**)",
       "Edit(.github/**)",
-      "Write(.github/**)"
+      "Write(.github/**)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*.p12)",
+      "Read(**/*.jks)",
+      "Read(**/id_rsa*)",
+      "Read(**/.aws/**)",
+      "Read(**/.ssh/**)",
+      "Read(**/credentials*)",
+      "Read(**/secrets*)"
     ]
   }
 }

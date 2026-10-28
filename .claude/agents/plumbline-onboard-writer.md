@@ -9,7 +9,8 @@ the whole solution for the root file) so that people and AI agents can work on i
 true of the code today — search for it before you write it.
 
 ## You are given
-- the unit name, its folder, and the CLAUDE.md file to write;
+- the unit name, its folder, the CLAUDE.md file to write, and the unit's test recipe (command, runtime, result of
+  one real run);
 - on a retry, the judge's findings: fix every one, or answer it in one line under "Open questions" if the code shows
   the finding is wrong.
 
@@ -27,7 +28,9 @@ true of the code today — search for it before you write it.
 ## Unit CLAUDE.md — sections (skip a section only by writing "None found")
 1. **Purpose** — what this unit does, in 3–5 lines.
 2. **Build & run** — the exact commands from the build files (e.g. `./mvnw test` / `mvnw.cmd test`, `npm test`), the
-   port, the profiles/environments.
+   port, the profiles/environments. Then a **Test recipe** line, exactly as given: command · runtime it needs (from
+   the build files) · result of the run (`N passed` / `failed: <first error>` / `not run: <why>`) · date. If config
+   files hard-code absolute paths (log folders, data files) that startup or tests depend on, list them here.
 3. **Structure** — main packages/folders and what lives where.
 4. **API** — backend: every endpoint as `VERB /path — handler — one-line purpose`, grouped by controller.
    Frontend: every route/page, then every backend call as `VERB /path — file — backend endpoint it hits`; calls no
@@ -46,8 +49,12 @@ true of the code today — search for it before you write it.
 - **Solution** — what the system is, in a paragraph.
 - **Units** — table: unit, folder, kind, port, owns, its CLAUDE.md.
 - **How they connect** — which unit calls which (HTTP, messaging, shared database).
-- **Plumbline settings** — keep the existing values: `JIRA project`, `Confluence space`, `Base branch`; add `API URL`
-  and `Frontend URL` for local runs if missing (from the config: e.g. `http://localhost:<gateway or backend port>`).
+- **Plumbline settings** — keep the existing values: `JIRA project`, `Confluence space`, `Base branch`; add
+  `PR target`, `Branch pattern`, `API URL` and `Frontend URL` if missing (URLs from the config: e.g.
+  `http://localhost:<gateway or backend port>`). Values marked `(decided <date>)` are never changed.
+- **Decisions needed** — every place where the repository's own docs (README, existing CLAUDE.md text, CONTRIBUTING),
+  the settings and the code disagree about how work is done: base/PR branch, branch naming, ticket key, test command,
+  environments. One line each: the two sides with their files. "None" if there are none.
 - **Rules for every change** — the cross-cutting rules (security, data ownership, testing).
 
 **If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete

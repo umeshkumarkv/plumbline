@@ -69,13 +69,18 @@ paste the story text instead.
   ran, and your decision at the hand-over). `/pl-sm metrics` summarises it.
 - **Honest test status** — when the build or tests could not run, `/pl-dev` says so in its first line and marks the
   story `built, tests not run`; it never calls such work tested.
+- **Test recipe and decisions** — `/pl-onboard` runs each unit's tests once and records how (or why they cannot run
+  here), and asks you to settle conflicting rules (PR target, branch naming) once; every command then follows the
+  Plumbline settings.
 
 ## Permissions (recommended)
 Plumbline works with Claude Code's normal permission prompts. To avoid approving the same safe commands every time,
 merge the `allow` and `deny` lists from [`examples/claude-settings.json`](examples/claude-settings.json) into your
 `.claude/settings.json` and replace the build/test lines with your own commands. It allows reading, `git` read
 commands, writing only inside `.plumbline-drafts/`, and your test commands; it denies `git push`, `reset --hard`,
-`clean`, `stash` and edits to `.claude/` and `.github/`. Everything else still asks you.
+`clean`, `stash`, edits to `.claude/` and `.github/`, and reading `.env`, key and credential files. Everything else
+still asks you. Config files such as `application-*.properties` stay readable (onboarding documents their keys); the
+judge fails any output that copies a secret value.
 
 ## CI check (optional)
 

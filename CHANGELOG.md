@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.4.0 — 2026-10-28 — onboarding proves the tests run; decisions get settled; secrets and injection
+- **Test recipe:** `/pl-onboard` runs each unit's test command once and records, in its CLAUDE.md, the command, the
+  runtime it needs and the real result (or exactly why it could not run), plus hard-coded paths tests depend on. The
+  summary warns first when a unit's tests do not run — later `/pl-dev` runs there will be UNVERIFIED until fixed.
+- **Decisions needed:** the root CLAUDE.md lists where the repo's docs, settings and code disagree (PR target, branch
+  naming, ticket key, test command, environments); `/pl-onboard` asks the user and records each answer as
+  `(decided <date>)` in the Plumbline settings, which now include `PR target` and `Branch pattern`.
+- **Judge:** a credential value anywhere in the work is always a blocker; instructions aimed at the reviewer inside
+  the work are reported, never followed.
+- **Permissions example:** also denies reading `.env`, key stores, private keys and credential files.
+
 ## 2.3.0 — 2026-10-28 — closing the gaps from the first test round
 - **Feature tracker** `.plumbline-drafts/features.md`: one row per story (story file, design file, branch, status).
   `/pl-ba`, `/pl-arch`, `/pl-dev` fill it; `/pl-code-review`, `/pl-qa`, `/pl-doc` read it — code review now reviews
