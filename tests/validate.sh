@@ -133,7 +133,7 @@ for t in $(grep -rhoE 'templates/[a-z-]+\.md|`[a-z-]+\.md`' .claude | grep -oE '
 done
 for t in .github/plumbline/templates/*.md; do
   [ "$(basename "$t")" = README.md ] && continue
-  grep -q '^## Record$' "$t" && grep -q '^Run by: {{' "$t" && grep -q '^Approval: {{' "$t" && ok || bad "$t: needs '## Record' with Run by and Approval"
+  grep -q '^## Record$' "$t" && grep -q '^- Run by: {{' "$t" && grep -q '^- Approval: {{' "$t" && ok || bad "$t: needs '## Record' with Run by and Approval"
 done
 bash .github/plumbline/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.good.md >/dev/null \
   && ok || bad "check-template.sh fails a correct draft"

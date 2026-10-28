@@ -1,8 +1,8 @@
 [Plumbline /pl-dev] today
 
 ## Change
-Branch: ai/OD-12-refund
-PR: not opened
+- Branch: ai/OD-12-refund
+- PR: not opened
 Tests:
 
 ## Acceptance criteria → tests
@@ -15,9 +15,9 @@ refund partial → RefundTest.refundsPart
 None
 
 ## Record
-Plumbline: 2.8.0
-Commit: abc1234
-Judge: PASS after 1/3
-Run by: Umesh
-Approval: pending — plumbline-review-passed to be added by reviewer
-PR: {{x}}
+- Plumbline: 2.8.0
+- Commit: abc1234
+- Judge: PASS after 1/3
+- Run by: Umesh
+- Approval: pending — plumbline-review-passed to be added by reviewer
+- PR: {{x}}

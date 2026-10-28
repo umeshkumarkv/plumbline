@@ -54,7 +54,8 @@ parent page` in the Plumbline settings), linked from the epic; every other hand-
 | `/pl-approve` | the approver's decision on one step + its label | `approval.md` | (adds the step's label) |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]`, and for an epic the PRD page it links, **at the version
+  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]` (JIRA returns them as `\[Plumbline …\]`: ignore
+  backslashes), and for an epic the PRD page it links, **at the version
   it names** (no version from the tools → compare last-modified times; neither → say so in the hand-over). A PRD page
   or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
   role's work; if it is wrong, say which role must fix it.

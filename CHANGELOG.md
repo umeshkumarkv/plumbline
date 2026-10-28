@@ -6,6 +6,10 @@
   page, linked and version-pinned from the epic.
 - A hand-off comment edited after its approval stops the next command, as an edited PRD page does.
 - A comment must stay under 30,000 characters (JIRA's limit 32,767); longer → split the story.
+- **From the live test on OMS** (TEST-REPORT §6e): template fields are bullets (`- Label: value`), because Confluence
+  and JIRA merge plain lines into one paragraph; `check-template.sh` accepts `-` and `*` bullets (JIRA returns `*`)
+  and ignores the backslashes JIRA and Confluence add on read-back (`\[Plumbline …\]`, `\~`); commands ignore those
+  backslashes when they look for `[Plumbline …]` comments.
 
 ## 2.8.1 — 2026-10-29 — approvals that do not depend on JIRA history; ready to test in one go
 - **`/pl-approve <KEY> <pm|ba|arch|review|qa>`:** the second person reads the hand-off as the next role will, sees

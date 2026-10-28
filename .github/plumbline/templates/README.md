@@ -3,7 +3,8 @@
 Every artefact Plumbline posts is written on one of these, so the same work looks the same in every project.
 Rules for writers: keep every `## ` heading, in this order, with the exact text; replace every `{{…}}`; write `None`
 under a heading with nothing to say; add sub-headings (`###`) or tables freely inside a section. Plain `-` bullets
-only (JIRA shows `- [ ]` as literal text). `check-template.sh` checks the shape before any judge or post; the judge
+only (JIRA shows `- [ ]` as literal text). Fields are bullets (`- Label: value`): plain line breaks are merged into one
+paragraph by Confluence and JIRA. `check-template.sh` checks the shape before any judge or post; the judge
 checks the content.
 
 | Template | Becomes | Written by |

@@ -60,7 +60,8 @@ parent page` in the Plumbline settings), linked from the epic; every other hand-
 | `/pl-approve` | the approver's decision on one step + its label | `approval.md` | (adds the step's label) |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]`, and for an epic the PRD page it links, **at the version
+  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]` (JIRA returns them as `\[Plumbline …\]`: ignore
+  backslashes), and for an epic the PRD page it links, **at the version
   it names** (no version from the tools → compare last-modified times; neither → say so in the hand-over). A PRD page
   or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
   role's work; if it is wrong, say which role must fix it.
@@ -88,14 +89,13 @@ redirection, which permission settings block.
 - A JIRA key: read the story (summary, description, acceptance criteria), and its latest `[Plumbline /pl-arch]` comment (the design) with the connected JIRA/Atlassian tools, and save both in `.plumbline-drafts/<KEY>/` for this run's
   writer and judge. No `plumbline-arch-approved` label → `STOPPED` (see JIRA hand-off). No JIRA tools → ask the user to
   paste the story and the design.
-- A description: use it; ask for acceptance criteria if there are none.
-- No acceptance criteria at all → stop and ask. Do not invent them.
+- A description: use it. No acceptance criteria at all → stop and ask; never invent them.
 
 ## Step 2 — Prepare
 1. Read the root `CLAUDE.md` (Plumbline settings: base branch) and pick the units the story touches; read their
    CLAUDE.md files. No CLAUDE.md yet → suggest `/pl-onboard` first, then continue if the user agrees.
 2. Build/test command: from the units' CLAUDE.md "Build & run" (on Windows use the `.cmd` wrapper, e.g. `mvnw.cmd`).
-3. `git status` must be clean. Create the branch: `git switch -c ai/<KEY>-<short-slug> <base branch>`.
+3. `git status` clean, then `git switch -c ai/<KEY>-<short-slug> <base branch>`.
 4. **Baseline:** run the build/test command once before any change. Failures now are pre-existing and do not count
    against the story — note which. If it cannot run at all, tell the user and continue: tests are still written, and
    the judge checks them by reading.

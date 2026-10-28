@@ -288,3 +288,26 @@ points, which we accept:
 | Separate approver | `/pl-arch` then `/pl-dev` with the label added by the same user | `/pl-dev` stops `self-approved` |
 | Page pinning | edit the design page after `plumbline-arch-approved` | `/pl-dev` stops `changed after approval` |
 | Onboard split | `/pl-onboard` on broker-dealer | core ≤ 8 KB, reference ≤ 30 KB, every rule tagged |
+
+## 6e. Live hand-off test on JIRA + Confluence (2.8.2, 2026-10-28)
+
+Run by hand through the Atlassian connector on the real site, project **OMS**, Confluence space **OMS**, every item
+labelled `plumbline-test`: epic OMS-1, story OMS-2, PRD page 91193576. One Atlassian account, so separation of
+duties was tested only as far as "stops a self-approval"; the flow then continued in `Separate approver: no` mode.
+
+| Check | Result |
+|---|---|
+| PRD page created under the parent page; page version returned | PASS — `version.number` 1 |
+| Epic description (`epic.md`), story (`story.md`, AC1–AC5, points field `customfield_10016`, parent = epic), design comment (`handoff-arch.md`, 3.0 KB), approval comments (`approval.md`) | PASS — all posted; every template check PASS on the draft and on JIRA's read-back |
+| `/pl-ba` gate before approval | PASS — would stop: `plumbline-prd-approved not on OMS-1` |
+| `/pl-approve` by the person who ran the step | PASS — would stop: approver = `Run by` (from `atlassianUserInfo`) |
+| Who added a label (change history) | PASS when the label is added after creation (history shows author + time); **a label set at creation does not appear in the history** — covered by the approval comment |
+| Comment author, created, updated readable | PASS |
+| Design comment edited after its approval | PASS — detected: `updated` 17:31:39 > approval 17:31:21 |
+| PRD page edited after approval | PASS — detected: version 2 ≠ pinned 1 |
+| Move a published page to another space | **Not possible** through the connector (API allows it for drafts only) — recreate the page instead |
+
+**Fixed from this run:** Record fields as bullets (plain lines were merged into one paragraph); checker accepts `*`
+bullets and strips the backslash escapes JIRA/Confluence add on read-back (`\[Plumbline …\]`, `\~`).
+**Not covered:** a second account approving; the model-driven commands themselves (this run was written by hand to
+test the hand-off mechanics); change-history paging on issues with many changes.
