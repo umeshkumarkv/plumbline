@@ -70,10 +70,14 @@ agent redoes what an earlier role settled. Specs people review and edit (PRD, de
   `[Plumbline /pl-<role>]`, and each page those link to, **at the version the comment names**. A page now at a later
   version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Do not redo an earlier role's work; if it is
   wrong, stop and say which role must fix it.
-- **Gate:** start only when the previous step's label is on the ticket. Missing → `STOPPED: <label> not on <KEY>`
-  (the SME adds it, or tells you to go on).
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first; then
-  add the label.
+- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (Plumbline
+  settings; the default) it must also have been added — per the issue's change history — by someone other than that
+  step's `Run by`. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <label> on <KEY> self-approved by
+  <name>` · `STOPPED: cannot verify who approved <KEY>`. Only with `Separate approver: no` may the SME say go on.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
+  `Run by` is the connected Atlassian user. `Separate approver: yes` → do not add the label: write `Approval: pending
+  — <label> to be added by the <role> approver` and tell the SME who must approve. `no` → add the label after the yes
+  and write `Approval: self — <name> (<date>)`.
 - No Confluence tools or no parent page → the PRD goes in the epic description and the design in the arch comment.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
 
@@ -90,7 +94,7 @@ The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-
 ## Step 1 — Setup
 1. Read the story and its acceptance criteria from JIRA (or ask the user to paste them) and save them as
    `.plumbline-drafts/<KEY>/story.md`. The branch in its latest `[Plumbline /pl-dev]` comment is the code under test.
-2. **Gate:** `plumbline-review-passed` on the story (see JIRA hand-off); missing → `STOPPED`, unless the SME says go on.
+2. **Gate:** `plumbline-review-passed` on the story (see JIRA hand-off); checked as the JIRA hand-off Gate says.
 3. **Environment.** URLs from the root `CLAUDE.md` Plumbline settings (API URL, frontend URL); ask if missing. Check
    each answers with exactly `curl -s -o /dev/null -m 5 -w "%{http_code}" <url>` (any HTTP status means it is up; `000`
    means it is not). If not, offer:
@@ -129,6 +133,6 @@ The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-
 ## Step 3 — Hand over
 Show: criterion · type · result. For each failure, exactly four fields: request/steps · expected · actual · response
 body. If a failure looks like a design problem (wrong owner field, role, missing header), say "design gap — run
-`/pl-arch <KEY>`" and nothing more. Ask before posting the report as a JIRA comment (`[Plumbline /pl-qa] <date>`), adding `plumbline-qa-passed` when every
+`/pl-arch <KEY>`" and nothing more. Ask before posting the report as a JIRA comment (`[Plumbline /pl-qa] <date>`), the approval label as the JIRA hand-off says (`plumbline-qa-passed`) when every
 criterion passed, or moving the ticket — show
 the exact text first and wait for a yes.

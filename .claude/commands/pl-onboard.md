@@ -58,7 +58,8 @@ The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. If it has no **Plumbline settings** (JIRA project, Confluence space,
-Confluence parent page, base branch), ask the user for them once (base branch: suggest the repository's default branch) and keep the answers for
+Confluence parent page, base branch,
+whether approvals need a second person — `Separate approver`, default yes), ask the user for them once (base branch: suggest the repository's default branch) and keep the answers for
 the root file in Step 4.
 
 ## Step 2 — Find the units
@@ -121,7 +122,7 @@ Only if at least one unit passed. Writer: `plumbline-onboard-writer` with "root 
 table from Step 2 with results>, settings: <from Step 1>". Judge: `plumbline-judge` with the root file and this
 checklist: (1) every unit is in the Units table with the right folder and CLAUDE.md; (2) How they connect matches the
 units' Integrations/API sections; (3) Plumbline settings present (JIRA project, Confluence space and parent page, base
-branch, PR target, branch pattern, API URL, frontend URL — the URLs match the config); (4) text outside the markers unchanged;
+branch, Separate approver, PR target, branch pattern, API URL, frontend URL — the URLs match the config); (4) text outside the markers unchanged;
 (5) **Architecture** (how the units fit, cross-cutting stack and patterns) and **Decisions & trade-offs** (each with
 its source, none invented) are present; (6) **Decisions needed** lists every place where the repository's own docs, the settings and the code disagree on how
 work is done (base/PR branch, branch naming, ticket key, test command, environments) — each with both sides and their

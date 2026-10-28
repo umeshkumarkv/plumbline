@@ -61,7 +61,7 @@ every merge.
 - **Decisions & trade-offs** — system-wide choices and why, only where a source says so (README, ADR, docs, config,
   commit history), each with its source.
 - **Plumbline settings** — keep the existing values: `JIRA project`, `Confluence space`,
-  `Confluence parent page`, `Base branch`; add
+  `Confluence parent page`, `Base branch`, `Separate approver` (default `yes`); add
   `PR target`, `Branch pattern`, `API URL` and `Frontend URL` if missing (URLs from the config: e.g.
   `http://localhost:<gateway or backend port>`). Values marked `(decided <date>)` are never changed.
 - **Decisions needed** — every place where the repository's own docs (README, existing CLAUDE.md text, CONTRIBUTING),

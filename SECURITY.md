@@ -43,3 +43,17 @@ Plan as if anything only instructed can fail.
 
 ## Reporting a problem
 Open a GitHub issue (no secrets or customer code in it), or contact the maintainer privately for anything sensitive.
+
+## Approvals and separation of duties
+Each hand-off records `Run by` (the connected Atlassian user) and `Approval` in the `## Record` of its template. With
+`Separate approver: yes` in the Plumbline settings (the default), a command never adds an approval label itself, and
+the next command stops unless JIRA's change history shows the label was added by someone other than `Run by`.
+
+| Control | Enforced by | Notes |
+|---|---|---|
+| The runner does not approve their own step | **Instructed**: the next command reads the issue history | A person can still add the label from a second account, or remove the check by editing the command (CI protects the commands) |
+| Only the right role can approve | **Not enforced by Plumbline.** Use JIRA: workflow transitions with conditions restricted to a role group, and/or an Automation rule that removes a `plumbline-*` label added by anyone outside the approver group | Needed for regulated clients |
+| A spec cannot change after approval unnoticed | **Instructed**: comments pin the Confluence page version; a later version stops the next command | Confluence keeps every version for audit |
+| The architect owns CLAUDE.md | GitHub CODEOWNERS (see `examples/CODEOWNERS`) + branch protection requiring code-owner review | Without branch protection, only instructed |
+
+When Plumbline posts to a client's JIRA or Confluence, the client's AI-use policy applies: confirm it before a pilot.

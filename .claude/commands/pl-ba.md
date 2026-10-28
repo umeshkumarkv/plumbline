@@ -70,10 +70,14 @@ agent redoes what an earlier role settled. Specs people review and edit (PRD, de
   `[Plumbline /pl-<role>]`, and each page those link to, **at the version the comment names**. A page now at a later
   version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Do not redo an earlier role's work; if it is
   wrong, stop and say which role must fix it.
-- **Gate:** start only when the previous step's label is on the ticket. Missing → `STOPPED: <label> not on <KEY>`
-  (the SME adds it, or tells you to go on).
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first; then
-  add the label.
+- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (Plumbline
+  settings; the default) it must also have been added — per the issue's change history — by someone other than that
+  step's `Run by`. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <label> on <KEY> self-approved by
+  <name>` · `STOPPED: cannot verify who approved <KEY>`. Only with `Separate approver: no` may the SME say go on.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
+  `Run by` is the connected Atlassian user. `Separate approver: yes` → do not add the label: write `Approval: pending
+  — <label> to be added by the <role> approver` and tell the SME who must approve. `no` → add the label after the yes
+  and write `Approval: self — <name> (<date>)`.
 - No Confluence tools or no parent page → the PRD goes in the epic description and the design in the arch comment.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
 
@@ -89,7 +93,7 @@ The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-
 
 ## Step 1 — Input
 - An epic key: fetch it (and its PRD, from the description or a linked Confluence page) with the connected
-  JIRA/Atlassian tools. The epic should carry `plumbline-prd-approved`; if not, tell the user and ask whether to go on.
+  JIRA/Atlassian tools. The epic must pass the JIRA hand-off gate for `plumbline-prd-approved`.
 - Plain English: use it and continue. BA never creates epics: the stories are created without a parent unless the
   user names an epic at the hand-over (suggest `/pl-pm` for a new epic).
 - No JIRA tools: ask the user to paste the epic/PRD.
@@ -131,7 +135,7 @@ means the story must be split — say so.
 
 ## Step 3 — Hand over
 Show a table: story · unit · points · result. For each passed story, show its Definition of Ready (items 1–10 checked)
-and ask before creating it in JIRA under the epic with label `plumbline-dor-ready` and its blocked-by links — show the
+and ask before creating it in JIRA under the epic with its approval label as the JIRA hand-off says (`plumbline-dor-ready`) and its blocked-by links — show the
 exact content first and wait for a yes.
 **Writing to JIRA (once approved):** create each story with its epic as `parent`; put the points in the project's
 story-points field (team-managed projects: `customfield_10016`, "Story point estimate" — check the issue-type fields if

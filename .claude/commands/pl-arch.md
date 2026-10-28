@@ -71,10 +71,14 @@ agent redoes what an earlier role settled. Specs people review and edit (PRD, de
   `[Plumbline /pl-<role>]`, and each page those link to, **at the version the comment names**. A page now at a later
   version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Do not redo an earlier role's work; if it is
   wrong, stop and say which role must fix it.
-- **Gate:** start only when the previous step's label is on the ticket. Missing → `STOPPED: <label> not on <KEY>`
-  (the SME adds it, or tells you to go on).
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first; then
-  add the label.
+- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (Plumbline
+  settings; the default) it must also have been added — per the issue's change history — by someone other than that
+  step's `Run by`. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <label> on <KEY> self-approved by
+  <name>` · `STOPPED: cannot verify who approved <KEY>`. Only with `Separate approver: no` may the SME say go on.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
+  `Run by` is the connected Atlassian user. `Separate approver: yes` → do not add the label: write `Approval: pending
+  — <label> to be added by the <role> approver` and tell the SME who must approve. `no` → add the label after the yes
+  and write `Approval: self — <name> (<date>)`.
 - No Confluence tools or no parent page → the PRD goes in the epic description and the design in the arch comment.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
 
@@ -123,5 +127,5 @@ After 3 failed attempts: stop, show the last findings, and hand over (usually th
 ## Step 3 — Hand over
 Show the design. Ask before (1) publishing it as a Confluence page `<KEY> — <summary> — Design` under the PRD page
 (else the parent page), (2) posting the story comment on `handoff-arch.md` with the page link and version, and (3)
-adding `plumbline-arch-approved` — show the exact content first and wait for a yes. A design covering several stories
+the approval label as the JIRA hand-off says (`plumbline-arch-approved`) — show the exact content first and wait for a yes. A design covering several stories
 is one page, linked from each story. Next step: `/pl-dev <KEY>`.
