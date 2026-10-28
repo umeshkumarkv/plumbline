@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Runs /pl-code-review headless (Claude Code) on every eval case, with the recommended permission settings,
 # and scores each review.   bash eval/run.sh [case-id ...]      Results: eval/results/<timestamp>/
-# Optional: MODEL=<model> to choose the model (default: Claude Code's default).
+# Optional: MODEL=<model> to choose the model (default: Claude Code's default);
+#           PLUMBLINE_FROM=<dir> to test another Plumbline checkout; OUT=<dir> to choose the results folder.
 set -uo pipefail
 EVAL=$(cd "$(dirname "$0")" && pwd)
 cases=${*:-$(ls "$EVAL/cases")}
-out="$EVAL/results/$(date +%Y%m%d-%H%M%S)"; mkdir -p "$out"; W=$(mktemp -d)
+out=${OUT:-"$EVAL/results/$(date +%Y%m%d-%H%M%S)"}; mkdir -p "$out"; W=$(mktemp -d)
 model_arg=(); [ -n "${MODEL:-}" ] && model_arg=(--model "$MODEL")
 for c in $cases; do
   bash "$EVAL/setup-case.sh" "$c" "$W/$c" > /dev/null || { echo "setup failed: $c"; continue; }

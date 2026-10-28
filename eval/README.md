@@ -48,3 +48,16 @@ Add `cases/<id>/case.json` (`title`, `pr`, `kind`: `defects` or `clean`, `edits`
 ignore the `allow` list there (the `deny` list and normal prompts still apply; unanswered prompts are refused). That
 is stricter than your project. A case whose run fails (for example a usage limit) is reported as not scored, never as
 0 found.
+
+## Compare two Plumbline versions (A/B)
+```bash
+REPEAT=3 bash eval/ab.sh v2.6.0 HEAD      # code-review eval on both versions, same cases and scorer, 3 runs each
+```
+`ab-summary.md` shows recall, false alarms, decoys and cost per run. One run per version is anecdotal.
+
+To measure a command on **your own** repository (e.g. whether 2.7+ really reads less code than 2.6):
+```bash
+bash eval/ab-command.sh v2.6.0 HEAD ~/work/your-repo "/pl-ba <a requirement in plain English>"
+```
+The repository is copied for each run and never changed; nothing is posted. The table counts `Read`/`Grep`/`Glob`
+calls, tokens, cost and time per version. Read both hand-overs too — fewer tokens only counts if the output is as good.

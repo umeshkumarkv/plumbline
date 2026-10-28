@@ -4,6 +4,8 @@
 #   bash eval/setup-case.sh <case-id> [target-dir]        e.g.  bash eval/setup-case.sh d1-email-search
 set -euo pipefail
 EVAL=$(cd "$(dirname "$0")" && pwd); ROOT=$(cd "$EVAL/.." && pwd)
+# PLUMBLINE_FROM=<dir>: install Plumbline from another checkout (eval/ab.sh uses it to compare two versions)
+SRC=${PLUMBLINE_FROM:-$ROOT}
 id=${1:?usage: setup-case.sh <case-id> [target-dir]}
 case_dir="$EVAL/cases/$id"; [ -f "$case_dir/case.json" ] || { echo "no such case: $id (see eval/cases/)"; exit 1; }
 dest=${2:-$(mktemp -d)/orderdesk-$id}
@@ -11,9 +13,10 @@ dest=${2:-$(mktemp -d)/orderdesk-$id}
 
 mkdir -p "$dest" && cp -R "$EVAL/sample-app/." "$dest/"
 mkdir -p "$dest/.claude" "$dest/.github"
-cp -R "$ROOT/.claude/commands" "$ROOT/.claude/agents" "$dest/.claude/"
-cp -R "$ROOT/.github/prompts" "$ROOT/.github/agents" "$dest/.github/"
-cp "$ROOT/examples/claude-settings.json" "$dest/.claude/settings.json"
+cp -R "$SRC/.claude/commands" "$SRC/.claude/agents" "$dest/.claude/"
+cp -R "$SRC/.github/prompts" "$SRC/.github/agents" "$dest/.github/"
+[ -d "$SRC/.github/plumbline" ] && cp -R "$SRC/.github/plumbline" "$dest/.github/"
+cp "$SRC/examples/claude-settings.json" "$dest/.claude/settings.json"
 cd "$dest"
 git init -q -b main
 git add -A && git -c user.name=eval -c user.email=eval@example.com commit -qm "Order Desk baseline + Plumbline"
