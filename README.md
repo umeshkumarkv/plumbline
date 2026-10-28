@@ -28,7 +28,7 @@ an optional CI check). Same on Windows, macOS and Linux.
 
 **Tested:** every command on two real codebases; two features end to end, with both repos' backend tests run green
 (411 and 75 passing, 0 failures); every judge against deliberately flawed work (47/47), plus a blind test where a separate
-agent hid the defects (8/8 found, no false alarms) — see [TEST-REPORT.md](TEST-REPORT.md). Planning a team trial?
+agent hid the defects (8/8 found twice; a repeat raised the decoy as a low-confidence minor) — see [TEST-REPORT.md](TEST-REPORT.md). Planning a team trial?
 See [PILOT.md](PILOT.md).
 
 ## Install — copy two folders into your project
@@ -78,9 +78,11 @@ Plumbline works with Claude Code's normal permission prompts. To avoid approving
 merge the `allow` and `deny` lists from [`examples/claude-settings.json`](examples/claude-settings.json) into your
 `.claude/settings.json` and replace the build/test lines with your own commands. It allows reading, `git` read
 commands, writing only inside `.plumbline-drafts/`, and your test commands; it denies `git push`, `reset --hard`,
-`clean`, `stash`, edits to `.claude/` and `.github/`, and reading `.env`, key and credential files. Everything else
-still asks you. Config files such as `application-*.properties` stay readable (onboarding documents their keys); the
-judge fails any output that copies a secret value.
+`clean`, `stash`, `reset`, `checkout`, `restore`, `rebase`, `commit --amend`, deleting branches, edits to `.claude/`
+and `.github/`, and reading `.env`, key and credential files and `*-prod*` / `*-local*` config; `git push` always
+asks. Everything else still asks you — including JIRA, Confluence and GitHub write tools, which you should leave on
+"ask". If other config files hold secrets, add them to `deny`: anything an agent can read reaches the model and its
+logs. The judge also fails any output that copies a secret value.
 
 ## CI check (optional)
 

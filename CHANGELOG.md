@@ -13,8 +13,12 @@
 - **Drafts folder ignores itself** (`.plumbline-drafts/.gitignore` = `*`): Claude Code protects `.git/`, so commands no
   longer edit `.git/info/exclude`. Commands create files only with the write tool; onboarding runs tests as
   `cd <unit> && <command>`; the example settings allow `java -version` / `node -v`.
+- **After an independent critique:** report corrected (all runs used `claude-sonnet-5-5`, so the "second model" test
+  was a repeat; onboarding, BA and QA rows made exact; evidence status stated). Example settings now deny reading
+  `*-prod*` / `*-local*` config, deleting branches, `reset`, `checkout`, `restore`, `rebase`, `commit --amend` and
+  `git -C`; `git push` always asks. Onboarding helpers run one unit at a time.
 - **Tested:** onboarding records real test results and 6 decisions; a prompt-injection branch is failed and the
-  injection reported; the blind 8-defect review scores 8/8 on Sonnet as on Opus. `TEST-REPORT.md` section 6.
+  injection reported; a repeat of the blind 8-defect review scores 8/8 again (same model — see the correction in the report). `TEST-REPORT.md` section 6.
 
 ## 2.3.0 — 2026-10-28 — closing the gaps from the first test round
 - **Feature tracker** `.plumbline-drafts/features.md`: one row per story (story file, design file, branch, status).

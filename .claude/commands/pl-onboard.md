@@ -56,7 +56,7 @@ must not do (install software, network the user has not allowed), do not run it 
 The result goes to the writer as the unit's **test recipe**; other commands rely on it, so a failure must be recorded
 exactly, never smoothed over.
 
-## Step 3 — Each unit (units may run in parallel)
+## Step 3 — Each unit, one at a time (helpers run in the foreground)
 For attempt = 1, 2, 3:
 1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md path, the unit's test recipe
    from Step 2b, and on attempts 2–3 the judge's findings from the previous attempt (verbatim JSON).

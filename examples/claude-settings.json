@@ -8,14 +8,14 @@
       "Agent",
       "Edit(.plumbline-drafts/**)",
       "Write(.plumbline-drafts/**)",
-      "Edit(.git/info/exclude)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
       "Bash(git ls-files:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git branch:*)",
+      "Bash(git branch --show-current)",
+      "Bash(git branch --list:*)",
       "Bash(git merge-base:*)",
       "Bash(git fetch:*)",
       "Bash(git switch -c:*)",
@@ -31,8 +31,6 @@
       "Bash(./mvnw -v)"
     ],
     "deny": [
-      "Bash(git push:*)",
-      "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
       "Bash(git stash:*)",
       "Bash(rm -rf:*)",
@@ -50,7 +48,26 @@
       "Read(**/.aws/**)",
       "Read(**/.ssh/**)",
       "Read(**/credentials*)",
-      "Read(**/secrets*)"
+      "Read(**/secrets*)",
+      "Bash(git branch -D:*)",
+      "Bash(git branch -d:*)",
+      "Bash(git branch -f:*)",
+      "Bash(git branch --delete:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)",
+      "Bash(git rebase:*)",
+      "Bash(git commit --amend:*)",
+      "Bash(git -C:*)",
+      "Read(**/*-prod*.properties)",
+      "Read(**/*-prod*.yml)",
+      "Read(**/*-prod*.yaml)",
+      "Read(**/*-local*.properties)",
+      "Read(**/*-local*.yml)",
+      "Read(**/*-local*.yaml)"
+    ],
+    "ask": [
+      "Bash(git push:*)"
     ]
   }
 }

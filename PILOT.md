@@ -16,7 +16,7 @@ we have never seen?**
 - Pick 4–6 real backlog items. For each: `/pl-ba` → `/pl-arch` → `/pl-dev` → `/pl-code-review` → `/pl-qa` →
   `/pl-doc`. A person approves every hand-over as usual; nothing changes in the team's review or merge rules.
 - One person, not the one approving, plants 3–5 defects in one branch each sprint and runs `/pl-code-review` on it
-  (a blind test, like section 8 of the test report).
+  (a blind test, like section 5.2 of the test report).
 - Every command appends a line to `.plumbline-drafts/metrics.csv` and records the human decision (`approved`,
   `edited`, `rejected`). Keep the file; it is the main evidence.
 
