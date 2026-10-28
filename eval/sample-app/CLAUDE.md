@@ -18,7 +18,7 @@ One Spring Boot service behind an API gateway; stateless; authorization in this 
 error format (`ApiError`) for every endpoint.
 
 ## Decisions & trade-offs
-None recorded beyond `src/CLAUDE.md` §12.
+None recorded beyond `src/CLAUDE.md` §7.
 
 ## Plumbline settings
 - JIRA project: OD

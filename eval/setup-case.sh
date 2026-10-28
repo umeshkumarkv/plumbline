@@ -17,12 +17,26 @@ cp -R "$SRC/.claude/commands" "$SRC/.claude/agents" "$dest/.claude/"
 cp -R "$SRC/.github/prompts" "$SRC/.github/agents" "$dest/.github/"
 [ -d "$SRC/.github/plumbline" ] && cp -R "$SRC/.github/plumbline" "$dest/.github/"
 cp "$SRC/examples/claude-settings.json" "$dest/.claude/settings.json"
+# Plumbline before 2.8 has no CLAUDE.reference.md: give it the sample's reference sections inside CLAUDE.md, so an
+# A/B run compares the commands, not two different amounts of documentation.
+if ! grep -rqF 'CLAUDE.reference.md' "$SRC/.claude"; then
+  python3 - "$dest/src" <<'PY'
+import sys, os
+d = sys.argv[1]; core = open(f"{d}/CLAUDE.md").read(); ref = open(f"{d}/CLAUDE.reference.md").read()
+body = ref.split("<!-- plumbline:begin reference -->")[1].split("<!-- plumbline:end reference -->")[0]
+body = "\n".join(l for l in body.splitlines() if not l.startswith("Last updated:")).replace("## ", "## R")
+open(f"{d}/CLAUDE.md", "w").write(core.replace("<!-- plumbline:end unit -->", body.strip() + "\n<!-- plumbline:end unit -->"))
+os.remove(f"{d}/CLAUDE.reference.md")
+PY
+fi
 cd "$dest"
 git init -q -b main
 git add -A && git -c user.name=eval -c user.email=eval@example.com commit -qm "Order Desk baseline + Plumbline"
 base=$(git rev-parse --short HEAD)
 python3 - "$base" <<'PY'
-import sys; p="src/CLAUDE.md"; s=open(p).read(); open(p,"w").write(s.replace("VERIFIED_COMMIT", sys.argv[1]))
+import os, sys
+for p in ("src/CLAUDE.md", "src/CLAUDE.reference.md"):
+    if os.path.exists(p): s = open(p).read(); open(p, "w").write(s.replace("VERIFIED_COMMIT", sys.argv[1]))
 PY
 git -c user.name=eval -c user.email=eval@example.com commit -qam "docs: CLAUDE.md last updated at $base"
 git switch -q -c "case/$id"
