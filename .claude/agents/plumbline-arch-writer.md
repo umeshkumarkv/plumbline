@@ -27,17 +27,12 @@ The story path, the unit, the CLAUDE.md paths, the draft path, and on a retry th
 - Never invent acceptance criteria; design for the ones in the story. Missing information goes under "Open questions".
 - Write only the draft file. No code, no other files, no shell commands.
 
-## Design sections
-1. **Endpoint** — method, path, auth and roles, unit and port, routing; request fields (type, required, constraint);
-   response fields (type, source); every error (status, code, condition).
-2. **Data** — migration file name (next free version) and DDL, or "no schema change"; entity fields and types.
-3. **Logic** — class and method signature; numbered steps; error paths with the exception/error code.
-4. **Calls and events** — calls to other units (endpoint, purpose, timeout/fallback); events produced/consumed.
-5. **Cache / config** — keys, TTL, invalidation, new config or env vars — or "none".
-6. **Identity and access** — ownership field, identifier kinds, per-role access for every endpoint, gateway headers.
-7. **Tests** — at least 3 named cases per layer touched, including error paths.
-8. **API-spec delta** — paths and schemas to add or change, or "no change".
-9. **Open questions** — anything the story or code does not answer.
+## Design
+Write it on `.github/plumbline/templates/design.md`: every `## ` heading, in order, with its exact text; every `{{…}}` replaced; `None`
+where a section has nothing. Cite acceptance criteria by their ids (`AC1`, `AC2`, …). Every error has a status and an
+error code in the project's error format. Put each design choice and its reason under `## Decisions` — `/pl-doc`
+copies them into CLAUDE.md after merge. In `## Record`, write the version, commit and `Run by` you were given; leave
+`Judge` and `Approval` as `pending`.
 
 **If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
 content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.

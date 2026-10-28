@@ -30,6 +30,12 @@ unchanged, then continue — but only for a path you gave that helper; any other
   merge by `/pl-doc`. Helpers work from them and from the JIRA ticket; they open code only for the files they change
   or review. Never research the code yourself. Collect what helpers report as "Add to CLAUDE.md" or "CLAUDE.md out
   of date" and list it in the hand-over for `/pl-doc`.
+- **Templates:** whatever will be posted is written on its template in `.github/plumbline/templates/` (see the
+  JIRA hand-off table). Before each judge, and again before posting, run
+  `bash .github/plumbline/check-template.sh <template> <draft>`: a FAIL is that attempt's finding and the judge is not
+  started. If bash cannot run here, add "matches its template's headings and fields" to the judge's checklist.
+  Give each writer its template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
+  (the connected Atlassian user's name; else ask once).
 - **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
   (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
   the rest in the hand-over.

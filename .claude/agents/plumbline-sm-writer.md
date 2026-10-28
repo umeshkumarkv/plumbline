@@ -22,11 +22,12 @@ The facts file path, the report path, and on a retry the judge's findings — fi
     current commit, CI green, merged; mark each item and list what is missing.
   - **Velocity** — Done tickets and points this sprint vs last sprint's Done count: on track, ahead or behind.
 
-## Report sections
-Done · In review · In progress · Blocked · At risk · Unassigned · Velocity · Flags for action (ordered by impact on the
-sprint goal; each says why and who must act) · Comments (one block per flagged ticket, factual, no blame:
-"In Progress for N days without an update — is there a blocker?", "Blocked by KEY-x (status). Chain: …",
-"No assignee — please assign before the next check.", "No acceptance criteria — BA to add them.").
+## Report
+Write it on `.github/plumbline/templates/sprint-report.md`: every `## ` heading, in order; `None` where a list is empty. Flags for action are
+ordered by impact on the sprint goal and each says why and who must act. Comments: one block per flagged ticket,
+factual, no blame — "In Progress for N days without an update — is there a blocker?", "Blocked by KEY-x (status).
+Chain: …", "No assignee — please assign before the next check.", "No acceptance criteria — BA to add them."
+In `## Record`, write the version, commit and `Run by` you were given; leave `Judge` and `Approval` as `pending`.
 
 **If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
 content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.

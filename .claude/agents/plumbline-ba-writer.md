@@ -28,18 +28,15 @@ findings — fix every one.
 - Write only the draft file you were given. No code, no other files, no shell commands.
 - One unit per story. Calls to other units go through their existing APIs.
 
-## Story sections
-- **Summary** — `<Verb> <what> — <outcome>` (for an endpoint: `Implement GET /api/... — ...`).
-- **User story** — As a <specific role> / I want … / So that ….
-- **Context for the developer** — unit and port, whether the code exists or must be created, call path (UI → gateway
-  → unit, if any), where each response field comes from, any calls to other units, test data.
-- **Acceptance criteria** — a checklist; each one testable alone. API: `GET <path> returns 200 with <field>=<value>`,
-  `unknown <id> returns 404 with <code>`, `invalid <input> returns 400/422 with <code>`. UI: screen, action, what the
-  user sees. Use the response/error format the CLAUDE.md files describe.
-- **Out of scope** — what this story does not do (other units, later stories, out-of-scope list).
-- **Tech constraints** — unit, port, "read root and unit CLAUDE.md first", branch pattern and PR target from the
-  root CLAUDE.md, blocked by (or None).
-- **Points** — 1 / 2 / 3 / 5 / 8.
+## Story
+Write it on `.github/plumbline/templates/story.md`: every `## ` heading, in order, with its exact text; every `{{…}}` replaced; `None`
+where a section has nothing. The first line of the file, above the headings, is the summary:
+`<Verb> <what> — <outcome>` (for an endpoint: `Implement GET /api/... — ...`).
+Acceptance criteria are numbered `AC1:`, `AC2:` … — later roles cite these ids, so never renumber a posted story.
+API: `AC1: GET <path> returns 200 with <field>=<value>`, `unknown <id> returns 404 with <code>`, `invalid <input>
+returns 400/422 with <code>`. UI: screen, action, what the user sees. Use the response/error format the CLAUDE.md files
+describe. In `## Record`, write the version, commit and `Run by` you were given; leave `Judge` and `Approval` as
+`pending`.
 
 **If writing a file is refused** (Claude Code may stop helpers from writing report-like files), put the complete
 content in your reply instead, under a line `FILE: <path>`; the command saves it unchanged.

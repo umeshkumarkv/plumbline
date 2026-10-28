@@ -124,5 +124,20 @@ if [ -d eval/cases ]; then
   rm -rf "$tmp"
 fi
 
+# 10. Templates: every template a command or agent names exists; the template checker passes a good draft and fails a bad one
+for t in $(grep -rhoE 'templates/[a-z-]+\.md|`[a-z-]+\.md`' .claude | grep -oE '[a-z-]+\.md' | sort -u); do
+  case "$t" in pl-*|plumbline-*|story-*|prd.md|design.md|epic.md|story.md|handoff-*|sprint-report.md) ;; *) continue;; esac
+  case "$t" in pl-*|plumbline-*) continue;; esac
+  [ -f ".github/plumbline/templates/$t" ] && ok || bad "a command names template '$t' that does not exist"
+done
+for t in .github/plumbline/templates/*.md; do
+  [ "$(basename "$t")" = README.md ] && continue
+  grep -q '^## Record$' "$t" && grep -q '^Run by: {{' "$t" && grep -q '^Approval: {{' "$t" && ok || bad "$t: needs '## Record' with Run by and Approval"
+done
+bash .github/plumbline/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.good.md >/dev/null \
+  && ok || bad "check-template.sh fails a correct draft"
+bash .github/plumbline/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.bad.md >/dev/null \
+  && bad "check-template.sh passes a broken draft" || ok
+
 echo "Plumbline self-test: $((checks-fail))/$checks checks passed."
 [ "$fail" -eq 0 ]

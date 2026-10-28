@@ -30,6 +30,12 @@ unchanged, then continue — but only for a path you gave that helper; any other
   merge by `/pl-doc`. Helpers work from them and from the JIRA ticket; they open code only for the files they change
   or review. Never research the code yourself. Collect what helpers report as "Add to CLAUDE.md" or "CLAUDE.md out
   of date" and list it in the hand-over for `/pl-doc`.
+- **Templates:** whatever will be posted is written on its template in `.github/plumbline/templates/` (see the
+  JIRA hand-off table). Before each judge, and again before posting, run
+  `bash .github/plumbline/check-template.sh <template> <draft>`: a FAIL is that attempt's finding and the judge is not
+  started. If bash cannot run here, add "matches its template's headings and fields" to the judge's checklist.
+  Give each writer its template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
+  (the connected Atlassian user's name; else ask once).
 - **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
   (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
   the rest in the hand-over.
@@ -49,15 +55,16 @@ Roles pass work to each other only through JIRA — never through files on someo
 again what an earlier role settled. The person running a command is that role's SME; their yes at the hand-over is the
 approval.
 
-| Step | Lives in JIRA as | Approval label (added on the SME's yes) |
-|---|---|---|
-| `/pl-pm` | epic — the PRD in its description | `plumbline-prd-approved` |
-| `/pl-ba` | stories under the epic — criteria, points, `Blocks` links | `plumbline-dor-ready` |
-| `/pl-arch` | comment on the story — the design | `plumbline-arch-approved` |
-| `/pl-dev` | comment on the story — branch, PR, test result | — (the PR is reviewed next) |
-| `/pl-code-review` | PR review + comment on the story — verdict and findings | `plumbline-review-passed` |
-| `/pl-qa` | comment on the story — evidence per criterion | `plumbline-qa-passed` |
-| `/pl-doc` | docs PR updating CLAUDE.md + comment on the story | the architect approves the docs PR |
+| Step | Lives in JIRA as | Template | Approval label (added on the SME's yes) |
+|---|---|---|---|
+| `/pl-pm` | epic — the PRD in its description | `epic.md`, `prd.md` | `plumbline-prd-approved` |
+| `/pl-ba` | stories under the epic — criteria, points, `Blocks` links | `story.md` | `plumbline-dor-ready` |
+| `/pl-arch` | comment on the story — the design | `handoff-arch.md`, `design.md` | `plumbline-arch-approved` |
+| `/pl-dev` | comment on the story — branch, PR, test result | `handoff-dev.md` | — (the PR is reviewed next) |
+| `/pl-code-review` | PR review + comment on the story — verdict and findings | `handoff-review.md` | `plumbline-review-passed` |
+| `/pl-qa` | comment on the story — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
+| `/pl-doc` | docs PR updating CLAUDE.md + comment on the story | `handoff-doc.md` | the architect approves the docs PR |
+| `/pl-devops`, `/pl-sm` | comment on the story / sprint issue | `handoff-devops.md`, `sprint-report.md` | — |
 
 - **Input:** read the ticket — description, labels, links, and the latest comment of each kind that starts
   `[Plumbline /pl-<role>]`. Do not redo an earlier role's work; if it is wrong, stop and say which role must fix it.
@@ -95,7 +102,7 @@ are connected, search for them).
 After 3 failed attempts: stop, show the last findings and the draft, and hand over to the user.
 
 ### PRD checklist
-1. All 6 sections present: Problem, Solution, Success criteria, Out of scope, Dependencies, Backlog.
+1. Every section of the template has real content (`None` is fine only for Open questions and Dependencies).
 2. Problem names a specific user role, what they cannot do today, and the business impact.
 3. Solution describes the behaviour in at least a paragraph, including what the user sees and any API/data change.
 4. At least 2 success criteria, each measurable — verifiable by an API call or something visible in the UI.
