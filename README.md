@@ -26,8 +26,10 @@ and **sm** every morning. Each command also works on its own.
 **Nothing to install.** Plumbline is two folders of markdown: `.claude/` (Claude Code) and `.github/` (Copilot +
 an optional CI check). Same on Windows, macOS and Linux.
 
-**Tested:** every command on two real codebases, and every judge against deliberately flawed work (47/47 defects
-caught) — see [TEST-REPORT.md](TEST-REPORT.md).
+**Tested:** every command on two real codebases; two features end to end (broker-dealer's backend tests run green:
+411 passing, 0 failures); every judge against deliberately flawed work (47/47), plus a blind test where a separate
+agent hid the defects (8/8 found, no false alarms) — see [TEST-REPORT.md](TEST-REPORT.md). Planning a team trial?
+See [PILOT.md](PILOT.md).
 
 ## Install — copy two folders into your project
 
@@ -59,6 +61,22 @@ wrote with `git diff`, then commit on a branch and open a PR.
 JIRA, Confluence and GitHub work through the tools you have connected (e.g. the Atlassian MCP server); without them,
 paste the story text instead.
 
+## How the commands hand work to each other
+- **Feature tracker** — `.plumbline-drafts/features.md` has one row per story: story file, design file, branch,
+  status. `/pl-ba` adds the rows, `/pl-arch` adds the design, `/pl-dev` the branch; `/pl-code-review`, `/pl-qa` and
+  `/pl-doc` read it, so you don't have to tell each command which stories a branch carries.
+- **Metrics** — every command appends one line to `.plumbline-drafts/metrics.csv` (attempts, verdict, whether tests
+  ran, and your decision at the hand-over). `/pl-sm metrics` summarises it.
+- **Honest test status** — when the build or tests could not run, `/pl-dev` says so in its first line and marks the
+  story `built, tests not run`; it never calls such work tested.
+
+## Permissions (recommended)
+Plumbline works with Claude Code's normal permission prompts. To avoid approving the same safe commands every time,
+merge the `allow` and `deny` lists from [`examples/claude-settings.json`](examples/claude-settings.json) into your
+`.claude/settings.json` and replace the build/test lines with your own commands. It allows reading, `git` read
+commands, writing only inside `.plumbline-drafts/`, and your test commands; it denies `git push`, `reset --hard`,
+`clean`, `stash` and edits to `.claude/` and `.github/`. Everything else still asks you.
+
 ## CI check (optional)
 
 `.github/workflows/plumbline-checks.yml` runs on every pull request, in GitHub Actions:
@@ -71,7 +89,7 @@ Don't want it? Delete that file.
 
 ## What's in the box
 ```
-.claude/commands/   plumbline-<role>.md   ← one per command: the steps + the judge's checklist (the real content)
+.claude/commands/   pl-<role>.md          ← one per command: the steps + the judge's checklist (the real content)
 .claude/agents/     plumbline-<role>-writer.md (pm, ba, arch, dev, doc, onboard, sm), plumbline-qa-runner.md,
                     plumbline-devops-fixer.md, plumbline-judge.md (shared by every command)
 .github/prompts/    the same commands for Copilot (each points at .claude/commands)

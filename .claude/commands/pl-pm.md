@@ -17,7 +17,7 @@ Idea: $ARGUMENTS
   agent `plumbline-pm-writer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
-only `git` yourself; read and search files with your file tools. Do not research the code yourself — that is the
+only `git` (from the repository root — never `git -C`, which permission rules do not match) yourself; read and search files with your file tools. Do not research the code yourself — that is the
 writer's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
@@ -26,6 +26,13 @@ unchanged, then continue.
 Drafts go in `.plumbline-drafts/<slug>/` at the repository root (slug = a short kebab-case name for the idea). Before
 the first draft, make sure the line `.plumbline-drafts/` is in `.git/info/exclude` (add it with your edit tool if
 missing) so drafts never show up in `git status`.
+
+## Metrics
+At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
+`date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
+story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
+`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
+The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
 
 ## Step 1 — Context
 Read the root `CLAUDE.md` (solution, units, out-of-scope list, Plumbline settings) and the CLAUDE.md of the units the

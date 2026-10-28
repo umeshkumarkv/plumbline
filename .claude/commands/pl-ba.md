@@ -18,7 +18,7 @@ Input: $ARGUMENTS
   agent `plumbline-ba-writer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
-only `git` yourself; read and search files with your file tools. Do not research the code yourself — that is the
+only `git` (from the repository root — never `git -C`, which permission rules do not match) yourself; read and search files with your file tools. Do not research the code yourself — that is the
 writer's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
@@ -26,6 +26,21 @@ unchanged, then continue.
 ## Drafts
 Drafts go in `.plumbline-drafts/<KEY or slug>/`. Make sure `.plumbline-drafts/` is in `.git/info/exclude` (add it with
 your edit tool if missing).
+
+## Feature tracker
+`.plumbline-drafts/features.md` links each story to its files and branch, so every command finds its inputs without
+being told. One markdown table, one row per story:
+`| Story | Title | Unit | Story file | Design file | Branch | Status | Last check |`
+Status is one of: `story ready` · `designed` · `built` · `built, tests not run` · `reviewed` · `QA passed` ·
+`documented`. Read it with your file tools; create it with that header if missing; change only your own rows, with your
+edit tool. A path or branch named in this command's input wins over the tracker.
+
+## Metrics
+At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
+`date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
+story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
+`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
+The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
 
 ## Step 1 — Input
 - An epic key: fetch it (and its PRD, from the description or a linked Confluence page) with the connected
@@ -37,12 +52,17 @@ your edit tool if missing).
 Read the root `CLAUDE.md` and the CLAUDE.md of each unit involved. Split the work into stories, each inside **one
 unit**. Show the list (title, unit, rough size) and continue.
 
+**Settle shared decisions once, before any story is written:** the branch pattern, the PR target branch and the JIRA
+key format. Take them from the root CLAUDE.md Plumbline settings; if the CLAUDE.md files disagree with each other,
+ask the user which applies (unattended: use the Plumbline settings and say so). Give the same values to every writer —
+stories must never disagree with each other on these.
+
 **Stop and ask the user** if: a story needs another unit's database directly; it needs a unit that does not exist;
 it is in the root CLAUDE.md out-of-scope list; or you cannot tell which unit owns a concept.
 
 ## Step 2 — Each story, attempts (1, 2, 3)
 1. **Writer** — start `plumbline-ba-writer` with: the requirement/PRD, the story title and unit, the CLAUDE.md paths,
-   the draft path `.plumbline-drafts/<KEY>/story-<n>.md`; on attempts 2–3 the judge's findings.
+   the shared decisions (branch pattern, PR target, key format), the draft path `.plumbline-drafts/<KEY>/story-<n>.md`; on attempts 2–3 the judge's findings.
 2. **Judge** — start `plumbline-judge` with exactly: *Review:* the story path, the CLAUDE.md paths and the unit folder;
    *Checklist:* the **Story checklist** below, verbatim. PASS → next story. FAIL → next attempt.
 
@@ -58,12 +78,18 @@ means the story must be split — say so.
 5. Points are one of 1 / 2 / 3 / 5 / 8.
 6. Blocked-by is named, or explicitly "None".
 7. Nothing from the root CLAUDE.md out-of-scope list.
-8. Tech constraints: unit, port, branch pattern, PR target and "read CLAUDE.md first" are stated and match the root
-   CLAUDE.md settings and the code.
+8. Tech constraints: unit, port, branch pattern, PR target and "read CLAUDE.md first" are stated, and the branch
+   pattern and PR target are exactly the shared decisions given in the request.
 9. Test data is named: an existing table/fixture/seed (check it exists) or synthetic values.
 10. Every endpoint, table or field the story says exists today really exists in the code.
 
 ## Step 3 — Hand over
+Add a feature-tracker row for every passed story: Story = its JIRA key once created (until then `<slug>-<n>`), Title,
+Unit, Story file, Status `story ready`. Update the key when the story is created in JIRA.
 Show a table: story · unit · points · result. For each passed story, show its Definition of Ready (items 1–10 checked)
 and ask before creating it in JIRA under the epic with label `plumbline-dor-ready` and its blocked-by links — show the
 exact content first and wait for a yes.
+**Writing to JIRA (once approved):** create each story with its epic as `parent`; put the points in the project's
+story-points field (team-managed projects: `customfield_10016`, "Story point estimate" — check the issue-type fields if
+unsure); write acceptance criteria as plain `-` bullets (markdown `- [ ]` arrives as literal text); then add one
+`Blocks` link per blocked-by. Read one created issue back to confirm parent, points and labels were saved.

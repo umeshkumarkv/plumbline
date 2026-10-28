@@ -16,13 +16,28 @@ Change: $ARGUMENTS
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with
   agent `plumbline-doc-writer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
-Never do the writer's or the judge's work yourself. **Shell:** run only `git` (and `gh` if present) yourself. Do not research the code yourself — that is the
+Never do the writer's or the judge's work yourself. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) (and `gh` if present) yourself. Do not research the code yourself — that is the
 writer's/runner's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
 
+## Feature tracker
+`.plumbline-drafts/features.md` links each story to its files and branch, so every command finds its inputs without
+being told. One markdown table, one row per story:
+`| Story | Title | Unit | Story file | Design file | Branch | Status | Last check |`
+Status is one of: `story ready` · `designed` · `built` · `built, tests not run` · `reviewed` · `QA passed` ·
+`documented`. Read it with your file tools; create it with that header if missing; change only your own rows, with your
+edit tool. A path or branch named in this command's input wins over the tracker.
+
+## Metrics
+At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
+`date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
+story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
+`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
+The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
+
 ## Step 1 — The change
-1. Find the change: a PR number (`gh pr view <n>` / `gh pr diff <n>`, or the connected GitHub tools), a story key
+1. Find the change: a story key → its tracker row's Branch; a PR number (`gh pr view <n>` / `gh pr diff <n>`, or the connected GitHub tools), a story key
    (search PRs for it), or a branch. Work out the commit range: `<base>...<merge or head>`.
 2. List what changed in the code: endpoints, request/response fields, error codes, events/topics, cache keys, env vars,
    migrations, new libraries, new units.
@@ -54,5 +69,6 @@ library arrived without the root CLAUDE.md allowing it.
 8. The API spec still parses (valid YAML/JSON) and every documented path exists in the code.
 
 ## Step 3 — Hand over
+On PASS, set the tracker rows of the change's stories to Status `documented`.
 Show the doc diff summary and the judge verdict. Ask before commit, push and opening a docs PR — show the exact message
 first and wait for a yes. Never commit to the base branch directly.

@@ -17,10 +17,17 @@ Target: $ARGUMENTS (empty = every unit)
   (`.github/agents/`). If subagents are not available in this chat, stop and say so.
 
 Each subagent starts with a clean context. Never do the writer's or the judge's work yourself, and never pass the
-writer's reasoning or your own opinion to the judge. **Shell:** run only `git` commands yourself (they work in bash,
+writer's reasoning or your own opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) commands yourself (they work in bash,
 PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
+
+## Metrics
+At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
+`date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
+story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
+`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
+The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. If it has no **Plumbline settings** (JIRA project, Confluence space, base

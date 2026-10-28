@@ -17,7 +17,7 @@ Story: $ARGUMENTS
   agent `plumbline-arch-writer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
-only `git` yourself; read and search files with your file tools. Do not research the code yourself — that is the
+only `git` (from the repository root — never `git -C`, which permission rules do not match) yourself; read and search files with your file tools. Do not research the code yourself — that is the
 writer's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
@@ -25,7 +25,23 @@ unchanged, then continue.
 ## Drafts
 Drafts go in `.plumbline-drafts/<KEY>/`. Make sure the line
 `.plumbline-drafts/` is in `.git/info/exclude` — read and edit that file with your file tools (no shell `echo`/`mkdir`).
-Save the story text you fetched as `.plumbline-drafts/<KEY>/story.md` (the writer and judge read it there).
+Save the story text you fetched as `.plumbline-drafts/<KEY>/story.md` (the writer and judge read it there). If the
+feature tracker already has a story file for this key, use that instead of fetching.
+
+## Feature tracker
+`.plumbline-drafts/features.md` links each story to its files and branch, so every command finds its inputs without
+being told. One markdown table, one row per story:
+`| Story | Title | Unit | Story file | Design file | Branch | Status | Last check |`
+Status is one of: `story ready` · `designed` · `built` · `built, tests not run` · `reviewed` · `QA passed` ·
+`documented`. Read it with your file tools; create it with that header if missing; change only your own rows, with your
+edit tool. A path or branch named in this command's input wins over the tracker.
+
+## Metrics
+At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
+`date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
+story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
+`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
+The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
 
 ## Step 1 — Pre-flight
 Fetch the story with the connected JIRA tools (or ask the user to paste it). Read the root `CLAUDE.md` and the unit's
@@ -60,5 +76,7 @@ After 3 failed attempts: stop, show the last findings, and hand over (usually th
 10. API-spec delta (e.g. openapi.yaml) stated, or "no change". No placeholders left.
 
 ## Step 3 — Hand over
+Set the story's tracker row: Design file, Status `designed` (add the row if missing). One design may cover several
+stories — set it on each.
 Show the design. Ask before posting it as a comment on the story with label `plumbline-arch-approved` — show the exact
 content first and wait for a yes. Next step: `/pl-dev <KEY>`.

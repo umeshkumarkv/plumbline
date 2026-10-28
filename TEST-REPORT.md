@@ -1,4 +1,4 @@
-# Plumbline 2.2.0 — test report (2026-10-27)
+# Plumbline 2.3.0 — test report (2026-10-27, round two 2026-10-28)
 
 Claude Code 2.1.309, headless (`claude -p`), on clean git copies of two real repositories:
 **candidate-review-system** (Spring Boot + SQLite backend at the repo root, Angular `ui/`) and **broker-dealer**
@@ -103,7 +103,52 @@ skipped: it needs the running backend.
 **Operator mistake worth knowing:** the first `/pl-code-review` was told only about the UI story, so it flagged the
 backend half as out of scope (correct for what it was told). When a branch carries several stories, name all of them.
 
-## 5. Problems found and fixed in this round
+## 5. Round two (2.3.0): nine gaps, fixed and re-tested
+
+After the first round we listed what the tests above could **not** prove, fixed what we could, and tested again.
+
+| # | Gap | What changed | Result |
+|---|---|---|---|
+| 1 | Backend tests never ran | Ran on a developer Mac with Maven (JDK picked per repo; the default JDK 24 cannot run Lombok) | **broker-dealer: 234 tests before → 411 after, 0 failures; all 194 tests of the feature green.** candidate-review-system: pending (needs JDK 17 on that Mac) |
+| 2 | We graded our own work | A separate agent built a plausible PR and hid defects; the answer key was opened only after the review | **8/8 found, decoy not flagged, 0 false alarms** (§5.2) |
+| 3 | Dev judge ignored the design's test plan | Dev reads the design; judge item 7 lists `design test → test name`; code review item 10 checks it too | Code review on the old CRS branch now **FAILs**: 7 design tests missing (C-5…C-9, S-P7, S-V10) — confirmed by hand. The 2.3 dev run wrote them: UI 48/48 green |
+| 4 | Nothing carried context between steps | `.plumbline-drafts/features.md` (story → design → branch → status), read and updated by every command | Code review found all 3 stories of the branch from the tracker with no hint in the prompt |
+| 5 | QA stopped at the environment | `/pl-qa` checks the URLs; offers start-here (with a yes), another URL, or stop; unattended → stop | Unattended run with nothing running: "QA not run", no PASS/FAIL invented, also refused because the branch's code review had failed |
+| 6 | JIRA never written | `/pl-ba` hand-over: parent epic, points field, plain bullets, `Blocks` links, read-back | Epic **SCRUM-210** + stories **SCRUM-211…215** created in the real JIRA (label `plumbline-test`), points and parent confirmed by read-back, 5 blocked-by links |
+| 7 | One run per number | PM and Arch run 3× each on fresh copies | PM 1.8–2.6 min, $0.55–0.81, all PASS at attempt 1; 2 of 3 chose the same gap (§5.3). Arch 2.5–4.6 min, $0.76–1.33; 1 of 3 needed attempt 2; all 3 designs made the same key decisions |
+| 8 | Only tested with permissions bypassed | `examples/claude-settings.json` allowlist; runs with `--permission-mode default`/`acceptEdits` | Code review, dev, QA and SM all completed. Blocked only: shell file-writing, `git -C`, `curl` with an extra flag, `mkdir` — the commands now avoid each |
+| 9 | No outcome metrics | Every command appends to `.plumbline-drafts/metrics.csv`; `/pl-sm metrics` summarises; [PILOT.md](PILOT.md) | `/pl-sm metrics` produced correct per-command tables from the file |
+
+### 5.1 New problem found by writing to JIRA
+The five broker-dealer stories did not agree on the PR target: stories 1 and 5 said `main`, stories 2–4 said
+`develop`. The root CLAUDE.md and the Plumbline settings disagree; each writer resolved it alone and each judge saw
+one story. **Fix:** `/pl-ba` now settles branch pattern, PR target and key format once, passes them to every writer,
+and the judge checks each story against them.
+
+### 5.2 Blind code review (candidate-review-system)
+Branch `feature/opt-closure-summary`: two new summary endpoints, 7 files, +198 / −4, written by a separate agent with
+8 hidden defects and 1 decoy. Reviewer given only the branch and the author's PR description, with permissions on.
+
+| Hidden defect | Found as |
+|---|---|
+| SQL built by concatenating a request parameter | F1 blocker |
+| `requireAdmin()` silently removed from a write endpoint | F2 blocker |
+| 400 body key changed `message` → `error`; UI callers not updated | F3 major |
+| Integer division makes the closure rate 0 | F4 major |
+| Null closure date → NPE / 500 | F5 major |
+| N+1 queries and an unbounded `findAll()` | F6 major |
+| Test that asserts only tautologies | F7 major |
+| Endpoint path hard-coded instead of `constants.ts` | F8 minor |
+| *Decoy:* new GET endpoints without `requireAdmin()` (correct — rule is for writes) | not flagged ✔ |
+
+0.9 minutes, $0.29.
+
+### 5.3 PM variance
+Asked three times for "the most important domain gap", PM chose the Opportunity Lost loss-reason rule twice and the
+bench-to-allocation loop once (where the loss-reason rule was listed 5th). Both are real, evidence-backed gaps; the
+choice of "highest impact" is a judgement. The PRD's ranked gap table is what a person should decide from.
+
+## 6. Problems found and fixed in round one
 1. `/pl-doc` judge accepted an invented 400 as "minor, not checked" → must trace each documented error code to its
    handler.
 2. A helper ran in the background and the command reported "still waiting" as if finished → helpers run in the
@@ -113,9 +158,11 @@ backend half as out of scope (correct for what it was told). When a branch carri
 4. Orchestrators still sometimes run `grep`/`mkdir` themselves. Works in Claude Code (bash/Git Bash); the rule
    against it stays. Watch this in Copilot on Windows.
 
-## 6. Not tested
+## 7. Not tested
 - **GitHub Copilot** (no Copilot login here; VS Code allows clicks only). Files match VS Code's documented format.
-- **Backend builds** — Maven Central is blocked in the test environment; dev and QA stories used the frontends, and
-  `/pl-dev` on a backend story reported honestly that tests could not run.
+- **Backend builds** in the test environment (Maven Central blocked) — broker-dealer's were run on a developer Mac
+  instead (§5); candidate-review-system's are pending.
 - **Windows.**
-- QA ran against the real frontend with a **stand-in API** for the Java services.
+- QA ran against the real frontend with a **stand-in API** for the Java services; `/pl-qa`'s new "start it here" path
+  (a) has not been run with a real stack.
+- **A team using it on its own repository** — the plan is in [PILOT.md](PILOT.md).

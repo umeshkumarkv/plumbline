@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.3.0 — 2026-10-28 — closing the gaps from the first test round
+- **Feature tracker** `.plumbline-drafts/features.md`: one row per story (story file, design file, branch, status).
+  `/pl-ba`, `/pl-arch`, `/pl-dev` fill it; `/pl-code-review`, `/pl-qa`, `/pl-doc` read it — code review now reviews
+  a branch against *all* the stories it carries without being told.
+- **Design test plan enforced:** `/pl-dev` gives the writer the design; the judge lists `design test → test name` and
+  fails on a missing one; `/pl-code-review` checks stories and designs (item 10).
+- **No false "tested":** if the build/tests could not run, `/pl-dev`'s hand-over starts with **UNVERIFIED** and the
+  story is marked `built, tests not run`.
+- **QA environment step:** `/pl-qa` health-checks the URLs and offers start-here (with a yes), another URL, or stop;
+  unattended runs stop with "QA not run" instead of guessing.
+- **`/pl-ba` consistency:** branch pattern, PR target and key format are settled once and given to every writer;
+  JIRA writes set the epic parent, story points and `Blocks` links and read one issue back.
+- **Metrics:** every command appends to `.plumbline-drafts/metrics.csv` (attempts, verdict, tests run, human
+  decision); `/pl-sm metrics` summarises it. [PILOT.md](PILOT.md) describes a two-sprint team trial.
+- **Permissions:** `examples/claude-settings.json` — a tested allowlist so Plumbline runs with normal permission
+  prompts. Helpers write files only with edit tools; commands run git without `-C`.
+- **Tested:** broker-dealer backend tests on a developer Mac (234 → 411 passing, 0 failures); a blind code review
+  (8/8 hidden defects, no false alarms); repeat runs of PM and Arch; JIRA epic + 5 stories created for real; runs
+  with permissions on. Details: `TEST-REPORT.md` section 5.
+
 ## 2.2.0 — 2026-10-27 — short commands, tested end to end
 - **Commands are `/pl-<role>`** (`/pl-onboard`, `/pl-pm`, `/pl-ba`, `/pl-arch`, `/pl-dev`, `/pl-code-review`, `/pl-qa`,
   `/pl-doc`, `/pl-devops`, `/pl-sm`); typing `/pl` lists them all. Agents keep `plumbline-*` (never typed; avoids

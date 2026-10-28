@@ -17,7 +17,7 @@ Target: $ARGUMENTS
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with
   agent `plumbline-devops-fixer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
-Never do the fixer's or the judge's work yourself. **Shell:** run only `git`, `gh` and the project's build/test
+Never do the fixer's or the judge's work yourself. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match), `gh` and the project's build/test
 command yourself. Do not research the code yourself — the fixer and the judge do; you route,
 check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
@@ -26,6 +26,13 @@ unchanged, then continue.
 ## Drafts
 Logs and diagnoses go in `.plumbline-drafts/ci-<branch>/`. Make sure the line
 `.plumbline-drafts/` is in `.git/info/exclude` — read and edit that file with your file tools (no shell `echo`/`mkdir`).
+
+## Metrics
+At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
+`date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
+story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
+`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
+The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
 
 ## Step 1 — The failure
 1. Find the latest failed run for the PR/branch (`gh run list --branch <b>`, `gh run view <id> --log-failed`, or the

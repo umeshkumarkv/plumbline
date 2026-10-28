@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Task",
+      "Agent",
+      "Edit(.plumbline-drafts/**)",
+      "Write(.plumbline-drafts/**)",
+      "Edit(.git/info/exclude)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git branch:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git fetch:*)",
+      "Bash(git switch -c:*)",
+      "Bash(curl -s -o /dev/null:*)",
+      "Bash(./mvnw test:*)",
+      "Bash(mvn test:*)",
+      "Bash(mvn -B test:*)",
+      "Bash(npm test:*)",
+      "Bash(npx ng test:*)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(git stash:*)",
+      "Bash(rm -rf:*)",
+      "Edit(.claude/**)",
+      "Write(.claude/**)",
+      "Edit(.github/**)",
+      "Write(.github/**)"
+    ]
+  }
+}

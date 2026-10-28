@@ -17,12 +17,30 @@ Story: $ARGUMENTS
   If subagents are not available in this chat, stop and say so.
 
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
-only `git` and the project's build/test command yourself (they work in bash, PowerShell and cmd alike); find and read
+only `git` (from the repository root — never `git -C`, which permission rules do not match) and the project's build/test command yourself (they work in bash, PowerShell and cmd alike); find and read
 files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
 
+## Feature tracker
+`.plumbline-drafts/features.md` links each story to its files and branch, so every command finds its inputs without
+being told. One markdown table, one row per story:
+`| Story | Title | Unit | Story file | Design file | Branch | Status | Last check |`
+Status is one of: `story ready` · `designed` · `built` · `built, tests not run` · `reviewed` · `QA passed` ·
+`documented`. Read it with your file tools; create it with that header if missing; change only your own rows, with your
+edit tool. A path or branch named in this command's input wins over the tracker.
+
+## Metrics
+At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
+`date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
+story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, and leave
+`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
+The file stays on this machine (`.plumbline-drafts/` must be in `.git/info/exclude`); `/pl-sm` can summarise it.
+
 ## Step 1 — The story
+- Several keys (`CRS-301 CRS-302`): implement them in that order on one branch; everything below applies to each.
+- Look each story up in the feature tracker: use its story file and **design file**. No design → say so and ask
+  whether to run `/pl-arch` first; continue without one only if the user agrees.
 - A JIRA key: fetch the issue with the connected JIRA/Atlassian tools (summary, description, acceptance criteria). If
   no JIRA tools are connected, ask the user to paste the story.
 - A description: use it; ask for acceptance criteria if there are none.
@@ -39,16 +57,16 @@ unchanged, then continue.
    reading.
 
 ## Step 3 — Attempts (1, 2, 3)
-1. **Writer** — start `plumbline-dev-writer` with: the story, the branch, the units and their CLAUDE.md paths, the
-   build/test command; on attempts 2–3 also the previous findings and build output.
+1. **Writer** — start `plumbline-dev-writer` with: the story, the design path(s), the branch, the units and their
+   CLAUDE.md paths, the build/test command; on attempts 2–3 also the previous findings and build output.
 2. **Build/tests** — run the build/test command yourself. A failure that is not in the baseline → that is the finding;
    next attempt. Pre-existing failures do not count; say so in the hand-over.
 3. **Scope check** — run `git diff --name-only <base branch>` and `git status --porcelain`. Fail if anything under
    `.claude/`, `.github/`, any `CLAUDE.md`/`AGENTS.md`, or CI/build settings that skip tests changed, or if an
    existing test was deleted. → next attempt with that as the finding.
 4. **Judge** — start `plumbline-judge` with exactly:
-   - *Review:* "the change on this branch: `git diff <base branch>`", the story and acceptance criteria, the
-     CLAUDE.md paths;
+   - *Review:* "the change on this branch: `git diff <base branch>`", the story and acceptance criteria, the design
+     path(s), the CLAUDE.md paths;
    - *Checklist:* the **Dev checklist** below, verbatim.
    PASS → Step 4. FAIL → next attempt with the findings.
 
@@ -63,7 +81,15 @@ After 3 failed attempts: stop, show the last findings and the branch, and hand o
 5. Only the code the story needs changed; nothing unrelated.
 6. Any API or schema change is backward compatible, or the story says it may break — and callers in other units are
    updated or listed.
+7. Every test the design's Tests section lists exists in the diff — answer as a list `design item → test name`. A
+   missing one fails this item, unless the story itself moves it to another named story.
+8. The change follows the design (endpoints, order of checks, error codes, files); any deviation is named and
+   justified in a code comment or the hand-over.
 
 ## Step 4 — Hand over
-Show: the acceptance criteria → tests table, files changed, build result, judge verdict. Then ask before each of:
+**If the build/test command could not run** (or ran only for some units), the first line of the hand-over is:
+**UNVERIFIED — the tests were written but not run (<reason>). Run `<command>` before merging.** Never call such work
+"tested". Set the tracker rows: Branch, Status `built` (tests ran and passed) or `built, tests not run`.
+
+Show: the acceptance criteria → tests table, the design → tests table, files changed, build result, judge verdict. Then ask before each of:
 commit, push, open PR, comment on the JIRA issue — show the exact message/text first and wait for a yes.

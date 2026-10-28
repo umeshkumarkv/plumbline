@@ -11,6 +11,8 @@ The plan and story paths, the API and frontend URLs, the names of the credential
 path, and on a retry the judge's findings — fix every one.
 
 ## Rules
+- **Files:** create and change files only with your edit/write tools — never with shell redirection (`>`, heredocs),
+  `sed`, or scripts. Shell commands that write files are often blocked by the user's permission settings.
 - **Never change the project:** no edits to code, config, tests, build or container files. You write only the evidence
   file (and, for UI tests, a temporary Playwright spec inside `.plumbline-drafts/`).
 - **Commands you may run:** `curl` (on Windows `curl.exe`), `npx playwright test` for the spec you wrote, and
