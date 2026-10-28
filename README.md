@@ -32,8 +32,11 @@ and **sm** every morning. Each command also works on its own.
 | GitHub Copilot (VS Code agent mode, Copilot CLI) | **Preview.** Files follow the documented format; not yet tested end to end |
 | Stacks tested | Java/Spring Boot backends, Angular and React frontends. Others should work; not yet tested |
 
-What is enforced and what is only instructed is set out in [SECURITY.md](SECURITY.md). Planning a team trial? See
-[PILOT.md](PILOT.md).
+What is enforced and what is only instructed is set out in [SECURITY.md](SECURITY.md).
+
+**Check it yourself:** [eval/](eval/README.md) has a sample service and ten pull requests — five with planted defects
+and an answer key, five clean — so anyone can run `/pl-code-review` in Claude Code or Copilot and score it. Testing
+Plumbline with a team? Use [TEAM-TEST.md](TEAM-TEST.md); for a two-sprint trial, [PILOT.md](PILOT.md).
 
 ## Install
 
@@ -103,6 +106,8 @@ Anything an agent can read reaches the model and its logs: if other files in you
 .github/workflows/  plumbline-checks.yml (optional CI), plumbline-selftest.yml (Plumbline's own test)
 .github/plumbline/  semgrep-java.yml (CI rules), VERSION
 examples/           claude-settings.json (recommended permissions)
+eval/               sample app + 10 review cases, setup / score / run scripts (not copied into your project)
+tests/              validate.sh — Plumbline's self-test
 ```
 To change how a command behaves, edit its file in `.claude/` — Copilot uses the same file.
 
