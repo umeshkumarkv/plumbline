@@ -25,6 +25,11 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
   judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
   unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
+- **Project memory:** before the first helper, for each unit involved take the `Verified at` commit from its
+  CLAUDE.md and run `git diff --name-only <commit>..HEAD -- <unit folder>` (ignore the CLAUDE.md files themselves). Give every helper that list as **changed
+  since verified** (or "none"; "unknown" if the CLAUDE.md has no `Verified at`), plus the path of `context.md` in the
+  draft folder. More than 20 changed files in a unit → suggest `/pl-onboard <unit>` first. Never research the code
+  yourself to fill gaps — the helpers do, and record what they find in `context.md`.
 - **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
   (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
   the rest in the hand-over.

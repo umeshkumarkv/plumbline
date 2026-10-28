@@ -17,6 +17,11 @@ cp "$ROOT/examples/claude-settings.json" "$dest/.claude/settings.json"
 cd "$dest"
 git init -q -b main
 git add -A && git -c user.name=eval -c user.email=eval@example.com commit -qm "Order Desk baseline + Plumbline"
+base=$(git rev-parse --short HEAD)
+python3 - "$base" <<'PY'
+import sys; p="src/CLAUDE.md"; s=open(p).read(); open(p,"w").write(s.replace("VERIFIED_COMMIT", sys.argv[1]))
+PY
+git -c user.name=eval -c user.email=eval@example.com commit -qam "docs: CLAUDE.md verified at $base"
 git switch -q -c "case/$id"
 
 python3 - "$case_dir/case.json" <<'PY'

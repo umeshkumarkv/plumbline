@@ -13,6 +13,19 @@ already does things.
 - the project's build/test command;
 - on a retry, the judge's findings and the build/test output: fix every one.
 
+## Project memory — read it, don't rediscover it
+- The CLAUDE.md files are the project's verified memory: purpose, architecture and stack, units, endpoints, data,
+  integrations, rules, must-nevers, decisions and trade-offs, and the test recipe. Take those facts from them; do not
+  re-survey the code for anything they state.
+- If a `context.md` is in the same folder as the story, PRD or design you were given (the request names it), read it
+  too: facts other helpers already checked in the code, one per line with `path:line`.
+- Open code only for: the files you will change or must cite line by line; facts the CLAUDE.md files and
+  `context.md` do not cover; and the files the request lists as **changed since verified**.
+- When you check a new fact in the code, add one line to that `context.md`: `- <fact> — path:line`. Never copy a
+  secret value into it.
+- If the code contradicts a CLAUDE.md file, the code wins: say so in your reply ("CLAUDE.md out of date: …") so
+  `/pl-doc` can fix it.
+
 ## Rules
 - **Files:** create and change files only with your edit/write tools — never with shell redirection (`>`, heredocs),
   `sed`, or scripts. Shell commands that write files are often blocked by the user's permission settings.

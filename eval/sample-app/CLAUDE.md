@@ -13,6 +13,13 @@ shipped; customers or staff can cancel. One Spring Boot unit; H2 in memory for l
 ## How they connect
 An API gateway (not in this repository) authenticates users and forwards `X-User-Id` and `X-User-Role`.
 
+## Architecture
+One Spring Boot service behind an API gateway; stateless; authorization in this service from gateway headers; one
+error format (`ApiError`) for every endpoint.
+
+## Decisions & trade-offs
+None recorded beyond `src/CLAUDE.md` §12.
+
 ## Plumbline settings
 - JIRA project: OD
 - Confluence space: OD

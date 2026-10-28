@@ -9,8 +9,8 @@ the whole solution for the root file) so that people and AI agents can work on i
 true of the code today — search for it before you write it.
 
 ## You are given
-- the unit name, its folder, the CLAUDE.md file to write, and the unit's test recipe (command, runtime, result of
-  one real run);
+- the unit name, its folder, the CLAUDE.md file to write, the unit's test recipe (command, runtime, result of
+  one real run), and the commit and date for the `Verified at` line;
 - on a retry, the judge's findings: fix every one, or answer it in one line under "Open questions" if the code shows
   the finding is wrong.
 
@@ -26,12 +26,16 @@ true of the code today — search for it before you write it.
 - Use only your read, search and edit tools — no shell commands.
 
 ## Unit CLAUDE.md — sections (skip a section only by writing "None found")
+Start the block with one line: `Verified at: <commit> (<date>)` — the commit you were given. Other agents trust this
+file instead of re-reading the code, and use the commit to see what changed since.
 1. **Purpose** — what this unit does, in 3–5 lines.
 2. **Build & run** — the exact commands from the build files (e.g. `./mvnw test` / `mvnw.cmd test`, `npm test`), the
    port, the profiles/environments. Then a **Test recipe** line, exactly as given: command · runtime it needs (from
    the build files) · result of the run (`N passed` / `failed: <first error>` / `not run: <why>`) · date. If config
    files hard-code absolute paths (log folders, data files) that startup or tests depend on, list them here.
-3. **Structure** — main packages/folders and what lives where.
+3. **Architecture & structure** — stack and versions (language, framework, build, database), the layers and patterns
+   the code follows (e.g. controller → service → repository, events, DTO mapping), main packages/folders and what lives
+   where.
 4. **API** — backend: every endpoint as `VERB /path — handler — one-line purpose`, grouped by controller.
    Frontend: every route/page, then every backend call as `VERB /path — file — backend endpoint it hits`; calls no
    backend endpoint serves go in a separate "Calls with no matching endpoint" list.
@@ -43,12 +47,18 @@ true of the code today — search for it before you write it.
 9. **Rules** — business and technical rules the code enforces, each with the file that enforces it.
 10. **Must never** — things a change must not do here (only ones grounded in the code or the root CLAUDE.md).
 11. **Tech debt** — TODO/FIXME count and top files; other debt as counts plus up to 10 locations.
-12. **Open questions** — what the code does not answer.
+12. **Decisions & trade-offs** — why the code is the way it is, only where a source says so (code comment, README, ADR,
+    commit message, config); each with its source. Never guess a reason.
+13. **Open questions** — what the code does not answer.
 
 ## Root (master) CLAUDE.md — the `solution` block
 - **Solution** — what the system is, in a paragraph.
 - **Units** — table: unit, folder, kind, port, owns, its CLAUDE.md.
 - **How they connect** — which unit calls which (HTTP, messaging, shared database).
+- **Architecture** — the overall shape (e.g. modular monolith, microservices behind a gateway), shared stack and
+  versions, cross-cutting patterns (auth, error format, logging, transactions, events).
+- **Decisions & trade-offs** — system-wide choices and why, only where a source says so (README, ADR, docs, config,
+  commit history), each with its source.
 - **Plumbline settings** — keep the existing values: `JIRA project`, `Confluence space`, `Base branch`; add
   `PR target`, `Branch pattern`, `API URL` and `Frontend URL` if missing (URLs from the config: e.g.
   `http://localhost:<gateway or backend port>`). Values marked `(decided <date>)` are never changed.

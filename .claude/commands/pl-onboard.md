@@ -26,6 +26,11 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
   judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
   unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
+- **Project memory:** before the first helper, for each unit involved take the `Verified at` commit from its
+  CLAUDE.md and run `git diff --name-only <commit>..HEAD -- <unit folder>` (ignore the CLAUDE.md files themselves). Give every helper that list as **changed
+  since verified** (or "none"; "unknown" if the CLAUDE.md has no `Verified at`), plus the path of `context.md` in the
+  draft folder. More than 20 changed files in a unit → suggest `/pl-onboard <unit>` first. Never research the code
+  yourself to fill gaps — the helpers do, and record what they find in `context.md`.
 - **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
   (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
   the rest in the hand-over.
@@ -74,7 +79,7 @@ exactly, never smoothed over.
 ## Step 3 — Each unit, one at a time (helpers run in the foreground)
 For attempt = 1, 2, 3:
 1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md path, the unit's test recipe
-   from Step 2b, and on attempts 2–3 the judge's findings from the previous attempt (verbatim JSON).
+   from Step 2b, the current commit (`git rev-parse --short HEAD`) and today's date for its `Verified at` line, and on attempts 2–3 the judge's findings from the previous attempt (verbatim JSON).
 2. **Judge** — start `plumbline-judge` with exactly:
    - *Review:* the CLAUDE.md path, the unit folder, and "compare with `git diff -- <CLAUDE.md path>`: text outside the
      plumbline markers must be unchanged";
@@ -100,8 +105,11 @@ and move on.
 7. Rules and Must-never items are each traceable to code or the root CLAUDE.md.
 8. Tech debt states the TODO/FIXME count and top files; other debt as counts plus up to 10 locations. Debt recorded
    truthfully passes.
-9. All 12 sections present ("None found" is fine); the file is at most 30 KB.
+9. All 13 sections present ("None found" is fine); the file is at most 30 KB; a `Verified at: <commit> (<date>)`
+   line with the commit given in the request.
 10. Text outside the plumbline markers is unchanged.
+11. Decisions & trade-offs: each one names its source (code comment, README, ADR, commit message, config) — none is
+    invented; "None found" is fine.
 
 ## Step 4 — Root master CLAUDE.md
 Only if at least one unit passed. Writer: `plumbline-onboard-writer` with "root master file: `CLAUDE.md`, units: <the
@@ -109,7 +117,8 @@ table from Step 2 with results>, settings: <from Step 1>". Judge: `plumbline-jud
 checklist: (1) every unit is in the Units table with the right folder and CLAUDE.md; (2) How they connect matches the
 units' Integrations/API sections; (3) Plumbline settings present (JIRA project, Confluence space, base branch, PR
 target, branch pattern, API URL, frontend URL — the URLs match the config); (4) text outside the markers unchanged;
-(5) **Decisions needed** lists every place where the repository's own docs, the settings and the code disagree on how
+(5) **Architecture** (how the units fit, cross-cutting stack and patterns) and **Decisions & trade-offs** (each with
+its source, none invented) are present; (6) **Decisions needed** lists every place where the repository's own docs, the settings and the code disagree on how
 work is done (base/PR branch, branch naming, ticket key, test command, environments) — each with both sides and their
 files — or says "None". Up to 3 attempts.
 

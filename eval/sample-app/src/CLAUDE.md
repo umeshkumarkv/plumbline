@@ -1,6 +1,8 @@
 # order-desk
 
 <!-- plumbline:begin unit -->
+Verified at: VERIFIED_COMMIT (2026-10-28)
+
 ## 1. Purpose
 REST API for customer orders: create, read, list, pay, ship, cancel. Package `com.example.orderdesk`.
 
@@ -8,8 +10,10 @@ REST API for customer orders: create, read, list, pay, ship, cancel. Package `co
 - Test: `./mvnw test` (or `mvn test`). Run: `mvn spring-boot:run` (port 8085).
 - Test recipe: `mvn test` · Java 21 · not run in this sample (it is review material).
 
-## 3. Structure
-`order/` (controller, service, repository, records), `common/` (errors), `security/` (gateway header filter, roles).
+## 3. Architecture & structure
+Java 21, Spring Boot 3.3 (Web MVC, JDBC, Security, Validation), Maven, H2. Layers: controller → service →
+repository (`JdbcTemplate`, no JPA); records for data; one exception handler for every error. Packages: `order/`
+(controller, service, repository, records), `common/` (errors), `security/` (gateway header filter, roles).
 
 ## 4. API
 - `GET /api/orders/{id}` — owner or ADMIN.
@@ -53,6 +57,11 @@ None besides the gateway headers.
 ## 11. Tech debt
 None found (sample).
 
-## 12. Open questions
+## 12. Decisions & trade-offs
+- `JdbcTemplate` instead of JPA: explicit SQL, no lazy-loading surprises (stated in this file by the team).
+- Status rules live in `OrderStatus.canMoveTo` and are enforced only through `OrderService.changeStatus`, so
+  `order_status_history` is always written (source: `OrderRepository.updateStatus` comment).
+
+## 13. Open questions
 None.
 <!-- plumbline:end unit -->
