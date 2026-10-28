@@ -23,7 +23,8 @@ jobs:
           changed=$(git diff --name-only "$BASE"...HEAD -- \
             '.claude/commands/pl-*' '.claude/agents/plumbline-*' \
             '.github/prompts/pl-*' '.github/agents/plumbline-*' \
-            '.github/plumbline/' '.github/workflows/plumbline-checks.yml')
+            '.github/plumbline/' '.github/workflows/plumbline-checks.yml' \
+            '.github/workflows/plumbline-selftest.yml')
           if [ -z "$changed" ]; then echo "No Plumbline files changed."; exit 0; fi
           echo "Plumbline files changed:"; echo "$changed"
           if [ "$APPROVED" = "true" ]; then echo "Approved by the plumbline-policy-change label."; exit 0; fi

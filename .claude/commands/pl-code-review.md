@@ -18,6 +18,20 @@ Target: $ARGUMENTS (empty = the current branch)
 Do not review the change yourself first and do not pass your opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) (and
 `gh` if present) yourself; read files with your file read/search tools.
 
+## Every run
+- **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
+  judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
+  unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
+- **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
+  (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
+  the rest in the hand-over.
+- **Nobody to answer** (a scheduled or headless run): wherever a step says ask, take the safe choice it names, or else
+  stop that item — never guess. Write nothing outside the repository and `.plumbline-drafts/`, and list every
+  question you could not ask in the hand-over.
+- **Hand-over:** the first line is one of `PASS` · `FAIL after 3 attempts` · `STOPPED: <reason>` · `UNVERIFIED: <what
+  did not run>` — then the details, then each question for the user, each with the exact text or command it would
+  send or run.
+
 ## Feature tracker
 `.plumbline-drafts/features.md` links each story to its files and branch, so every command finds its inputs without
 being told. One markdown table, one row per story:

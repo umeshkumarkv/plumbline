@@ -1,0 +1,19 @@
+# Plumbline's own self-test. Runs only in the Plumbline repository (where tests/validate.sh exists);
+# in projects that copied .github/ it is skipped. Safe to delete from your project.
+name: plumbline-selftest
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Structure, pointers, shared blocks, settings, version, links
+        if: hashFiles('tests/validate.sh') != ''
+        run: |
+          pip install --quiet pyyaml
+          bash tests/validate.sh

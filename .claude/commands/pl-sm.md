@@ -22,6 +22,20 @@ writer's/runner's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
 
+## Every run
+- **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
+  judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
+  unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
+- **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
+  (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
+  the rest in the hand-over.
+- **Nobody to answer** (a scheduled or headless run): wherever a step says ask, take the safe choice it names, or else
+  stop that item — never guess. Write nothing outside the repository and `.plumbline-drafts/`, and list every
+  question you could not ask in the hand-over.
+- **Hand-over:** the first line is one of `PASS` · `FAIL after 3 attempts` · `STOPPED: <reason>` · `UNVERIFIED: <what
+  did not run>` — then the details, then each question for the user, each with the exact text or command it would
+  send or run.
+
 ## Metrics
 At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
 `date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
@@ -31,6 +45,7 @@ The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-
 **Files:** create every draft, tracker and metrics file with your write tool — it creates missing folders. Never
 `mkdir`, `echo`, `printf` or redirection: permission settings block them.
 
+## Metrics mode
 **`/pl-sm metrics`** — instead of the sprint report, read `.plumbline-drafts/metrics.csv` and show one table per
 command: runs, median attempts, PASS rate, runs where tests did not run, and approved / edited / rejected / not yet
 answered. Numbers only from the file; no judge needed. Stop after the table.
@@ -43,7 +58,8 @@ sprint's issues (JIRA "Export → CSV" or JSON, plus last sprint's Done count) a
    blocked-by links, whether the description has acceptance criteria. Also the previous sprint's Done count.
 2. For each In Review ticket, its PR state: human approval, `/pl-code-review` result, CI status, merged
    (`gh pr list --search <KEY>` or the connected GitHub tools).
-3. Write all of it, **unedited**, with today's date, to `.plumbline-drafts/sprint-<name>/facts.md` (make sure `.plumbline-drafts/.gitignore` exists with the single line `*` (write it with your write tool; it keeps the folder out of git without touching `.git/`, which Claude Code protects)). This file is the single source of truth.
+3. Write all of it, **unedited**, with today's date, to `.plumbline-drafts/sprint-<name>/facts.md` — make sure `.plumbline-drafts/.gitignore` exists with the single line `*` (write it with your write tool; it
+   keeps the folder out of git without touching `.git/`). This file is the single source of truth.
 
 **Stop and ask the user** if: JIRA returns an error; more than one sprint is open; a blocked-by chain is circular.
 

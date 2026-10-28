@@ -22,6 +22,20 @@ unit's own test command, yourself (they work in bash, PowerShell and cmd alike);
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue.
 
+## Every run
+- **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
+  judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
+  unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
+- **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
+  (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
+  the rest in the hand-over.
+- **Nobody to answer** (a scheduled or headless run): wherever a step says ask, take the safe choice it names, or else
+  stop that item — never guess. Write nothing outside the repository and `.plumbline-drafts/`, and list every
+  question you could not ask in the hand-over.
+- **Hand-over:** the first line is one of `PASS` · `FAIL after 3 attempts` · `STOPPED: <reason>` · `UNVERIFIED: <what
+  did not run>` — then the details, then each question for the user, each with the exact text or command it would
+  send or run.
+
 ## Metrics
 At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
 `date,command,target,attempts,verdict,tests_run,human_decision` if missing): today's date, this command, the
