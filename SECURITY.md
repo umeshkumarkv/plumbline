@@ -47,7 +47,9 @@ Open a GitHub issue (no secrets or customer code in it), or contact the maintain
 ## Approvals and separation of duties
 Each hand-off records `Run by` (the connected Atlassian user) and `Approval` in the `## Record` of its template. With
 `Separate approver: yes` in the Plumbline settings (the default), a command never adds an approval label itself, and
-the next command stops unless JIRA's change history shows the label was added by someone other than `Run by`.
+the next command stops unless the approval came from someone other than `Run by`: a `[Plumbline approve /pl-<role>]`
+comment written by `/pl-approve` (the comment's author is always readable), or else JIRA's change history for the
+label. The doc writer has no shell (2.8.1): it reads the diff the command saves.
 
 | Control | Enforced by | Notes |
 |---|---|---|

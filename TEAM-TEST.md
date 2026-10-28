@@ -1,5 +1,7 @@
 # Team test plan — Plumbline 2.7 (Claude Code and Copilot)
 
+> Testing 2.8 in one session? Use [TEST-PLAN.md](TEST-PLAN.md). This page is the general team test.
+
 Goal: an independent check of Plumbline by people who did not build it, on both tools. About half a day per person.
 Record everything in the results table at the end and send it back with the transcripts or chat exports.
 

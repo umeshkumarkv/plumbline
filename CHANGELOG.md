@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.8.1 — 2026-10-29 — approvals that do not depend on JIRA history; ready to test in one go
+- **`/pl-approve <KEY> <pm|ba|arch|review|qa>`:** the second person reads the hand-off as the next role will, sees
+  any judge FAIL, template failure, open question or page edited since the hand-off, and approves or rejects. It
+  posts an `[Plumbline approve /pl-<role>]` comment (template `approval.md`) and, on approval, adds the label. It
+  refuses to let the person who ran the step approve it. No writer, no judge: the decision is the person's.
+- **Gate no longer depends on reading JIRA's change history:** an approval comment by someone other than `Run by`
+  is enough; the change history is the fallback; neither → `STOPPED: cannot verify who approved — run /pl-approve`.
+- **Page versions:** when the tools give no page version, commands compare the page's last-modified time; when
+  neither is available, the hand-over says later edits cannot be detected (instead of guessing).
+- **Doc writer has no shell:** `/pl-doc` saves the diff for it.
+- **Every command's Shell rule** now names `check-template.sh`, which 2.8.0 asked them to run.
+- **Eval sample** in the 2.8 shape (core + `CLAUDE.reference.md`, rules tagged); `setup-case.sh` merges the two for
+  Plumbline before 2.8, so `eval/ab.sh v2.6.0 …` compares commands, not documentation.
+- **[TEST-PLAN.md](TEST-PLAN.md):** everything to test 2.8 in one session, in order, with pass conditions and a
+  results table. README: `/pl-approve`, and how to give the judge its own model.
+- Self-test covers `/pl-approve` (the one command without a judge) and the approval template.
+
 ## 2.8.0 — 2026-10-29 — independent judging, templates, Confluence specs, separate approvers, a small CLAUDE.md
 Goal: close the gaps an independent critique of 2.7 found against Plumbline's own aims (agents per role, spec-driven,
 CLAUDE.md as a cheap source of truth, JIRA/Confluence hand-off, the same output on every project).

@@ -275,7 +275,7 @@ points, which we accept:
 - **A judge on a different model** — every run used `claude-sonnet-5-5`; no cross-model or cross-vendor test yet.
 - **Shared tracker and metrics** — both stay on each developer's machine; a team-wide option is open.
 
-## 6d. 2.8.0 — not yet run
+## 6d. 2.8.0 / 2.8.1 — not yet run (full plan: [TEST-PLAN.md](TEST-PLAN.md))
 
 2.8.0 was written from an independent critique and checked only by the self-test (236/236) and by exercising
 `check-template.sh` on good and broken drafts. **No model run has tested it.** Before release to `main`:

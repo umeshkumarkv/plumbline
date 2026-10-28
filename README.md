@@ -1,7 +1,7 @@
 # Plumbline
 
 **AI agents for existing codebases, with a second pair of eyes.** Plumbline gives Claude Code (and, in preview, GitHub
-Copilot) ten commands, one per SDLC role. In each, a *writer* agent does the work and a separate *judge* agent — fresh
+Copilot) ten commands, one per SDLC role, plus `/pl-approve` for the person who signs each step off. In each, a *writer* agent does the work and a separate *judge* agent — fresh
 context, never saw how the work was done — checks it against your project's rules. Up to 3 attempts, then it hands
 over to you. Nothing is committed, pushed or posted without your yes.
 
@@ -17,11 +17,13 @@ over to you. Nothing is committed, pushed or posted without your yes.
 | `/pl-doc 42` | After merge: updates the API spec and CLAUDE.md files to match the code | docs PR* |
 | `/pl-devops 42` | Fixes a red CI run (code/tests/coverage) or proposes the fix (pipeline/config) | branch* |
 | `/pl-sm` | Daily sprint health: stuck, blocked, Definition of Done, velocity; `/pl-sm metrics` | JIRA comments* |
+| `/pl-approve CRS-12 arch` | A second person approves (or rejects) one step's hand-off; adds the label the next step waits for | JIRA comment + label* |
 
 \* only after you say yes — you see the exact content first.
 
 The usual flow: **onboard** once → **pm → ba → arch → dev → code-review → qa → doc**, with **devops** when CI is red
-and **sm** every morning. Each command also works on its own.
+and **sm** every morning. After pm, ba, arch, code-review and qa, someone other than the person who ran it runs
+`/pl-approve`. Each command also works on its own. Testing it? [TEST-PLAN.md](TEST-PLAN.md) runs everything in one go.
 
 ## Status
 
@@ -115,9 +117,15 @@ Anything an agent can read reaches the model and its logs: if other files in you
 
 `plumbline-selftest.yml` is Plumbline's own test and is skipped in your project. Delete either file if you don't want it.
 
+## A different model for the judge (optional)
+Writer and judge use your session's model, so they can share blind spots. To give the judge its own model, add a
+`model:` line to the frontmatter of `.claude/agents/plumbline-judge.md` (e.g. `model: opus`, or a full model id), and
+check `/agents` shows it. The file is protected by the CI check, so this needs the `plumbline-policy-change` label.
+Compare with `eval/ab.sh` before and after.
+
 ## What's in the box
 ```
-.claude/commands/   pl-<role>.md          one per command: the steps + the judge's checklist
+.claude/commands/   pl-<role>.md          one per command: the steps + the judge's checklist; pl-approve.md
 .claude/agents/     plumbline-<role>-writer.md, plumbline-qa-runner.md, plumbline-devops-fixer.md,
                     plumbline-judge.md (shared by every command)
 .github/prompts/    the commands for Copilot (each points at .claude/commands)
