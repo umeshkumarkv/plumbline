@@ -25,7 +25,8 @@ unchanged, then continue — but only for a path you gave that helper; any other
 ## Every run
 - **Judge replies:** only the judge's JSON counts. Not JSON → ask that judge once more, then count the attempt as FAIL
   ("judge reply unreadable"). Never decide PASS yourself or drop a finding before the next attempt.
-- **Project memory:** helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
+- **Project memory:** no root `CLAUDE.md` → `STOPPED: run /pl-onboard first` (only `/pl-onboard` runs without one).
+  Helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
@@ -117,7 +118,8 @@ After 3 failed attempts: stop, show the last findings and the draft, and hand ov
 10. No placeholders (`{…}`, TBD, TODO) left.
 
 ## Step 3 — Hand over
-Show the PRD. Then ask before each of: publish it as a Confluence page `<title> — PRD` under the `Confluence parent
-page`; create the epic in JIRA (Plumbline settings: JIRA project) with `epic.md` as its description (summary, PRD link
-and version); its approval label as the JIRA hand-off says (`plumbline-prd-approved`). Show the exact content first and wait for a yes. After the epic exists,
-put its key in the page title. No Confluence → the full PRD goes in the epic description.
+Show the PRD. Then ask before each, in this order (exact content first, then a yes): (1) create the epic in JIRA
+(Plumbline settings: JIRA project) with the title; (2) publish the PRD as a Confluence page `<EPIC> — <title> — PRD`
+under the `Confluence parent page` — the key is in the title from the start, so the page is never renamed; (3) set the
+epic's description on `epic.md` with the page link and its version; (4) add `plumbline-prd-approved`. No Confluence →
+the full PRD goes in the epic description.

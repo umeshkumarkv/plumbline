@@ -311,3 +311,23 @@ duties was tested only as far as "stops a self-approval"; the flow then continue
 bullets and strips the backslash escapes JIRA/Confluence add on read-back (`\[Plumbline …\]`, `\~`).
 **Not covered:** a second account approving; the model-driven commands themselves (this run was written by hand to
 test the hand-off mechanics); change-history paging on issues with many changes.
+
+## 6f. Model-followed run on OMS (2.8.6, 2026-10-28)
+
+The 2.8.6 command and agent files followed step by step by a model (Claude, in chat — not Claude Code; the judge was
+the same model in the same context, so **not independent**), with the real template checker and the real JIRA and
+Confluence. Feature: amend an open order. Created: epic OMS-3 with its PRD page, stories OMS-4 and OMS-5 (Blocks).
+
+| Step | Result |
+|---|---|
+| `/pl-pm` | PASS 1/3; template checks PASS |
+| `/pl-ba` | Story 1 **FAIL 1/3** (no criterion for who may not amend) → PASS 2/3; story 2 PASS 1/3 |
+| `/pl-arch <EPIC>` | Correctly **STOPPED**: no root CLAUDE.md, so no units to name (no OMS repository) |
+
+**Findings, fixed in 2.8.7:** (1) no rule for a missing root CLAUDE.md — now every command but `/pl-onboard` stops
+first; (2) `/pl-pm` renamed the PRD page after the epic pinned its version, which would trip its own edit check —
+the epic is now created first and the page is titled with its key from the start; (3) "edited after posting" was
+defined for comments only — now also descriptions (issue history after the label) and pages; (4) `/pl-ba` still said
+the team sets points — the architect does; (5) `/pl-ba` did not say which priorities become stories — P1 unless the
+user says otherwise; (6) stories referred to each other as "story 1" — now created in dependency order with keys
+filled in.

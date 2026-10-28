@@ -86,7 +86,7 @@ top=$(grep -m1 -oE '^## [0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | cut -c4-)
 [ -n "$v" ] && [ "$v" = "$top" ] && ok || bad ".github/plumbline/VERSION ('$v') must equal the top CHANGELOG version ('$top')"
 
 # 7. Relative links in the docs resolve
-for doc in README.md PILOT.md SECURITY.md RELEASING.md TEST-REPORT.md TEAM-TEST.md TEST-PLAN.md eval/README.md; do
+for doc in README.md PILOT.md SECURITY.md RELEASING.md TEST-REPORT.md TEAM-TEST.md TEST-PLAN.md SMOKE-TEST.md eval/README.md; do
   [ -f "$doc" ] || continue
   for l in $(grep -oE '\]\([^)#:]+\)' "$doc" | sed -E 's/^\]\(//; s/\)$//'); do
     [ -e "$(dirname "$doc")/$l" ] && ok || bad "$doc: broken link '$l'"

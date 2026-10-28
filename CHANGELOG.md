@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.8.7 — 2026-10-28 — fixes from the OMS run; half-day smoke test
+Fixes from the first model-followed run (TEST-REPORT §6f):
+- No root CLAUDE.md → every command except `/pl-onboard` stops first: `STOPPED: run /pl-onboard first`.
+- `/pl-pm` creates the epic first and titles the PRD page with its key from the start; it never renames the page after
+  the epic pins its version.
+- "Edited after it was posted" now covers descriptions (changed in the issue history after the label was added) and
+  pages, not only comments.
+- `/pl-ba`: stories from the PRD's P1 unless the user names other priorities; created in dependency order with
+  "story <n>" replaced by keys; the architect (not the team) sets points.
+- Design checklist tidied (no item dropped).
+- **SMOKE-TEST.md:** the half-day Stage 1 run — 7 steps, 2 deliberate breaks, what to send back, and the bar for a
+  team pilot.
+
 ## 2.8.6 — 2026-10-28 — every output templated, and templates versioned
 - **No untemplated output left.** New templates: `pr.md` (every PR description — story, docs, CI fix), `sm-flag.md`
   (each flagged ticket's comment), and `claude-root.md`, `claude-unit.md`, `claude-reference.md` (the CLAUDE.md files,

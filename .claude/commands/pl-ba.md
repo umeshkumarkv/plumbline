@@ -26,7 +26,8 @@ unchanged, then continue — but only for a path you gave that helper; any other
 ## Every run
 - **Judge replies:** only the judge's JSON counts. Not JSON → ask that judge once more, then count the attempt as FAIL
   ("judge reply unreadable"). Never decide PASS yourself or drop a finding before the next attempt.
-- **Project memory:** helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
+- **Project memory:** no root `CLAUDE.md` → `STOPPED: run /pl-onboard first` (only `/pl-onboard` runs without one).
+  Helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
@@ -98,7 +99,8 @@ redirection, which permission settings block.
 
 Read the root `CLAUDE.md` (solution, rules, out-of-scope list); the writer may read unit CLAUDE.md files and code to
 learn what exists today, but writes business language only.
-Split the work into stories, each one piece of user value that can be checked on its own. Show the list (title, rough
+Split the work into stories — the PRD's P1 items unless the user names other priorities — each one piece of user value
+that can be checked on its own. Show the list (title, rough
 size S/M/L) and continue. Which unit builds a story, its points and technical blockers are `/pl-arch`'s.
 
 **Stop and ask the user** if a story is in the root CLAUDE.md out-of-scope list or contradicts a rule there.
@@ -129,5 +131,5 @@ criteria after attempt 3 must be split — say so.
 Show a table: story · size · result. For each passed story, show its checklist (items 1–8) and ask before creating it
 in JIRA under the epic — show the exact content first and wait for a yes. **Writing to JIRA (once approved):** create
 each story with its epic as `parent`, the first line as summary and the rest (the footer's judge filled in) as the
-description; acceptance criteria as plain `-` bullets; one `Blocks` link per business dependency that is a story. Do
-not set story points — the team sets them when the design is approved. Approval follows the JIRA hand-off.
+description; acceptance criteria as plain `-` bullets; one `Blocks` link per business dependency that is a story. Create stories in dependency order and replace each
+"story <n>" reference with its new key. Do not set story points — the architect sets them in `/pl-arch`. Approval follows the JIRA hand-off.

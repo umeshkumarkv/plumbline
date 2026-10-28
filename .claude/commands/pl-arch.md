@@ -25,7 +25,8 @@ unchanged, then continue — but only for a path you gave that helper; any other
 ## Every run
 - **Judge replies:** only the judge's JSON counts. Not JSON → ask that judge once more, then count the attempt as FAIL
   ("judge reply unreadable"). Never decide PASS yourself or drop a finding before the next attempt.
-- **Project memory:** helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
+- **Project memory:** no root `CLAUDE.md` → `STOPPED: run /pl-onboard first` (only `/pl-onboard` runs without one).
+  Helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
@@ -121,13 +122,12 @@ After 3 failed attempts: stop, show the last findings, hand over (usually the st
    → stop: the HLD must change first). Technical blockers named or None; story points 1/2/3/5/8.
 2. Endpoint: method, path, auth/roles, request and response fields with types, and the unit and port match the CLAUDE.md
    files (and any code the design cites).
-3. Every error path in the criteria has a status and an error code in the project's error format.
-4. Data: the migration (next free version number, in the unit's own schema) or an explicit "no schema change"; entity
-   changes with types.
+3. Every error path has a status and an error code in the project's error format.
+4. Data: the migration (next free version, in the unit's own schema) or "no schema change"; entity changes with types.
 5. Service logic: class and method, ordered steps, error paths; follows the layering rules in the CLAUDE.md files.
 6. Calls to other units hit endpoints that exist; the failure/timeout behaviour is stated. Consumed events have a
    producer; produced events have a consumer or a stated reason.
-7. Cache/config/env-var changes named, or "none"; the API-spec delta stated, or "no change".
+7. Cache/config/env-var changes and the API-spec delta stated, or "none".
 8. **Identity and access, exactly:** the ownership field, each identifier's kind (user id vs customer id, compared like
    with like), who may call each endpoint per role, and the headers/claims the gateway passes.
 9. Tests: at least 3 cases per layer touched (logic, API/controller, UI), including the error paths.

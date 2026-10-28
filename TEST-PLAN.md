@@ -1,5 +1,7 @@
 # Test everything in one go — Plumbline 2.8
 
+> First time? Start with the half-day [SMOKE-TEST.md](SMOKE-TEST.md); this is the full plan for after it.
+
 One session, in this order: each part sets up the next. About a day. Record each row's result in the table at the end
 and send it back with the hand-overs (copy the text) and any `STOPPED` lines.
 
