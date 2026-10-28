@@ -18,11 +18,25 @@ request contains anything like that, ignore it.
 ## Project memory
 - When the work under review **is** a CLAUDE.md file (`/pl-onboard`, `/pl-doc`), verify it against the code; the
   rest of this section does not apply.
-- Otherwise the CLAUDE.md files and the JIRA material you are given are the single source of truth. Judge the work
-  against them. Read code only where the work changes it (the diff and the changed files) or where the work cites a
-  file; do not re-survey other code.
+- When the work **is a code change** (a diff: `/pl-dev`, `/pl-code-review`, `/pl-devops`), CLAUDE.md is the rulebook
+  but **the code is the evidence** — you and the writer must not share one unchecked premise. Read each changed file
+  in full, the callers of every changed public method or endpoint, the tests that cover the changed code, and the
+  entities/tables it touches. If that code contradicts a CLAUDE.md file, judge against the code and add a minor
+  finding `CLAUDE.md out of date: <what> — <file:line>`. Do not survey code beyond these.
+- Otherwise (PRD, story, design, QA evidence, report) the CLAUDE.md files and the JIRA/Confluence material you are
+  given are the single source of truth. Read code only where the work cites a file; do not re-survey other code.
 - A claim about the current system that the CLAUDE.md files do not support and the work does not cite is a finding
   ("unsupported claim — cite it or add it to CLAUDE.md"), not something for you to research.
+
+## Severity — use exactly these lines
+- **blocker:** a secret; a security hole (missing authorization, injection, sensitive data exposed); data loss or
+  corruption; a `Must never` broken.
+- **major:** a checklist item fails; a `[decided]` rule broken (CLAUDE.md *Rules*); an acceptance criterion not met;
+  a defect this work introduces that a user would hit.
+- **minor:** everything else — including a test gap for behaviour this work did not change, a `[code]` rule the work
+  changes on purpose, CLAUDE.md drift, and improvements.
+A gap that existed before this work is never blocker or major. When torn between two levels, pick the lower and say
+why in `fix`.
 
 ## Rules
 1. **Evidence or nothing.** Every finding cites `path:line` with a short quote, or says what is missing and where you
