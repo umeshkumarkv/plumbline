@@ -1,29 +1,25 @@
+<!-- plumbline:forbid (GET|POST|PUT|PATCH|DELETE) /|/api/|[a-z]\.(java|ts|py|kt)|[A-Z][a-z]+(Service|Controller|Repository|Exception|Dto|Entity)|HTTP [1-5][0-9][0-9]|status [1-5][0-9][0-9]|customfield_|[Ss]tory points|[0-9]+ points -->
 # {{Epic key or "new epic"}} — {{feature title}} — PRD
 
 ## Problem
-{{who has it (a specific role), what they cannot do today, the business impact}}
+{{who has it (a specific business role), what they cannot do today, the business impact}}
 
 ## Solution
-{{what the system will do, what the user sees, API/data/event changes, which unit(s)}}
+{{what the user will be able to do and see, step by step, in business language — no APIs, services, data model or how to build it}}
 
 ## Success criteria
-{{SC1, SC2, … — each measurable by an API call or visibly in the UI}}
+{{SC1, SC2, … — each observable by a user or measurable in the business (counts, time, money)}}
 
 ## Out of scope
 {{explicit list; cite the root CLAUDE.md out-of-scope list where it applies}}
 
 ## Dependencies
-{{Blocked by: … or None. Enables: … or None.}}
+{{business dependencies — other features, teams, decisions, regulations — or None}}
 
 ## Backlog
-{{P1 (≤ 20 points total), P2, P3 — each item with points 1/2/3/5/8}}
+{{P1, P2, P3 — each item with a size S / M / L; P1 has no L (split it)}}
 
 ## Open questions
-{{what the idea or CLAUDE.md does not answer, or None}}
+{{for the business, or None}}
 
-## Record
-- Plumbline: {{version from .github/plumbline/VERSION}}
-- Commit: {{short commit the work is based on}}
-- Judge: {{PASS after n/3 | FAIL after 3/3 | n/a}}
-- Run by: {{name of the person who ran the command}}
-- Approval: {{pending — <label> to be added by <role> SME | self — <name> (<date>)}}
+— Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

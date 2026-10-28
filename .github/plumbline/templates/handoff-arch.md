@@ -1,7 +1,13 @@
+<!-- plumbline:forbid ^```(java|kotlin|typescript|ts|js|python|go)|public (class|interface) |@(Service|RestController|Entity|Test)$ -->
 [Plumbline /pl-arch] {{YYYY-MM-DD}}
 
 ## Acceptance criteria → design
-{{AC1 → the endpoint, rule, error or UI behaviour that meets it; one line per AC}}
+{{AC1 → how it is met and checked technically: endpoint, status, fields, error code or UI behaviour; one line per AC — QA tests against this}}
+
+## Ownership and estimate
+- Unit: {{the one unit that builds this story — spans units → stop and ask BA to split}}
+- Technical blockers: {{keys of stories/changes needed first, or None}}
+- Suggested points: {{1 | 2 | 3 | 5 | 8 — the team confirms at /pl-approve}}
 
 ## Endpoint
 {{method, path, auth and roles, unit and port, routing; request fields; response fields; every error (status, code, condition)}}
@@ -33,9 +39,4 @@
 ## Open questions
 {{anything the story or code does not answer, or None}}
 
-## Record
-- Plumbline: {{version from .github/plumbline/VERSION}}
-- Commit: {{short commit the work is based on}}
-- Judge: {{PASS after n/3 | FAIL after 3/3 | n/a}}
-- Run by: {{name of the person who ran the command}}
-- Approval: {{pending — <label> to be added by <role> SME | self — <name> (<date>)}}
+— Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

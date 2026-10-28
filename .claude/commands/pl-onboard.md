@@ -31,10 +31,12 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
   <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
-- **Templates:** what will be posted is written on its template (JIRA hand-off table; `.github/plumbline/templates/`).
-  Give each writer the template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
-  (the connected Atlassian user). Before each judge and before posting, run `bash .github/plumbline/check-template.sh
-  <template> <draft>`: FAIL = that attempt's finding, no judge. No bash here → the judge checks the headings instead.
+- **Templates and lanes:** what will be posted is written on its template (JIRA hand-off table;
+  `.github/plumbline/templates/`). Give each writer the template, the version (`.github/plumbline/VERSION`) and
+  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` — it also fails
+  text outside the role's lane: FAIL = that attempt's finding, no judge. No bash → the judge checks it instead. Before
+  posting, set the footer's `judge` to the result (e.g. `PASS 1/3`).
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -51,10 +53,8 @@ answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` su
 redirection, which permission settings block.
 
 ## Step 1 — Settings
-Read the root `CLAUDE.md` if it exists. If it has no **Plumbline settings** (JIRA project, Confluence space,
-Confluence parent page, base branch,
-whether approvals need a second person — `Separate approver`, default yes), ask the user for them once (base branch: suggest the repository's default branch) and keep the answers for
-the root file in Step 4.
+Read the root `CLAUDE.md` if it exists. Missing **Plumbline settings** (JIRA project, Confluence space and parent
+page, base branch, `Separate approver` — default yes) → ask once (base branch: suggest the default branch).
 
 ## Step 2 — Find the units
 Use `git ls-files` or your file search tool to find build files: `pom.xml`, `build.gradle`, `build.gradle.kts`, `package.json` (ignore `node_modules`,

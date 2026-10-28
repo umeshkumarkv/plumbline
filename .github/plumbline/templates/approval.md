@@ -8,9 +8,4 @@ Hand-off: {{date of the [Plumbline /pl-<role>] comment, or "epic description" / 
 ## Reasons
 {{why — required for a rejection; "None" is fine for an approval}}
 
-## Record
-- Plumbline: {{version from .github/plumbline/VERSION}}
-- Commit: {{short commit, or n/a}}
-- Judge: {{n/a}}
-- Run by: {{approver's name}}
-- Approval: {{approved by <name> (<date>) | rejected by <name> (<date>)}}
+— Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

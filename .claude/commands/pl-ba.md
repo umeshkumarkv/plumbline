@@ -32,10 +32,12 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
   <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
-- **Templates:** what will be posted is written on its template (JIRA hand-off table; `.github/plumbline/templates/`).
-  Give each writer the template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
-  (the connected Atlassian user). Before each judge and before posting, run `bash .github/plumbline/check-template.sh
-  <template> <draft>`: FAIL = that attempt's finding, no judge. No bash here → the judge checks the headings instead.
+- **Templates and lanes:** what will be posted is written on its template (JIRA hand-off table;
+  `.github/plumbline/templates/`). Give each writer the template, the version (`.github/plumbline/VERSION`) and
+  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` — it also fails
+  text outside the role's lane: FAIL = that attempt's finding, no judge. No bash → the judge checks it instead. Before
+  posting, set the footer's `judge` to the result (e.g. `PASS 1/3`).
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -70,12 +72,13 @@ parent page` in the Plumbline settings), linked from the epic; every other hand-
   or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
   role's work; if it is wrong, say which role must fix it.
 - **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
-  the approval must come from someone other than that step's `Run by`: a `[Plumbline approve /pl-<role>]` comment by
-  them, else the issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED:
-  <KEY> self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
-  `Run by` is the connected Atlassian user. `Separate approver: yes` → no label: `Approval: pending — /pl-approve
-  <KEY> <role> by another person`. `no` → add the label after the yes; `Approval: self — <name> (<date>)`.
+  the approval must come from someone other than the **author** of that step's hand-off (the comment's author; for
+  an epic or story description, the issue's creator): a `[Plumbline approve /pl-<role>]` comment by them, else the
+  issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <KEY>
+  self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first. JIRA
+  records who posted it. `Separate approver: yes` → no label; tell the SME `/pl-approve <KEY> <role>` must be run by
+  another person. `no` → add the label after the yes.
 - No Confluence tools or no parent page → the PRD goes in the epic description. A comment must stay under 30,000
   characters (JIRA's limit is 32,767): longer → stop and say the story should be split.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
@@ -95,46 +98,37 @@ redirection, which permission settings block.
   user names an epic at the hand-over (suggest `/pl-pm` for a new epic).
 - No JIRA tools: ask the user to paste the epic/PRD.
 
-Read the root `CLAUDE.md` and the CLAUDE.md of each unit involved. Split the work into stories, each inside **one
-unit**. Show the list (title, unit, rough size) and continue.
+Read the root `CLAUDE.md` only (solution, rules, out-of-scope list) — BA does not read code or unit CLAUDE.md files.
+Split the work into stories, each one piece of user value that can be checked on its own. Show the list (title, rough
+size S/M/L) and continue. Which unit builds a story, its points and technical blockers are `/pl-arch`'s.
 
-**Settle shared decisions once, before any story is written:** the branch pattern, the PR target branch and the JIRA
-key format. Take them from the root CLAUDE.md Plumbline settings; if the CLAUDE.md files disagree with each other,
-ask the user which applies (unattended: use the Plumbline settings and say so). Give the same values to every writer —
-stories must never disagree with each other on these.
-
-**Stop and ask the user** if: a story needs another unit's database directly; it needs a unit that does not exist;
-it is in the root CLAUDE.md out-of-scope list; or you cannot tell which unit owns a concept.
+**Stop and ask the user** if a story is in the root CLAUDE.md out-of-scope list or contradicts a rule there.
 
 ## Step 2 — Each story, attempts (1, 2, 3)
-1. **Writer** — start `plumbline-ba-writer` with: the requirement/PRD, the story title and unit, the CLAUDE.md paths,
-   the shared decisions (branch pattern, PR target, key format), the draft path `.plumbline-drafts/<KEY>/story-<n>.md`; on attempts 2–3 the judge's findings.
-2. **Judge** — start `plumbline-judge` with exactly: *Review:* the story path, the CLAUDE.md paths and the unit folder;
+1. **Writer** — start `plumbline-ba-writer` with: the requirement/PRD, the story title, the root CLAUDE.md path, the
+   draft path `.plumbline-drafts/<KEY>/story-<n>.md`; on attempts 2–3 the judge's findings.
+2. **Judge** — start `plumbline-judge` with exactly: *Review:* the story path and the root CLAUDE.md path (writer:
+   `plumbline-ba-writer`);
    *Checklist:* the **Story checklist** below, verbatim. PASS → next story. FAIL → next attempt.
 
-After 3 failed attempts: mark the story ESCALATED with its last findings and move on. Points of 13+ after attempt 3
-means the story must be split — say so.
+After 3 failed attempts: mark the story ESCALATED with its last findings and move on. A story with more than about 6
+criteria after attempt 3 must be split — say so.
 
 ### Story checklist
-1. User story is "As a <specific role> / I want / So that".
-2. Acceptance criteria are numbered `AC1`, `AC2`, … and each is testable on its own: for an API — method, path, expected status, and the field and
-   value checked; for UI — the screen, the action, and what the user sees.
-3. The criteria cover the happy path, not-found, and invalid input (where they apply).
-4. The story stays inside one unit; any call to another unit uses that unit's existing API (check it exists).
-5. Points are one of 1 / 2 / 3 / 5 / 8.
-6. Blocked-by is named, or explicitly "None".
-7. Nothing from the root CLAUDE.md out-of-scope list.
-8. Tech constraints: unit, port, branch pattern, PR target and "read CLAUDE.md first" are stated, and the branch
-   pattern and PR target are exactly the shared decisions given in the request.
-9. Test data is named: an existing table/fixture/seed (check it exists) or synthetic values.
-10. Every endpoint, table or field the story says exists today is in the CLAUDE.md files (section named) or in a file
-    the story cites — nothing taken on trust from memory.
+1. User story is "As a <specific business role> / I want / So that".
+2. Acceptance criteria are numbered `AC1`, `AC2`, … and written as Given / When / Then about what a user does and sees;
+   each can be checked on its own by watching the system.
+3. They cover the normal case, missing or not found, invalid input, and who may not do it — where they apply.
+4. Business language only: no API paths, status codes, services or units, data model, class names or points (the
+   template check catches most; also judge wording such as "the endpoint returns").
+5. Dependencies are named (other stories, business decisions) or "None".
+6. Nothing from the root CLAUDE.md out-of-scope list; nothing that contradicts its rules.
+7. Examples are concrete enough to check the criteria with, or "None" with a reason.
+8. The story is one piece of user value: at most about 6 criteria; bigger → the hand-over says how to split it.
 
 ## Step 3 — Hand over
-Show a table: story · unit · points · result. For each passed story, show its Definition of Ready (items 1–10 checked)
-and ask before creating it in JIRA under the epic with its approval label as the JIRA hand-off says (`plumbline-dor-ready`) and its blocked-by links — show the
-exact content first and wait for a yes.
-**Writing to JIRA (once approved):** create each story with its epic as `parent`; put the points in the project's
-story-points field (team-managed projects: `customfield_10016`, "Story point estimate" — check the issue-type fields if
-unsure); write acceptance criteria as plain `-` bullets (markdown `- [ ]` arrives as literal text); then add one
-`Blocks` link per blocked-by. Read one created issue back to confirm parent, points and labels were saved.
+Show a table: story · size · result. For each passed story, show its checklist (items 1–8) and ask before creating it
+in JIRA under the epic — show the exact content first and wait for a yes. **Writing to JIRA (once approved):** create
+each story with its epic as `parent`, the first line as summary and the rest (the footer's judge filled in) as the
+description; acceptance criteria as plain `-` bullets; one `Blocks` link per business dependency that is a story. Do
+not set story points — the team sets them when the design is approved. Approval follows the JIRA hand-off.

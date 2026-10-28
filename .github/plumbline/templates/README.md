@@ -17,4 +17,15 @@ checks the content.
 | `sprint-report.md` | sprint report comment or page | `/pl-sm` writer |
 | `approval.md` | `[Plumbline approve /pl-<role>]` comment: the approver's decision | `/pl-approve` |
 
-Every template ends with `## Record`: version, commit, judge result, who ran it, and the approval (see SECURITY.md).
+Every template ends with a one-line footer: `— Plumbline <version> · /pl-<command> · commit <sha> · judge <result> ·
+AI-drafted, posted after SME review`. Who posted it and who approved it are not typed in: JIRA records the author.
+A template's first line may be `<!-- plumbline:forbid <regex> -->`: what other roles own (APIs and points in a story,
+code in a design). The check fails any draft line that matches; writers do not copy that line.
+
+| Role | Owns | Never |
+|---|---|---|
+| PM | problem, behaviour, success criteria, scope, priority, size S/M/L | APIs, units, data, points, how to build |
+| BA | user story, Given/When/Then criteria, examples, business dependencies | APIs, status codes, units, data, points, branches |
+| Architect | unit, AC → technical check, design, technical blockers, suggested points | changing criteria or scope; production code |
+| Team (at `/pl-approve … arch`) | story points | — |
+| Repository settings | branch pattern, PR target | — |

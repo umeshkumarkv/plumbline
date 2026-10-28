@@ -31,10 +31,12 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
   <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
-- **Templates:** what will be posted is written on its template (JIRA hand-off table; `.github/plumbline/templates/`).
-  Give each writer the template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
-  (the connected Atlassian user). Before each judge and before posting, run `bash .github/plumbline/check-template.sh
-  <template> <draft>`: FAIL = that attempt's finding, no judge. No bash here → the judge checks the headings instead.
+- **Templates and lanes:** what will be posted is written on its template (JIRA hand-off table;
+  `.github/plumbline/templates/`). Give each writer the template, the version (`.github/plumbline/VERSION`) and
+  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` — it also fails
+  text outside the role's lane: FAIL = that attempt's finding, no judge. No bash → the judge checks it instead. Before
+  posting, set the footer's `judge` to the result (e.g. `PASS 1/3`).
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -70,12 +72,13 @@ parent page` in the Plumbline settings), linked from the epic; every other hand-
   or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
   role's work; if it is wrong, say which role must fix it.
 - **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
-  the approval must come from someone other than that step's `Run by`: a `[Plumbline approve /pl-<role>]` comment by
-  them, else the issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED:
-  <KEY> self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
-  `Run by` is the connected Atlassian user. `Separate approver: yes` → no label: `Approval: pending — /pl-approve
-  <KEY> <role> by another person`. `no` → add the label after the yes; `Approval: self — <name> (<date>)`.
+  the approval must come from someone other than the **author** of that step's hand-off (the comment's author; for
+  an epic or story description, the issue's creator): a `[Plumbline approve /pl-<role>]` comment by them, else the
+  issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <KEY>
+  self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first. JIRA
+  records who posted it. `Separate approver: yes` → no label; tell the SME `/pl-approve <KEY> <role>` must be run by
+  another person. `no` → add the label after the yes.
 - No Confluence tools or no parent page → the PRD goes in the epic description. A comment must stay under 30,000
   characters (JIRA's limit is 32,767): longer → stop and say the story should be split.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
@@ -89,31 +92,29 @@ answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` su
 redirection, which permission settings block.
 
 ## Step 1 — Context
-Read the root `CLAUDE.md` (solution, units, out-of-scope list, Plumbline settings) and the CLAUDE.md of the units the
-idea touches. If the idea is empty or too vague to name who has the problem, ask one question.
+Read the root `CLAUDE.md` only (solution, out-of-scope list, rules, Plumbline settings) — PM does not read code. If the idea is empty or too vague to name who has the problem, ask one question.
 
-**Stop and ask the user** if: the idea is entirely in the out-of-scope list; it needs a new service/unit not in the
-root CLAUDE.md; it contradicts a rule in the root CLAUDE.md; or existing epics already cover part of it (if JIRA tools
+**Stop and ask the user** if: the idea is entirely in the out-of-scope list; it contradicts a rule in the root CLAUDE.md; or existing epics already cover part of it (if JIRA tools
 are connected, search for them).
 
 ## Step 2 — Attempts (1, 2, 3)
-1. **Writer** — start `plumbline-pm-writer` with: the idea, the CLAUDE.md paths, the draft path
+1. **Writer** — start `plumbline-pm-writer` with: the idea, the root CLAUDE.md path, the draft path
    `.plumbline-drafts/<slug>/prd.md`; on attempts 2–3 also the judge's findings (verbatim JSON).
-2. **Judge** — start `plumbline-judge` with exactly: *Review:* the PRD path and the CLAUDE.md paths; *Checklist:* the
+2. **Judge** — start `plumbline-judge` with exactly: *Review:* the PRD path and the root CLAUDE.md (writer: `plumbline-pm-writer`); *Checklist:* the
    **PRD checklist** below, verbatim. PASS → Step 3. FAIL → next attempt with the findings.
 
 After 3 failed attempts: stop, show the last findings and the draft, and hand over to the user.
 
 ### PRD checklist
 1. Every section of the template has real content (`None` is fine only for Open questions and Dependencies).
-2. Problem names a specific user role, what they cannot do today, and the business impact.
-3. Solution describes the behaviour in at least a paragraph, including what the user sees and any API/data change.
-4. At least 2 success criteria, each measurable — verifiable by an API call or something visible in the UI.
+2. Problem names a specific business role, what they cannot do today, and the business impact.
+3. Solution describes, in business language, what users will be able to do and see — enough for a BA to write stories.
+4. At least 2 success criteria, each observable by a user or measurable in the business.
 5. Out of scope is explicit and refers to the root CLAUDE.md out-of-scope list where it applies.
-6. The feature maps to the units in the root CLAUDE.md with no ambiguity about which unit owns what.
-7. Dependencies: blocked-by and enables are named, or explicitly "None".
+6. No technical design: no APIs, status codes, services or units, data model, classes or points (that is `/pl-arch`).
+7. Dependencies are named, or explicitly "None".
 8. Nothing from the root CLAUDE.md out-of-scope list appears in P1, P2 or P3.
-9. P1 fits one sprint (story points ≤ 20 unless the root CLAUDE.md says otherwise).
+9. Every backlog item has a size S / M / L, and P1 has no L.
 10. No placeholders (`{…}`, TBD, TODO) left.
 
 ## Step 3 — Hand over

@@ -29,13 +29,14 @@ Use one small real backlog idea. After each step, open JIRA and Confluence and l
 
 | # | Who | Run | Pass when |
 |---|---|---|---|
-| 3.1 | A | `/pl-pm "<idea>"` | a Confluence PRD page under the parent page; the epic's description is `epic.md` (summary, link, version); `## Record` says `Run by: A`, `Approval: pending`; **no label yet** |
+| 3.1 | A | `/pl-pm "<idea>"` | a Confluence PRD page under the parent page; the epic's description is `epic.md` (summary, link, version); the PRD is business-only (no APIs, units or points) and ends with the footer; **no label yet** |
 | 3.2 | A | `/pl-ba <EPIC>` | stops: `STOPPED: plumbline-prd-approved not on <EPIC>` |
 | 3.3 | A | `/pl-approve <EPIC> pm` | stops: you ran this step; another person must approve it |
 | 3.4 | B | `/pl-approve <EPIC> pm` | an `[Plumbline approve /pl-pm]` comment by B, and the label |
-| 3.5 | A | `/pl-ba <EPIC>` | stories with `AC1`, `AC2`, …, the `story.md` headings, points and `Blocks` links; no label |
+| 3.5 | A | `/pl-ba <EPIC>` | stories in business language: Given/When/Then `AC1`, `AC2`, …, no APIs/units/points (a planted API path fails the template check); no label |
 | 3.6 | B | `/pl-approve <STORY> ba` | approved, label added |
-| 3.7 | A | `/pl-arch <STORY>` | the full design is one `[Plumbline /pl-arch]` comment on the story (no Confluence page); it maps every AC id |
+| 3.7 | A | `/pl-arch <STORY>` | one `[Plumbline /pl-arch]` comment: unit, technical blockers, suggested points, and every AC id mapped to its technical check |
+| 3.7b | B | `/pl-approve <STORY> arch` | asks B for points (default the suggestion), sets the story-points field and the blocker links |
 | 3.8 | — | edit one word of the PRD page in Confluence, then A: `/pl-ba <EPIC>` again | stops: the PRD page changed after approval |
 | 3.9 | A | `/pl-dev <STORY>` | a branch; the comment maps every AC id to a test; tests ran (or the first line says UNVERIFIED) |
 | 3.10 | A | `/pl-code-review <branch>` | the review cites code it read (callers, tests), not only CLAUDE.md; findings use blocker/major/minor as the judge's severity lines say |

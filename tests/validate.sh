@@ -57,7 +57,7 @@ done
 # 4. Stale or forbidden text
 hits=$(grep -rnE '(^|[ `(])/plumbline-(onboard|pm|ba|arch|dev|qa|doc|devops|sm|code-review)([^-a-z]|$)' .claude .github README.md PILOT.md 2>/dev/null)
 [ -z "$hits" ] && ok || bad "old /plumbline-<role> command names (now /pl-<role>): $hits"
-stale=( 'All 13 sections' 'Feature tracker' 'info/exclude' 'dangerously-skip-permissions' 'run_in_background: true' 'features.md' 'context.md' 'changed since verified' )
+stale=( 'Run by:' '`Run by`' 'Context for the developer' 'All 13 sections' 'Feature tracker' 'info/exclude' 'dangerously-skip-permissions' 'run_in_background: true' 'features.md' 'context.md' 'changed since verified' )
 for s in "${stale[@]}"; do
   hits=$(grep -rlF -- "$s" .claude .github README.md PILOT.md 2>/dev/null)
   [ -z "$hits" ] && ok || bad "stale text '$s' in: $hits"
@@ -133,12 +133,21 @@ for t in $(grep -rhoE 'templates/[a-z-]+\.md|`[a-z-]+\.md`' .claude | grep -oE '
 done
 for t in .github/plumbline/templates/*.md; do
   [ "$(basename "$t")" = README.md ] && continue
-  grep -q '^## Record$' "$t" && grep -q '^- Run by: {{' "$t" && grep -q '^- Approval: {{' "$t" && ok || bad "$t: needs '## Record' with Run by and Approval"
+  grep -q '^— Plumbline {{version}} · ' "$t" && ! grep -q '^## Record$' "$t" && ok || bad "$t: needs the '— Plumbline …' footer (no '## Record')"
 done
 bash .github/plumbline/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.good.md >/dev/null \
   && ok || bad "check-template.sh fails a correct draft"
 bash .github/plumbline/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.bad.md >/dev/null \
   && bad "check-template.sh passes a broken draft" || ok
+bash .github/plumbline/check-template.sh .github/plumbline/templates/story.md tests/fixtures/story.business.md >/dev/null \
+  && ok || bad "role check fails a business-only story"
+bash .github/plumbline/check-template.sh .github/plumbline/templates/story.md tests/fixtures/story.technical.md >/dev/null \
+  && bad "role check passes a story with an API path and story points" || ok
+for a in pm ba arch dev qa doc sm onboard; do
+  f=.claude/agents/plumbline-$a-writer.md; [ -f "$f" ] || f=.claude/agents/plumbline-$a-runner.md
+  grep -q '^## Your lane$' "$f" && ok || bad "$f: needs a '## Your lane' section"
+done
+for a in pm ba sm; do grep -q '^tools: Read, Write$' .claude/agents/plumbline-$a-writer.md && ok || bad "plumbline-$a-writer must have only Read, Write"; done
 
 echo "Plumbline self-test: $((checks-fail))/$checks checks passed."
 [ "$fail" -eq 0 ]

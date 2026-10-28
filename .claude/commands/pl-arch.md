@@ -31,10 +31,12 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
   <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
-- **Templates:** what will be posted is written on its template (JIRA hand-off table; `.github/plumbline/templates/`).
-  Give each writer the template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
-  (the connected Atlassian user). Before each judge and before posting, run `bash .github/plumbline/check-template.sh
-  <template> <draft>`: FAIL = that attempt's finding, no judge. No bash here → the judge checks the headings instead.
+- **Templates and lanes:** what will be posted is written on its template (JIRA hand-off table;
+  `.github/plumbline/templates/`). Give each writer the template, the version (`.github/plumbline/VERSION`) and
+  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` — it also fails
+  text outside the role's lane: FAIL = that attempt's finding, no judge. No bash → the judge checks it instead. Before
+  posting, set the footer's `judge` to the result (e.g. `PASS 1/3`).
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -71,12 +73,13 @@ parent page` in the Plumbline settings), linked from the epic; every other hand-
   or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
   role's work; if it is wrong, say which role must fix it.
 - **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
-  the approval must come from someone other than that step's `Run by`: a `[Plumbline approve /pl-<role>]` comment by
-  them, else the issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED:
-  <KEY> self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
-  `Run by` is the connected Atlassian user. `Separate approver: yes` → no label: `Approval: pending — /pl-approve
-  <KEY> <role> by another person`. `no` → add the label after the yes; `Approval: self — <name> (<date>)`.
+  the approval must come from someone other than the **author** of that step's hand-off (the comment's author; for
+  an epic or story description, the issue's creator): a `[Plumbline approve /pl-<role>]` comment by them, else the
+  issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <KEY>
+  self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first. JIRA
+  records who posted it. `Separate approver: yes` → no label; tell the SME `/pl-approve <KEY> <role>` must be run by
+  another person. `no` → add the label after the yes.
 - No Confluence tools or no parent page → the PRD goes in the epic description. A comment must stay under 30,000
   characters (JIRA's limit is 32,767): longer → stop and say the story should be split.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
@@ -100,12 +103,15 @@ need another unit's database, a new unit, an out-of-scope feature, or a new libr
 1. **Writer** — start `plumbline-arch-writer` with: the story path, the unit, the CLAUDE.md paths, the draft path
    `.plumbline-drafts/<KEY>/design.md` (on `handoff-arch.md`); on attempts 2–3 the judge's findings.
 2. **Judge** — start `plumbline-judge` with exactly: *Review:* the design path, the story path, the CLAUDE.md paths and
-   the unit folder; *Checklist:* the **Design checklist** below, verbatim. PASS → Step 3. FAIL → next attempt.
+   the unit folder (writer: `plumbline-arch-writer`); *Checklist:* the **Design checklist** below, verbatim. PASS → Step 3. FAIL → next attempt.
 
 After 3 failed attempts: stop, show the last findings, and hand over (usually the story needs the BA to clarify).
 
 ### Design checklist
-1. *Acceptance criteria → design* maps every AC id of the story to a part of the design — none left out.
+1. *Acceptance criteria → design* maps every AC id to how it is met **and checked** (endpoint, status, fields, error
+   code, or UI behaviour) — none left out; no criterion is changed (questions for BA go under Open questions).
+1b. *Ownership and estimate*: one unit that exists in the root CLAUDE.md (several → Open question "for BA: split");
+   technical blockers named or None; suggested points 1/2/3/5/8.
 2. Endpoint: method, path, auth/roles, request and response fields with types, and the unit and port match the CLAUDE.md
    files (and any code the design cites).
 3. Every error path in the criteria has a status and an error code in the project's error format.

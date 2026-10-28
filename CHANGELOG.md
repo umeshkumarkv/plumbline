@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.8.3 — 2026-10-28 — every role in its lane; business SMEs approve business content only
+- **PM and BA write business language only.** The PRD describes behaviour, success criteria and scope with a sized
+  backlog (S/M/L); stories are a user story, Given/When/Then criteria (`AC1`…), examples, out of scope and business
+  dependencies. "Context for the developer" and "Tech constraints" are gone from the story.
+- **The architect owns the technical side:** the design comment gains *Ownership and estimate* (the unit, technical
+  blockers, suggested points) and maps each AC to how it is checked technically (QA tests against that mapping).
+  The team sets story points when `/pl-approve <KEY> arch` runs, which also adds the blocker links. Branch pattern and
+  PR target come only from the repository settings.
+- **Guards:** every writer has a *Your lane* section (owns / never); the judge fails work outside the lane (major,
+  "outside role"); templates carry a `plumbline:forbid` pattern and `check-template.sh` rejects lines other roles own
+  (API paths, status codes, class names, points in a PRD or story; production code in a design) — no model involved;
+  the PM, BA and SM writers' tools are `Read, Write` only (no search: they cannot survey code); the arch writer cannot
+  edit files.
+- **`## Record` replaced by one footer line:** `— Plumbline <version> · /pl-<command> · commit <sha> · judge <result> ·
+  AI-drafted, posted after SME review`. Who posted and who approved are taken from JIRA (comment author, issue
+  creator), not typed in; the self-approval check uses the author.
+- Self-test: role check (business story passes, API path + points fail), lanes present, PM/BA/SM tool lists.
+
 ## 2.8.2 — 2026-10-29 — hand-offs in JIRA; Confluence only for the PRD
 - The design is the full `[Plumbline /pl-arch]` comment on the story again (template `handoff-arch.md`, which now holds
   all design sections; `design.md` removed). Every hand-off is a JIRA ticket or comment; the PRD is the only Confluence

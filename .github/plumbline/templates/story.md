@@ -1,29 +1,17 @@
+<!-- plumbline:forbid (GET|POST|PUT|PATCH|DELETE) /|/api/|[a-z]\.(java|ts|py|kt)|[A-Z][a-z]+(Service|Controller|Repository|Exception|Dto|Entity)|HTTP [1-5][0-9][0-9]|status [1-5][0-9][0-9]|customfield_|[Ss]tory points|[0-9]+ points -->
 ## User story
-As a {{specific role}} / I want {{…}} / So that {{…}}
-
-## Context for the developer
-{{unit and port; code exists or must be created; call path; where each response field comes from; calls to other units}}
+As a {{specific business role}} / I want {{…}} / So that {{…}}
 
 ## Acceptance criteria
-{{AC1: …  AC2: …  — one per line, each testable alone, numbered AC1, AC2, … and never renumbered once posted}}
+{{AC1: Given … When … Then …  — one per line, in business language, each checkable by watching what the system does; numbered AC1, AC2, … and never renumbered once posted}}
 
-## Test data
-{{an existing table/fixture/seed, or synthetic values}}
+## Examples
+{{concrete business examples the criteria can be checked with (accounts, orders, amounts), or None}}
 
 ## Out of scope
 {{what this story does not do}}
 
-## Tech constraints
-- Unit: {{unit name}}
-- Branch pattern: {{from the Plumbline settings}}
-- PR target: {{from the Plumbline settings}}
-- Blocked by: {{keys or None}}
-- Points: {{1 | 2 | 3 | 5 | 8}}
-{{"Read the root and unit CLAUDE.md first."}}
+## Dependencies
+{{other stories or business decisions this needs first, or None}}
 
-## Record
-- Plumbline: {{version from .github/plumbline/VERSION}}
-- Commit: {{short commit the work is based on}}
-- Judge: {{PASS after n/3 | FAIL after 3/3 | n/a}}
-- Run by: {{name of the person who ran the command}}
-- Approval: {{pending — <label> to be added by <role> SME | self — <name> (<date>)}}
+— Plumbline {{version}} · {{/pl-command}} · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review

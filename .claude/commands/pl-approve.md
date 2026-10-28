@@ -25,10 +25,12 @@ match), `bash .github/plumbline/check-template.sh` and `date +%s` yourself; read
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
   <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
-- **Templates:** what will be posted is written on its template (JIRA hand-off table; `.github/plumbline/templates/`).
-  Give each writer the template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
-  (the connected Atlassian user). Before each judge and before posting, run `bash .github/plumbline/check-template.sh
-  <template> <draft>`: FAIL = that attempt's finding, no judge. No bash here → the judge checks the headings instead.
+- **Templates and lanes:** what will be posted is written on its template (JIRA hand-off table;
+  `.github/plumbline/templates/`). Give each writer the template, the version (`.github/plumbline/VERSION`) and
+  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` — it also fails
+  text outside the role's lane: FAIL = that attempt's finding, no judge. No bash → the judge checks it instead. Before
+  posting, set the footer's `judge` to the result (e.g. `PASS 1/3`).
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -60,12 +62,13 @@ parent page` in the Plumbline settings), linked from the epic; every other hand-
   or hand-off comment changed after its approval → `STOPPED: <what> changed after approval`. Do not redo an earlier
   role's work; if it is wrong, say which role must fix it.
 - **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
-  the approval must come from someone other than that step's `Run by`: a `[Plumbline approve /pl-<role>]` comment by
-  them, else the issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED:
-  <KEY> self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
-- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
-  `Run by` is the connected Atlassian user. `Separate approver: yes` → no label: `Approval: pending — /pl-approve
-  <KEY> <role> by another person`. `no` → add the label after the yes; `Approval: self — <name> (<date>)`.
+  the approval must come from someone other than the **author** of that step's hand-off (the comment's author; for
+  an epic or story description, the issue's creator): a `[Plumbline approve /pl-<role>]` comment by them, else the
+  issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <KEY>
+  self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first. JIRA
+  records who posted it. `Separate approver: yes` → no label; tell the SME `/pl-approve <KEY> <role>` must be run by
+  another person. `no` → add the label after the yes.
 - No Confluence tools or no parent page → the PRD goes in the epic description. A comment must stay under 30,000
   characters (JIRA's limit is 32,767): longer → stop and say the story should be split.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
@@ -92,7 +95,8 @@ Fetch the ticket with the connected JIRA/Atlassian tools (no tools → stop: app
 
 ## Step 2 — Who is approving
 `Approver` is the connected Atlassian user. With `Separate approver: yes` (root CLAUDE.md Plumbline settings), if the
-approver is the hand-off's `Run by` → `STOPPED: you ran this step; another person must approve it`.
+approver is the hand-off's author (comment author; for an epic or story description, the issue's creator) →
+`STOPPED: you ran this step; another person must approve it`.
 
 ## Step 3 — Show it
 Show the hand-off as posted, then flag plainly: its `Judge` line is not PASS; the template check
@@ -102,6 +106,7 @@ not redo the role's work — the approver decides.
 
 ## Step 4 — Hand over: the decision
 Ask: **approve**, or **reject** with reasons. Write the comment on `approval.md` (Decision, the hand-off's date, the
-page version, the reasons; `Run by` and `Approval` = the approver), run the template check, show it, and on a yes:
-post it; on approve, add the label. Never add a label for a rejection; never approve for someone who is not in this
+page version, the reasons), run the template check, show it, and on a yes: post it; on approve, add the label. For
+`arch`, also ask the approver for the story points (default: the design's suggestion), set the story-points field and
+add one `Blocks` link per technical blocker the design names. Never add a label for a rejection; never approve for someone who is not in this
 chat. Hand-over first line: `PASS` (approved), `STOPPED: rejected` or `STOPPED: <reason>`.

@@ -8,9 +8,9 @@ over to you. Nothing is committed, pushed or posted without your yes.
 | Command | What it does | Writes to |
 |---|---|---|
 | `/pl-onboard` | Documents the codebase: per service/frontend a short `CLAUDE.md` + a `CLAUDE.reference.md` catalogue, and a master `CLAUDE.md`; checks the tests run | CLAUDE.md files |
-| `/pl-pm "idea"` | Feature idea → PRD (problem, solution, success criteria, scope, backlog) | Confluence page + JIRA epic* |
-| `/pl-ba CRS-40` | Epic → stories with testable acceptance criteria | JIRA stories* |
-| `/pl-arch CRS-12` | Story → technical design (API, data, logic, access, tests) | JIRA comment* |
+| `/pl-pm "idea"` | Feature idea → PRD in business language (problem, behaviour, success criteria, scope, sized backlog) | Confluence page + JIRA epic* |
+| `/pl-ba CRS-40` | Epic → stories in business language (Given/When/Then criteria, examples) — no APIs, units or points | JIRA stories* |
+| `/pl-arch CRS-12` | Story → technical design: the unit, how each criterion is checked, API, data, logic, access, tests, suggested points | JIRA comment* |
 | `/pl-dev CRS-12` | Implements the story and the design's tests on a new branch | branch* |
 | `/pl-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules and its stories | PR comment* |
 | `/pl-qa CRS-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
@@ -86,6 +86,11 @@ your yes.
 - **Same shape everywhere.** Everything posted is written on a template in `.github/plumbline/templates/`;
   `check-template.sh` checks headings and fields before any judge runs. Acceptance criteria carry ids (`AC1`, `AC2`,
   …) that design, tests and QA evidence cite.
+- **Every agent stays in its lane.** Each writer has a *Your lane* section (what it owns, what it must never do);
+  the template check rejects what other roles own (an API path or points in a BA story, code in a design), the judge
+  fails anything else outside the lane, and the PM, BA and SM writers have no search tools, so they cannot read code.
+  Business SMEs approve business content only; the architect owns units, technical checks and blockers; the team sets
+  points at `/pl-approve … arch`; branch and PR target come from the repository settings.
 - **Independent judging.** For code changes the judge reads the changed files, their callers, tests and entities
   itself — it does not take CLAUDE.md's word for what the code does.
 
