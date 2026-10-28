@@ -43,3 +43,8 @@ Each run uses the recommended permission settings (the case repository gets `exa
 Add `cases/<id>/case.json` (`title`, `pr`, `kind`: `defects` or `clean`, `edits`: find/replace on sample-app files,
 `new_files`) and, for defects, `answer.json` (each defect: `id`, `severity`, `files`, `keywords`, `desc`; optional
 `decoys`). The best cases come from someone who did not write Plumbline: plant the defects your own reviews catch.
+
+**Note on `run.sh`:** each case runs in a fresh temporary folder that Claude Code has never trusted, so headless runs
+ignore the `allow` list there (the `deny` list and normal prompts still apply; unanswered prompts are refused). That
+is stricter than your project. A case whose run fails (for example a usage limit) is reported as not scored, never as
+0 found.

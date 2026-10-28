@@ -20,6 +20,7 @@ Goal: agents stop spending tokens rediscovering the project, and roles hand work
   scratch only and no command reads another's drafts.
 - **Removed:** the feature tracker, `context.md` and the "changed since verified" diff (replaced by the above).
 - **Eval scorer:** a finding naming a class without `.java` now matches; only a finding's own severity label counts.
+- **`eval/run.sh`:** a case whose run fails (e.g. a usage limit) is reported as not scored instead of "0 found".
 - **Self-test:** checks the new JIRA hand-off block is identical everywhere and that the removed mechanisms are not
   mentioned: 209 checks.
 

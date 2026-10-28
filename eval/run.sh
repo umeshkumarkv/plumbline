@@ -20,9 +20,12 @@ res = [json.loads(l) for l in open(sys.argv[1]) if '"type":"result"' in l]
 r = res[-1] if res else {}
 open(sys.argv[2], "w").write(r.get("result", "NO RESULT"))
 model = next((json.loads(l).get("model") for l in open(sys.argv[1]) if '"subtype":"init"' in l), "?")
-json.dump({"cost_usd": round(r.get("total_cost_usd", 0), 3), "seconds": int(sys.argv[3]), "model": model},
+err = r.get("result", "no result") if (not r or r.get("is_error")) else ""
+json.dump({"cost_usd": round(r.get("total_cost_usd", 0), 3), "seconds": int(sys.argv[3]), "model": model, "error": err[:200]},
           open(sys.argv[2] + ".meta.json", "w"))
 PY
+  e=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('error',''))" "$out/$c.review.md.meta.json")
+  if [ -n "$e" ]; then echo "case $c — RUN ERROR, not scored: $e"; continue; fi
   python3 "$EVAL/score.py" "$c" "$out/$c.review.md" --json > "$out/$c.score.json"
   python3 "$EVAL/score.py" "$c" "$out/$c.review.md"
 done
@@ -41,5 +44,8 @@ for p in sorted(glob.glob(f"{out}/*.score.json")):
 md = ["| Case | Kind | Verdict | Result | Time | Cost | Model |", "|---|---|---|---|---|---|---|", *rows, "",
       f"**Recall:** {tf}/{tp} planted defects found. **False alarms:** {fa} blocker/major findings on clean changes. "
       f"**Decoys flagged:** {dec}. **Total cost:** ${cost:.2f}."]
+errs = [os.path.basename(p)[:-len(".review.md.meta.json")] for p in sorted(glob.glob(f"{out}/*.meta.json"))
+        if json.load(open(p)).get("error")]
+if errs: md.append(f"\n**Not scored (the run itself failed — e.g. usage limit):** {', '.join(errs)}. Re-run them.")
 open(f"{out}/summary.md", "w").write("\n".join(md) + "\n"); print("\n".join(md)); print(f"\nResults: {out}")
 PY
