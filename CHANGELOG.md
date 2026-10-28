@@ -16,6 +16,8 @@ No new commands or tools; the same markdown commands, agents, settings and CI, m
   remove); new [SECURITY.md](SECURITY.md) (what is enforced vs only instructed, threats); new
   [RELEASING.md](RELEASING.md) (checklist); `.github/plumbline/VERSION`.
 - `/pl-sm` metrics mode moved to its own section; CI protects the self-test workflow too.
+- **Tested** (permissions on, transcripts kept): blind code review 8/8 (third run); arch PASS; unattended QA
+  stopped correctly; two negative cases 3/3 each, including a planted secret. `TEST-REPORT.md` section 6a.
 
 ## 2.4.1 — 2026-10-28 — independent critique applied
 - Test report corrected (all runs used `claude-sonnet-5-5`; the "second model" test was a repeat), evidence status

@@ -1,4 +1,4 @@
-# Plumbline 2.4.0 — test report (2026-10-27; rounds two and three 2026-10-28)
+# Plumbline 2.5.0 — test report (2026-10-27; rounds two to four 2026-10-28)
 
 Claude Code 2.1.309, headless (`claude -p`, default model `claude-sonnet-5-5` for writers, judges and orchestrators), on clean git copies of two real repositories:
 **candidate-review-system** (Spring Boot + SQLite backend at the repo root, Angular `ui/`) and **broker-dealer**
@@ -175,6 +175,23 @@ Permission lessons this round, all fixed: Claude Code protects `.git/`, so the d
 (`.plumbline-drafts/.gitignore` = `*`) instead of editing `.git/info/exclude`; commands create files only with the
 write tool (no `mkdir`/`printf` — one run skipped its metrics line because of that); tests run as
 `cd <unit> && <command>`; `java -version` / `node -v` allowed.
+
+## 6a. Round four (2.5.0): release hardening — regression with permissions on
+
+All runs: Claude Code 2.1.309, `claude-sonnet-5-5`, recommended settings (`default` or `acceptEdits`, never bypassed),
+transcripts kept. Self-test `tests/validate.sh`: 173/173; negative-tested with 4 planted breaks, 4 caught.
+
+| Run | What it exercised | Result | Time | Cost |
+|---|---|---|---|---|
+| `/pl-code-review` on the blind 8-defect branch (3rd run) | judge's new `checked` field; hand-over first line | `FAIL after 1 attempt`; **8/8** defects, decoy not raised; no permission denials | 0.7m | $0.26 |
+| `/pl-arch` CRS-302 | full writer → judge loop under 2.5 | `PASS` on attempt 1; tracker row set to `designed`; metrics line written | 2.1m | $0.63 |
+| `/pl-qa` CRS-303, unattended, nothing running | "nobody to answer" rule; health check | `STOPPED: … not reachable` — `curl` really ran (`000`); refused because the branch's last review failed; listed the 3 questions it could not ask | 0.4m | $0.18 |
+| Judge, flawed design (3 planted: wrong HTTP method, Tests section deleted, a fake API key) | negative case, secret rule | **FAIL, 3/3**: secret = blocker quoting 4 characters; missing tests; endpoint item failed | 0.7m | $0.27 |
+| Judge, flawed story (3 planted: untestable AC, 13 points, no blocked-by) | negative case | **FAIL, 3/3** | 0.6m | $0.22 |
+
+Every judge item now carries what was checked (e.g. "Searched the design for a tests section. It goes from section 6
+straight to section 8"), so a skipped check is visible. Remaining permission denials were the orchestrator's own
+`sed`/`for` shell calls, which the commands forbid; each run recovered with its file tools.
 
 ## 7. Independent critique (2026-10-28) and evidence status
 
