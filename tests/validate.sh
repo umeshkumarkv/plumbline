@@ -16,7 +16,8 @@ for c in $CMDS; do
   head -1 "$f" | grep -qx -- '---' && grep -q '^description: Plumbline — ' "$f" && grep -q '^argument-hint: ' "$f" \
     && ok || bad "$f: frontmatter needs description (starting 'Plumbline — ') and argument-hint"
   for s in '## Every run' '## Metrics'; do grep -qx "$s" "$f" && ok || bad "$f: missing section '$s'"; done
-  grep -q 'plumbline-judge' "$f" && ok || bad "$f: never starts plumbline-judge"
+  # /pl-approve is the human's decision: the one command with no judge
+  [ "$c" = pl-approve ] && ok || { grep -q 'plumbline-judge' "$f" && ok || bad "$f: never starts plumbline-judge"; }
   grep -qiE '^## Step [0-9]+ — (Hand over|Report|Summary)' "$f" && ok || bad "$f: no hand-over/report/summary step"
   n=$(wc -l < "$f"); [ "$n" -le 140 ] && ok || bad "$f: $n lines (budget 140) — long commands are followed less reliably"
   # every agent a command names must exist
@@ -126,7 +127,7 @@ fi
 
 # 10. Templates: every template a command or agent names exists; the template checker passes a good draft and fails a bad one
 for t in $(grep -rhoE 'templates/[a-z-]+\.md|`[a-z-]+\.md`' .claude | grep -oE '[a-z-]+\.md' | sort -u); do
-  case "$t" in pl-*|plumbline-*|story-*|prd.md|design.md|epic.md|story.md|handoff-*|sprint-report.md) ;; *) continue;; esac
+  case "$t" in pl-*|plumbline-*|story-*|prd.md|design.md|epic.md|story.md|handoff-*|sprint-report.md|approval.md) ;; *) continue;; esac
   case "$t" in pl-*|plumbline-*) continue;; esac
   [ -f ".github/plumbline/templates/$t" ] && ok || bad "a command names template '$t' that does not exist"
 done

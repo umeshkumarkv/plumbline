@@ -17,7 +17,7 @@ Story: $ARGUMENTS
   If subagents are not available in this chat, stop and say so.
 
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
-only `git` (from the repository root — never `git -C`, which permission rules do not match) and the project's build/test command yourself (they work in bash, PowerShell and cmd alike); find and read
+only `git` (from the repository root — never `git -C`, which permission rules do not match), `bash .github/plumbline/check-template.sh` and the project's build/test command yourself (they work in bash, PowerShell and cmd alike); find and read
 files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
@@ -57,19 +57,20 @@ agent redoes what an earlier role settled. Specs people review and edit (PRD, de
 | `/pl-qa` | story comment — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
 | `/pl-doc` | docs PR updating CLAUDE.md + story comment | `handoff-doc.md` | the architect approves the docs PR |
 | `/pl-devops`, `/pl-sm` | comment on the story / sprint issue | `handoff-devops.md`, `sprint-report.md` | — |
+| `/pl-approve` | the approver's decision on one step + its label | `approval.md` | (adds the step's label) |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]`, and each page those link to, **at the version the comment names**. A page now at a later
-  version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Do not redo an earlier role's work; if it is
-  wrong, stop and say which role must fix it.
-- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (Plumbline
-  settings; the default) it must also have been added — per the issue's change history — by someone other than that
-  step's `Run by`. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <label> on <KEY> self-approved by
-  <name>` · `STOPPED: cannot verify who approved <KEY>`. Only with `Separate approver: no` may the SME say go on.
+  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]`, and each page those link to, **at the version the
+  comment names**. Page now at a later version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Tools give
+  no version → compare the page's last-modified time with the approval; neither → say in the hand-over that later
+  page edits cannot be detected. Do not redo an earlier role's work; if it is wrong, say which role must fix it.
+- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
+  the approval must come from someone other than that step's `Run by`: a `[Plumbline approve /pl-<role>]` comment by
+  them, else the issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED:
+  <KEY> self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
 - **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
-  `Run by` is the connected Atlassian user. `Separate approver: yes` → do not add the label: write `Approval: pending
-  — <label> to be added by the <role> approver` and tell the SME who must approve. `no` → add the label after the yes
-  and write `Approval: self — <name> (<date>)`.
+  `Run by` is the connected Atlassian user. `Separate approver: yes` → no label: `Approval: pending — /pl-approve
+  <KEY> <role> by another person`. `no` → add the label after the yes; `Approval: self — <name> (<date>)`.
 - No Confluence tools or no parent page → the PRD goes in the epic description and the design in the arch comment.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
 
@@ -95,10 +96,9 @@ redirection, which permission settings block.
    CLAUDE.md files. No CLAUDE.md yet → suggest `/pl-onboard` first, then continue if the user agrees.
 2. Build/test command: from the units' CLAUDE.md "Build & run" (on Windows use the `.cmd` wrapper, e.g. `mvnw.cmd`).
 3. `git status` must be clean. Create the branch: `git switch -c ai/<KEY>-<short-slug> <base branch>`.
-4. **Baseline:** run the build/test command once before any change and keep the result. If it already fails, note
-   which tests or which step fail — those are pre-existing and do not count against the story. If the test runner
-   cannot run at all, tell the user now and continue: the story's tests are still written, and the judge checks them by
-   reading.
+4. **Baseline:** run the build/test command once before any change. Failures now are pre-existing and do not count
+   against the story — note which. If it cannot run at all, tell the user and continue: tests are still written, and
+   the judge checks them by reading.
 
 ## Step 3 — Attempts (1, 2, 3)
 1. **Writer** — start `plumbline-dev-writer` with: the story, the design path(s), the branch, the units and their

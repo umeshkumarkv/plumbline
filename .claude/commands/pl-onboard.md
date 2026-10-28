@@ -17,7 +17,7 @@ Target: $ARGUMENTS (empty = every unit)
   (`.github/agents/`). If subagents are not available in this chat, stop and say so.
 
 Each subagent starts with a clean context. Never do the writer's or the judge's work yourself, and never pass the
-writer's reasoning or your own opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) commands, and in Step 2b each
+writer's reasoning or your own opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match), `bash .github/plumbline/check-template.sh` commands, and in Step 2b each
 unit's own test command, yourself (they work in bash, PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.

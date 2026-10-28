@@ -17,7 +17,7 @@ Target: $ARGUMENTS (empty = the whole active sprint; a key = that ticket only)
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with
   agent `plumbline-sm-writer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
-Never do the writer's or the judge's work yourself. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) and `gh` yourself. Do not research the code yourself — that is the
+Never do the writer's or the judge's work yourself. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match), `bash .github/plumbline/check-template.sh` and `gh` yourself. Do not research the code yourself — that is the
 writer's/runner's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
@@ -57,19 +57,20 @@ agent redoes what an earlier role settled. Specs people review and edit (PRD, de
 | `/pl-qa` | story comment — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
 | `/pl-doc` | docs PR updating CLAUDE.md + story comment | `handoff-doc.md` | the architect approves the docs PR |
 | `/pl-devops`, `/pl-sm` | comment on the story / sprint issue | `handoff-devops.md`, `sprint-report.md` | — |
+| `/pl-approve` | the approver's decision on one step + its label | `approval.md` | (adds the step's label) |
 
 - **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]`, and each page those link to, **at the version the comment names**. A page now at a later
-  version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Do not redo an earlier role's work; if it is
-  wrong, stop and say which role must fix it.
-- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (Plumbline
-  settings; the default) it must also have been added — per the issue's change history — by someone other than that
-  step's `Run by`. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED: <label> on <KEY> self-approved by
-  <name>` · `STOPPED: cannot verify who approved <KEY>`. Only with `Separate approver: no` may the SME say go on.
+  `[Plumbline /pl-<role>]` or `[Plumbline approve /pl-<role>]`, and each page those link to, **at the version the
+  comment names**. Page now at a later version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Tools give
+  no version → compare the page's last-modified time with the approval; neither → say in the hand-over that later
+  page edits cannot be detected. Do not redo an earlier role's work; if it is wrong, say which role must fix it.
+- **Gate:** start only when the previous step's label is on the ticket. With `Separate approver: yes` (the default)
+  the approval must come from someone other than that step's `Run by`: a `[Plumbline approve /pl-<role>]` comment by
+  them, else the issue's change history for the label. Otherwise stop: `STOPPED: <label> not on <KEY>` · `STOPPED:
+  <KEY> self-approved by <name>` · `STOPPED: cannot verify who approved <KEY> — run /pl-approve`.
 - **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first.
-  `Run by` is the connected Atlassian user. `Separate approver: yes` → do not add the label: write `Approval: pending
-  — <label> to be added by the <role> approver` and tell the SME who must approve. `no` → add the label after the yes
-  and write `Approval: self — <name> (<date>)`.
+  `Run by` is the connected Atlassian user. `Separate approver: yes` → no label: `Approval: pending — /pl-approve
+  <KEY> <role> by another person`. `no` → add the label after the yes; `Approval: self — <name> (<date>)`.
 - No Confluence tools or no parent page → the PRD goes in the epic description and the design in the arch comment.
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
 
