@@ -51,29 +51,31 @@ unchanged, then continue — but only for a path you gave that helper; any other
 Drafts go in `.plumbline-drafts/<KEY or slug>/`. Make sure `.plumbline-drafts/.gitignore` exists with the single line `*` (write it with your write tool; it keeps the folder out of git without touching `.git/`, which Claude Code protects).
 
 ## JIRA hand-off
-Roles pass work to each other only through JIRA — never through files on someone's machine — so no agent works out
-again what an earlier role settled. The person running a command is that role's SME; their yes at the hand-over is the
-approval.
+Roles pass work to each other only through JIRA and Confluence — never through files on someone's machine — so no
+agent redoes what an earlier role settled. Specs people review and edit (PRD, design) are Confluence pages under the
+`Confluence parent page` (Plumbline settings); JIRA holds the state (labels), a short summary and the page link.
 
-| Step | Lives in JIRA as | Template | Approval label (added on the SME's yes) |
+| Step | Posts | Template | Approval label |
 |---|---|---|---|
-| `/pl-pm` | epic — the PRD in its description | `epic.md`, `prd.md` | `plumbline-prd-approved` |
+| `/pl-pm` | PRD page; the epic, with summary + PRD link | `prd.md`, `epic.md` | `plumbline-prd-approved` |
 | `/pl-ba` | stories under the epic — criteria, points, `Blocks` links | `story.md` | `plumbline-dor-ready` |
-| `/pl-arch` | comment on the story — the design | `handoff-arch.md`, `design.md` | `plumbline-arch-approved` |
-| `/pl-dev` | comment on the story — branch, PR, test result | `handoff-dev.md` | — (the PR is reviewed next) |
-| `/pl-code-review` | PR review + comment on the story — verdict and findings | `handoff-review.md` | `plumbline-review-passed` |
-| `/pl-qa` | comment on the story — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
-| `/pl-doc` | docs PR updating CLAUDE.md + comment on the story | `handoff-doc.md` | the architect approves the docs PR |
+| `/pl-arch` | design page under the PRD page; story comment with its link and version | `design.md`, `handoff-arch.md` | `plumbline-arch-approved` |
+| `/pl-dev` | story comment — branch, PR, test result | `handoff-dev.md` | — (the PR is reviewed next) |
+| `/pl-code-review` | PR review + story comment — verdict and findings | `handoff-review.md` | `plumbline-review-passed` |
+| `/pl-qa` | story comment — evidence per criterion | `handoff-qa.md` | `plumbline-qa-passed` |
+| `/pl-doc` | docs PR updating CLAUDE.md + story comment | `handoff-doc.md` | the architect approves the docs PR |
 | `/pl-devops`, `/pl-sm` | comment on the story / sprint issue | `handoff-devops.md`, `sprint-report.md` | — |
 
-- **Input:** read the ticket — description, labels, links, and the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]`. Do not redo an earlier role's work; if it is wrong, stop and say which role must fix it.
+- **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
+  `[Plumbline /pl-<role>]`, and each page those link to, **at the version the comment names**. A page now at a later
+  version → `STOPPED: <page> changed after approval (v<n> → v<m>)`. Do not redo an earlier role's work; if it is
+  wrong, stop and say which role must fix it.
 - **Gate:** start only when the previous step's label is on the ticket. Missing → `STOPPED: <label> not on <KEY>`
   (the SME adds it, or tells you to go on).
-- **Output:** post it as the table says, starting `[Plumbline /pl-<role>] <date>`, and add the label — both only
-  after the SME's yes, with the exact text shown first.
-- `.plumbline-drafts/` is scratch before posting; no other command reads it. No JIRA tools connected → give the
-  output as text for the SME to paste, and say the hand-off is manual.
+- **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first; then
+  add the label.
+- No Confluence tools or no parent page → the PRD goes in the epic description and the design in the arch comment.
+  No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
 
 ## Metrics
 At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header

@@ -23,6 +23,7 @@ None recorded beyond `src/CLAUDE.md` §12.
 ## Plumbline settings
 - JIRA project: OD
 - Confluence space: OD
+- Confluence parent page: Order Desk features
 - Base branch: main
 - PR target: main
 - Branch pattern: ai/OD-<n>-<slug>
