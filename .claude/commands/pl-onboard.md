@@ -23,38 +23,32 @@ If a helper replies with `FILE: <path>` and the content instead of writing the f
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
 
 ## Every run
-- **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
-  judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
-  unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
-- **Project memory:** the CLAUDE.md files are the single source of truth for the project, kept current after every
-  merge by `/pl-doc`. Helpers work from them and from the JIRA ticket; they open code only for the files they change
-  or review. Never research the code yourself. Collect what helpers report as "Add to CLAUDE.md" or "CLAUDE.md out
-  of date" and list it in the hand-over for `/pl-doc`.
-- **Templates:** whatever will be posted is written on its template in `.github/plumbline/templates/` (see the
-  JIRA hand-off table). Before each judge, and again before posting, run
-  `bash .github/plumbline/check-template.sh <template> <draft>`: a FAIL is that attempt's finding and the judge is not
-  started. If bash cannot run here, add "matches its template's headings and fields" to the judge's checklist.
-  Give each writer its template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
-  (the connected Atlassian user's name; else ask once).
-- **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
-  (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
-  the rest in the hand-over.
-- **Nobody to answer** (a scheduled or headless run): wherever a step says ask, take the safe choice it names, or else
-  stop that item — never guess. Write nothing outside the repository and `.plumbline-drafts/`, and list every
-  question you could not ask in the hand-over.
-- **Hand-over:** the first line is one of `PASS` · `FAIL after 3 attempts` · `STOPPED: <reason>` · `UNVERIFIED: <what
-  did not run>` — then the details, then each question for the user, each with the exact text or command it would
-  send or run.
+- **Judge replies:** only the judge's JSON counts. Not JSON → ask that judge once more, then count the attempt as FAIL
+  ("judge reply unreadable"). Never decide PASS yourself or drop a finding before the next attempt.
+- **Project memory:** helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
+  material, opening code only for what they change or review; never research the code yourself. List their "Add to
+  CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
+- **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
+  <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
+  changed>", and say so in the hand-over.
+- **Templates:** what will be posted is written on its template (JIRA hand-off table; `.github/plumbline/templates/`).
+  Give each writer the template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
+  (the connected Atlassian user). Before each judge and before posting, run `bash .github/plumbline/check-template.sh
+  <template> <draft>`: FAIL = that attempt's finding, no judge. No bash here → the judge checks the headings instead.
+- **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
+  nobody to answer → do the first 6 and list the rest.
+- **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
+  guess; write nothing outside the repository and `.plumbline-drafts/`; list the unasked questions in the hand-over.
+- **Hand-over:** first line `PASS` · `FAIL after 3 attempts` · `STOPPED: <reason>` · `UNVERIFIED: <what did not
+  run>`; then the details; then each question for the user with the exact text or command it would send or run.
 
 ## Metrics
-At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
-`date,command,target,attempts,verdict,tests_run,minutes,human_decision` if missing): today's date, this command, the
-story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, the
-minutes from start to hand-over (run `date +%s` once at the start and once at the hand-over), and leave
-`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
-The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-sm` can summarise it.
-**Files:** create every draft and metrics file with your write tool — it creates missing folders. Never
-`mkdir`, `echo`, `printf` or redirection: permission settings block them.
+At the hand-over append to `.plumbline-drafts/metrics.csv` (header, if new:
+`date,command,target,attempts,verdict,tests_run,minutes,human_decision`): date, command, story/branch/PR, attempts,
+verdict, tests ran `yes`/`no`/`n/a`, minutes (`date +%s` at start and at hand-over), and `human_decision` once the user
+answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` summarises it.
+**Files:** create drafts and metrics with your write tool (it creates folders) — never `mkdir`, `echo`, `printf` or
+redirection, which permission settings block.
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. If it has no **Plumbline settings** (JIRA project, Confluence space,
@@ -65,9 +59,9 @@ the root file in Step 4.
 ## Step 2 — Find the units
 Use `git ls-files` or your file search tool to find build files: `pom.xml`, `build.gradle`, `build.gradle.kts`, `package.json` (ignore `node_modules`,
 `target`, `build`, `dist`), plus other stacks' build files if present. A folder with its own build file and source is a
-unit; a parent build file that only lists modules is not. For each unit decide its CLAUDE.md:
-- a unit in a folder → `<folder>/CLAUDE.md`;
-- an app at the repository root → `src/CLAUDE.md` (the root `CLAUDE.md` is the master).
+unit; a parent build file that only lists modules is not. For each unit decide its CLAUDE.md (and, beside it, its
+`CLAUDE.reference.md`): a unit in a folder → `<folder>/CLAUDE.md`; an app at the repository root → `src/CLAUDE.md`
+(the root `CLAUDE.md` is the master).
 
 Show the user the list (name, folder, kind, CLAUDE.md) in one table and continue.
 
@@ -84,10 +78,10 @@ exactly, never smoothed over.
 
 ## Step 3 — Each unit, one at a time (helpers run in the foreground)
 For attempt = 1, 2, 3:
-1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md path, the unit's test recipe
+1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md and reference paths, the test recipe
    from Step 2b, the current commit (`git rev-parse --short HEAD`) and today's date for its `Last updated` line, and on attempts 2–3 the judge's findings from the previous attempt (verbatim JSON).
 2. **Judge** — start `plumbline-judge` with exactly:
-   - *Review:* the CLAUDE.md path, the unit folder, and "compare with `git diff -- <CLAUDE.md path>`: text outside the
+   - *Review:* both paths, the unit folder, and "compare with `git diff -- <both paths>`: text outside the
      plumbline markers must be unchanged";
    - *Checklist:* the **Onboard checklist** below, verbatim.
 3. **PASS** → next unit. **FAIL** → next attempt with the findings.
@@ -96,24 +90,25 @@ After 3 failed attempts: leave the file as it is, mark the unit **ESCALATED**, k
 and move on.
 
 ### Onboard checklist
-1. Every endpoint/route the code defines is listed in API — search the mapping annotations or route definitions, compare
-   the count, and check at least 10 at random. None listed that the code does not define.
+1. Every endpoint/route the code defines is in the reference API section — search the mapping annotations or route
+   definitions, compare the count, check at least 10 at random. None listed that the code does not define.
 2. Frontend: every backend call is listed with the endpoint it hits; calls that no backend endpoint serves are listed
    as such, not presented as working. (N/A for a backend.)
-3. Every entity/table is listed in Data with its key fields; none listed that the code, migrations or SQL scripts do
-   not define. Column names are fields, not tables.
+3. Every entity/table is in the reference Data section with its key fields; none the code, migrations or SQL scripts
+   do not define. Column names are fields, not tables.
 4. Integrations: every outbound HTTP call, messaging topic and cache the code uses is listed; nothing invented.
 5. Build & run commands, port and configuration match the build and config files. A **Test recipe** line states the
    command, the runtime it needs (from the build files), and the result of the Step 2b run as given in the request
    (passed / failed with the first error / not run and why) — a failure is not hidden or reworded as success.
    Absolute filesystem paths in config that tests or startup depend on are listed.
 6. Security: authentication, roles and token storage are described as the code does them, with the file.
-7. Rules and Must-never items are each traceable to code or the root CLAUDE.md.
+7. Every Rule is tagged `[code: <file>]` (and that file enforces it) or `[decided <source>]` (and that source says
+   so); every Must-never is traceable to code or the root CLAUDE.md.
 8. Tech debt states the TODO/FIXME count and top files; other debt as counts plus up to 10 locations. Debt recorded
    truthfully passes.
-9. All 13 sections present ("None found" is fine); the file is at most 30 KB; a `Last updated: <commit> (<date>,
-   /pl-onboard)` line with the commit given in the request.
-10. Text outside the plumbline markers is unchanged.
+9. Core: 8 sections, at most 8 KB, the Reference lines' counts match the reference file. Reference: 6 sections, at
+   most 30 KB. Both start with `Last updated: <commit> (<date>, /pl-onboard)` with the commit given in the request.
+10. Text outside the plumbline markers is unchanged, in both files.
 11. Decisions & trade-offs: each one names its source (code comment, README, ADR, commit message, config) — none is
     invented; "None found" is fine.
 

@@ -274,3 +274,17 @@ points, which we accept:
 - **A team using it on its own repository** — the plan is in [PILOT.md](PILOT.md).
 - **A judge on a different model** — every run used `claude-sonnet-5-5`; no cross-model or cross-vendor test yet.
 - **Shared tracker and metrics** — both stay on each developer's machine; a team-wide option is open.
+
+## 6d. 2.8.0 — not yet run
+
+2.8.0 was written from an independent critique and checked only by the self-test (236/236) and by exercising
+`check-template.sh` on good and broken drafts. **No model run has tested it.** Before release to `main`:
+
+| Run | Command | Pass if |
+|---|---|---|
+| Eval, 2.6 vs 2.8, 3 runs each | `REPEAT=3 bash eval/ab.sh v2.6.0 release/v2.8.0` | recall 13/13 every run; false alarms ≤ 2.6's; decoy not flagged |
+| Tokens, BA on a real repo | `bash eval/ab-command.sh v2.6.0 release/v2.8.0 <repo> "/pl-ba <requirement>"` | fewer code reads and tokens than 2.6, stories as good on reading both |
+| Judge independence | `/pl-code-review` on a branch whose change contradicts a stale CLAUDE.md line | judge reports the defect from the code and a `CLAUDE.md out of date` finding |
+| Separate approver | `/pl-arch` then `/pl-dev` with the label added by the same user | `/pl-dev` stops `self-approved` |
+| Page pinning | edit the design page after `plumbline-arch-approved` | `/pl-dev` stops `changed after approval` |
+| Onboard split | `/pl-onboard` on broker-dealer | core ≤ 8 KB, reference ≤ 30 KB, every rule tagged |

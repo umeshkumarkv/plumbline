@@ -1,5 +1,41 @@
 # Changelog
 
+## 2.8.0 — 2026-10-29 — independent judging, templates, Confluence specs, separate approvers, a small CLAUDE.md
+Goal: close the gaps an independent critique of 2.7 found against Plumbline's own aims (agents per role, spec-driven,
+CLAUDE.md as a cheap source of truth, JIRA/Confluence hand-off, the same output on every project).
+- **Judge reads the code around a diff.** For `/pl-dev`, `/pl-code-review` and `/pl-devops` the judge reads the
+  changed files, the callers of changed methods/endpoints, their tests and the entities touched, instead of trusting
+  CLAUDE.md for what the code does — writer and judge no longer share one unchecked premise. Code that contradicts
+  CLAUDE.md is a minor `CLAUDE.md out of date` finding.
+- **Fixed severity lines** in the judge (blocker / major / minor, with examples); a gap that predates the work is never
+  blocker or major. Aimed at the c2/c4 major-vs-minor swing seen in round six.
+- **Templates** for everything posted (`.github/plumbline/templates/`: PRD, epic, story, design, six hand-off
+  comments, sprint report), each ending with a `## Record` (version, commit, judge result, Run by, Approval).
+  `check-template.sh` checks headings, order, fields and placeholders before every judge and every post — no model,
+  no tokens; a failure is the attempt's finding. Acceptance criteria get stable ids (`AC1`, `AC2`, …).
+- **Confluence holds the specs.** The PRD and each design are Confluence pages under the new `Confluence parent page`
+  setting; the epic and the arch comment carry a summary, the link and the page version. A page edited after approval
+  stops the next command (`STOPPED: <page> changed after approval`). Without Confluence, 2.7 behaviour.
+- **Separate approver** (new setting, default `yes`): every hand-off records `Run by`; the command never adds its own
+  approval label; the next command checks JIRA's change history and stops if the label is missing, self-added or
+  unverifiable. `no` keeps 2.7's self-approval, recorded as `self`. SECURITY.md: what this enforces and what needs
+  JIRA workflow conditions.
+- **Small CLAUDE.md.** Each unit now has a core `CLAUDE.md` (≤ 8 KB: purpose, build/test recipe, architecture,
+  security, rules, must-nevers, decisions, reference index) and a `CLAUDE.reference.md` (≤ 30 KB: API, data,
+  integrations, config, debt, open questions) opened only for the section a task needs. Rules are tagged
+  `[code: <file>]` or `[decided <source>]`. `/pl-doc` adds only durable rules (`[decided <KEY>]`), keeps the core
+  under 8 KB and lists proposed removals for the architect; it never deletes a `[decided]` rule.
+- **Freshness:** every command checks `git log <Last updated>..HEAD -- <unit>` and tells the helpers and the judge
+  which files CLAUDE.md may be stale for.
+- **`examples/CODEOWNERS`:** the architect owns `CLAUDE.md` / `CLAUDE.reference.md`.
+- **A/B tooling:** `eval/ab.sh <refA> <refB>` runs the code-review eval on two versions (`REPEAT=n`);
+  `eval/ab-command.sh` runs any command on your repository with two versions and counts code reads, tokens, cost.
+- Shared blocks rewritten shorter so every command stays within the 140-line budget with the new rules.
+- **Self-test:** templates exist and carry a Record; `check-template.sh` passes a good draft and fails a broken one;
+  stale 2.7 text: 236 checks.
+- **Not yet run:** the 2.7/2.8 eval and A/B runs (see TEST-REPORT §6d). Treat 2.8's effect on tokens and false alarms
+  as unmeasured until they are.
+
 ## 2.7.0 — 2026-10-28 — CLAUDE.md is the single source of truth; JIRA is the hand-off
 Goal: agents stop spending tokens rediscovering the project, and roles hand work to each other in one place.
 - **CLAUDE.md is the single source of truth.** Every writer and the judge now work from the CLAUDE.md files and the

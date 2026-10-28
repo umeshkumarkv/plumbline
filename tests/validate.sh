@@ -56,7 +56,7 @@ done
 # 4. Stale or forbidden text
 hits=$(grep -rnE '(^|[ `(])/plumbline-(onboard|pm|ba|arch|dev|qa|doc|devops|sm|code-review)([^-a-z]|$)' .claude .github README.md PILOT.md 2>/dev/null)
 [ -z "$hits" ] && ok || bad "old /plumbline-<role> command names (now /pl-<role>): $hits"
-stale=( 'info/exclude' 'dangerously-skip-permissions' 'run_in_background: true' 'features.md' 'context.md' 'changed since verified' )
+stale=( 'All 13 sections' 'Feature tracker' 'info/exclude' 'dangerously-skip-permissions' 'run_in_background: true' 'features.md' 'context.md' 'changed since verified' )
 for s in "${stale[@]}"; do
   hits=$(grep -rlF -- "$s" .claude .github README.md PILOT.md 2>/dev/null)
   [ -z "$hits" ] && ok || bad "stale text '$s' in: $hits"

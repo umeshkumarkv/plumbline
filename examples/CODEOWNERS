@@ -1,0 +1,7 @@
+# Plumbline — merge into .github/CODEOWNERS and turn on "Require review from Code Owners" in branch protection.
+# The architect owns what every agent treats as the source of truth; maintainers own Plumbline itself.
+**/CLAUDE.md              @your-org/architects
+**/CLAUDE.reference.md    @your-org/architects
+.claude/commands/         @your-org/plumbline-maintainers
+.claude/agents/           @your-org/plumbline-maintainers
+.github/plumbline/        @your-org/plumbline-maintainers

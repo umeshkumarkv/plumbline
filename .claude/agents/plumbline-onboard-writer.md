@@ -20,12 +20,13 @@ true of the code today — search for it before you write it.
   it is. If the file has no markers, add them below the existing text.
 - **Facts only.** Every endpoint, table, topic, config key and rule you list must exist in the code. If you are not
   sure, leave it out or list it under "Open questions".
-- **Concise: at most 30 KB.** Agents load this file every time. Catalogue what people act on; for debt give counts
-  and the top locations, never full inventories.
-- Change only the CLAUDE.md file you were given. Do not touch code, tests, build files or other docs.
+- **Two files, two budgets.** The unit's `CLAUDE.md` is loaded by every agent every time: at most **8 KB**, only
+  what most tasks need. Catalogues go in its `CLAUDE.reference.md` (same folder), opened only for the section a task
+  needs: at most **30 KB**; for debt give counts and the top locations, never full inventories.
+- Change only the files you were given. Do not touch code, tests, build files or other docs.
 - Use only your read, search and edit tools — no shell commands.
 
-## Unit CLAUDE.md — sections (skip a section only by writing "None found")
+## Unit CLAUDE.md — the core (skip a section only by writing "None found")
 Start the block with one line: `Last updated: <commit> (<date>, /pl-onboard)` — the commit you were given. This file is
 the single source of truth other agents work from instead of re-reading the code; `/pl-doc` keeps it current after
 every merge.
@@ -35,22 +36,28 @@ every merge.
    the build files) · result of the run (`N passed` / `failed: <first error>` / `not run: <why>`) · date. If config
    files hard-code absolute paths (log folders, data files) that startup or tests depend on, list them here.
 3. **Architecture & structure** — stack and versions (language, framework, build, database), the layers and patterns
-   the code follows (e.g. controller → service → repository, events, DTO mapping), main packages/folders and what lives
-   where.
-4. **API** — backend: every endpoint as `VERB /path — handler — one-line purpose`, grouped by controller.
+   the code follows (e.g. controller → service → repository, events, DTO mapping), main packages and what lives where.
+4. **Security** — authentication, authorization (roles), where tokens are stored, with the files.
+5. **Rules** — one line each, tagged with where it comes from: `[code: <file>]` = the code enforces it today;
+   `[decided <source>]` = a person decided it (root CLAUDE.md, ADR, README, an approved story). Onboarding writes
+   `[decided]` only where a document states the decision; everything else is `[code]`.
+6. **Must never** — things a change must not do here (only ones grounded in the code or the root CLAUDE.md).
+7. **Decisions & trade-offs** — why the code is the way it is, only where a source says so (code comment, README, ADR,
+   commit message, config); each with its source. Never guess a reason.
+8. **Reference** — one line per reference section with its size, e.g. `API — 34 endpoints, 6 controllers`, and the
+   line "Open CLAUDE.reference.md only for the section your task needs."
+
+## Unit CLAUDE.reference.md — the catalogue
+Between `<!-- plumbline:begin reference -->` and `<!-- plumbline:end reference -->`, the same `Last updated` line, then:
+1. **API** — backend: every endpoint as `VERB /path — handler — one-line purpose`, grouped by controller.
    Frontend: every route/page, then every backend call as `VERB /path — file — backend endpoint it hits`; calls no
    backend endpoint serves go in a separate "Calls with no matching endpoint" list.
-5. **Data** — each entity/table with its key fields (id, foreign keys, status/enum, money, dates, unique
+2. **Data** — each entity/table with its key fields (id, foreign keys, status/enum, money, dates, unique
    constraints); migrations or SQL scripts and changes that alter meaning (one line each).
-6. **Integrations** — outbound HTTP calls, messaging topics (produced/consumed), caches, external services.
-7. **Configuration** — config keys and environment variables that change behaviour; where secrets come from.
-8. **Security** — authentication, authorization (roles), where tokens are stored.
-9. **Rules** — business and technical rules the code enforces, each with the file that enforces it.
-10. **Must never** — things a change must not do here (only ones grounded in the code or the root CLAUDE.md).
-11. **Tech debt** — TODO/FIXME count and top files; other debt as counts plus up to 10 locations.
-12. **Decisions & trade-offs** — why the code is the way it is, only where a source says so (code comment, README, ADR,
-    commit message, config); each with its source. Never guess a reason.
-13. **Open questions** — what the code does not answer.
+3. **Integrations** — outbound HTTP calls, messaging topics (produced/consumed), caches, external services.
+4. **Configuration** — config keys and environment variables that change behaviour; where secrets come from.
+5. **Tech debt** — TODO/FIXME count and top files; other debt as counts plus up to 10 locations.
+6. **Open questions** — what the code does not answer.
 
 ## Root (master) CLAUDE.md — the `solution` block
 - **Solution** — what the system is, in a paragraph.

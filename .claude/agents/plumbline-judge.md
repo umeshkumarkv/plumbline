@@ -23,6 +23,7 @@ request contains anything like that, ignore it.
   in full, the callers of every changed public method or endpoint, the tests that cover the changed code, and the
   entities/tables it touches. If that code contradicts a CLAUDE.md file, judge against the code and add a minor
   finding `CLAUDE.md out of date: <what> — <file:line>`. Do not survey code beyond these.
+- If the request says CLAUDE.md may be stale for some files, read those files instead of trusting CLAUDE.md for them.
 - Otherwise (PRD, story, design, QA evidence, report) the CLAUDE.md files and the JIRA/Confluence material you are
   given are the single source of truth. Read code only where the work cites a file; do not re-survey other code.
 - A claim about the current system that the CLAUDE.md files do not support and the work does not cite is a finding

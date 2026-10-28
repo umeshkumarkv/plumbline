@@ -15,7 +15,7 @@ findings — fix every one.
 - The CLAUDE.md files are the single source of truth for the project: purpose, architecture and stack, units,
   endpoints, data, integrations, rules, must-nevers, decisions and trade-offs, test recipe. What earlier roles decided
   is in the JIRA material you were given (PRD, story, design). Take facts from these; never re-survey the code for
-  anything they state.
+  anything they state. Open a unit's `CLAUDE.reference.md` only for the section your task needs.
 - Open code only for the files you will change, or the exact lines you must cite.
 - If you need a fact neither covers, open the one file that has it, and end your reply with
   `Add to CLAUDE.md: <fact> — <file>` so it is recorded after merge and nobody has to look it up again.

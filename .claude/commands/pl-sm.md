@@ -23,28 +23,24 @@ If a helper replies with `FILE: <path>` and the content instead of writing the f
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
 
 ## Every run
-- **Judge replies:** the judge answers with the JSON its instructions give. If a reply is not that JSON, ask the same
-  judge once to answer in that format; if it still does not, count the attempt as FAIL with the finding "judge reply
-  unreadable". Never decide PASS yourself, and never edit or summarise away a finding before the next attempt.
-- **Project memory:** the CLAUDE.md files are the single source of truth for the project, kept current after every
-  merge by `/pl-doc`. Helpers work from them and from the JIRA ticket; they open code only for the files they change
-  or review. Never research the code yourself. Collect what helpers report as "Add to CLAUDE.md" or "CLAUDE.md out
-  of date" and list it in the hand-over for `/pl-doc`.
-- **Templates:** whatever will be posted is written on its template in `.github/plumbline/templates/` (see the
-  JIRA hand-off table). Before each judge, and again before posting, run
-  `bash .github/plumbline/check-template.sh <template> <draft>`: a FAIL is that attempt's finding and the judge is not
-  started. If bash cannot run here, add "matches its template's headings and fields" to the judge's checklist.
-  Give each writer its template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
-  (the connected Atlassian user's name; else ask once).
-- **Limits:** at most 3 attempts per item, one writer and one judge per attempt. If the work covers more than 6 items
-  (stories, units, tickets), show the list and ask before starting; when nobody can answer, do the first 6 and list
-  the rest in the hand-over.
-- **Nobody to answer** (a scheduled or headless run): wherever a step says ask, take the safe choice it names, or else
-  stop that item — never guess. Write nothing outside the repository and `.plumbline-drafts/`, and list every
-  question you could not ask in the hand-over.
-- **Hand-over:** the first line is one of `PASS` · `FAIL after 3 attempts` · `STOPPED: <reason>` · `UNVERIFIED: <what
-  did not run>` — then the details, then each question for the user, each with the exact text or command it would
-  send or run.
+- **Judge replies:** only the judge's JSON counts. Not JSON → ask that judge once more, then count the attempt as FAIL
+  ("judge reply unreadable"). Never decide PASS yourself or drop a finding before the next attempt.
+- **Project memory:** helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
+  material, opening code only for what they change or review; never research the code yourself. List their "Add to
+  CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
+- **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
+  <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
+  changed>", and say so in the hand-over.
+- **Templates:** what will be posted is written on its template (JIRA hand-off table; `.github/plumbline/templates/`).
+  Give each writer the template, the version (`.github/plumbline/VERSION`), `git rev-parse --short HEAD` and `Run by`
+  (the connected Atlassian user). Before each judge and before posting, run `bash .github/plumbline/check-template.sh
+  <template> <draft>`: FAIL = that attempt's finding, no judge. No bash here → the judge checks the headings instead.
+- **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
+  nobody to answer → do the first 6 and list the rest.
+- **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
+  guess; write nothing outside the repository and `.plumbline-drafts/`; list the unasked questions in the hand-over.
+- **Hand-over:** first line `PASS` · `FAIL after 3 attempts` · `STOPPED: <reason>` · `UNVERIFIED: <what did not
+  run>`; then the details; then each question for the user with the exact text or command it would send or run.
 
 ## JIRA hand-off
 Roles pass work to each other only through JIRA and Confluence — never through files on someone's machine — so no
@@ -78,14 +74,12 @@ agent redoes what an earlier role settled. Specs people review and edit (PRD, de
   No JIRA tools → give the output as text to paste, and say the hand-off is manual. `.plumbline-drafts/` is scratch.
 
 ## Metrics
-At the hand-over, append one line to `.plumbline-drafts/metrics.csv` (create it with the header
-`date,command,target,attempts,verdict,tests_run,minutes,human_decision` if missing): today's date, this command, the
-story/branch/PR, attempts used, the final verdict, `yes`/`no`/`n/a` for whether the build/tests ran, the
-minutes from start to hand-over (run `date +%s` once at the start and once at the hand-over), and leave
-`human_decision` empty. When the user answers the hand-over question, fill it in: `approved`, `edited`, or `rejected`.
-The file stays on this machine (`.plumbline-drafts/.gitignore` holds `*`); `/pl-sm` can summarise it.
-**Files:** create every draft and metrics file with your write tool — it creates missing folders. Never
-`mkdir`, `echo`, `printf` or redirection: permission settings block them.
+At the hand-over append to `.plumbline-drafts/metrics.csv` (header, if new:
+`date,command,target,attempts,verdict,tests_run,minutes,human_decision`): date, command, story/branch/PR, attempts,
+verdict, tests ran `yes`/`no`/`n/a`, minutes (`date +%s` at start and at hand-over), and `human_decision` once the user
+answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` summarises it.
+**Files:** create drafts and metrics with your write tool (it creates folders) — never `mkdir`, `echo`, `printf` or
+redirection, which permission settings block.
 
 ## Metrics mode
 **`/pl-sm metrics`** — instead of the sprint report, read `.plumbline-drafts/metrics.csv` and show one table per
