@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.7.0 — 2026-10-28 — CLAUDE.md is the single source of truth; JIRA is the hand-off
+Goal: agents stop spending tokens rediscovering the project, and roles hand work to each other in one place.
+- **CLAUDE.md is the single source of truth.** Every writer and the judge now work from the CLAUDE.md files and the
+  JIRA material, and open code only for the files they change, review or must cite. A fact they had to look up is
+  reported as `Add to CLAUDE.md: <fact> — <file>`; a CLAUDE.md line the code contradicts as
+  `CLAUDE.md out of date: <what> — <file:line>`. The hand-over lists both for `/pl-doc`.
+- **`/pl-onboard`** writes two new sections per unit — *Architecture & structure* and *Decisions & trade-offs* (each
+  with its source) — plus the same in the root master, and starts each block with
+  `Last updated: <commit> (<date>, /pl-onboard)`.
+- **`/pl-doc`** (after merge) now writes back the story's business rules (its acceptance criteria) into *Rules*, the
+  design's decisions into *Decisions & trade-offs*, and the "Add to CLAUDE.md" notes, and sets `Last updated:` to the
+  merge commit. The architect approves the docs PR.
+- **JIRA hand-off with one SME per role** (new shared block in nine commands): the PRD is the epic, stories are
+  stories, and the design, dev result, review verdict and QA evidence are `[Plumbline /pl-<role>]` comments on the
+  story. Each SME approves with a label — `plumbline-prd-approved`, `plumbline-dor-ready`, `plumbline-arch-approved`,
+  `plumbline-review-passed`, `plumbline-qa-passed` — and the next command stops with `STOPPED: <label> not on <KEY>`
+  until it is there. Commands read the ticket and the latest comments instead of redoing earlier work; drafts are
+  scratch only and no command reads another's drafts.
+- **Removed:** the feature tracker, `context.md` and the "changed since verified" diff (replaced by the above).
+- **Eval scorer:** a finding naming a class without `.java` now matches; only a finding's own severity label counts.
+- **Self-test:** checks the new JIRA hand-off block is identical everywhere and that the removed mechanisms are not
+  mentioned: 209 checks.
+
 ## 2.6.0 — 2026-10-28 — check it yourself: public eval set, team test plan, time in metrics
 - **Eval set** (`eval/`): an original sample service (Order Desk) and ten pull requests — five with 13 planted
   defects and an answer key, plus a decoy; five clean changes. `setup-case.sh` builds any case as a git repo for
