@@ -83,6 +83,10 @@ your yes.
   `plumbline-review-passed`, `plumbline-qa-passed`); JIRA records who posted it. The next command starts only when the
   label is there, and stops if a PRD page or hand-off comment was edited after it was posted. Code still needs a second
   person: the PR approval your GitHub branch protection requires.
+- **Tickets move with the work.** Each command moves its ticket through your workflow (the `Workflow` setting, read
+  from JIRA by `/pl-onboard`): `/pl-dev` → In Progress, then In Review with the PR; a failed review or QA → back to In
+  Progress; **only `/pl-doc` closes a story** — after merge and QA — so CLAUDE.md and the API docs are updated before
+  anything is Done. `/pl-sm` flags any ticket whose status and labels disagree.
 - **The architect's design is final.** Dev, code review, QA, doc and devops follow the HLD and LLD exactly; a role that
   cannot stops with `design gap — /pl-arch <KEY>` instead of working around it, and code review fails any difference.
 - **Same shape everywhere, versioned.** Everything Plumbline produces — JIRA descriptions and comments, Confluence

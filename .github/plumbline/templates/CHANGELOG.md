@@ -5,6 +5,11 @@ CLAUDE.md file in its `Last updated` line. When a template changes, its version 
 Commands that read an older hand-off accept it as written: they look for the sections that version had (listed
 below) and never fail a hand-off for being on an older template. Only new output must use the current version.
 
+## claude-root v2 — Plumbline 2.8.8
+*Plumbline settings* gains `Workflow`: the project's status names for To Do → In Progress → In Review → Done, which
+commands use to move tickets. A v1 root CLAUDE.md has no `Workflow`: commands then use those four names and say so in
+the hand-over; `/pl-onboard` adds it.
+
 ## v1 — Plumbline 2.8.6 (baseline)
 All templates start at v1: `prd`, `epic`, `story`, `hld`, `handoff-hld`, `handoff-arch`, `handoff-dev`,
 `handoff-review`, `handoff-qa`, `handoff-doc`, `handoff-devops`, `sprint-report`, `sm-flag`, `pr`, `claude-unit`,

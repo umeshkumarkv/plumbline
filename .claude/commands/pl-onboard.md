@@ -30,7 +30,7 @@ unchanged, then continue — but only for a path you gave that helper; any other
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
-  <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
+  <unit folder> ':!**/CLAUDE*.md'` (CLAUDE.md's own edits do not make it stale). Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
 - **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
   every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
@@ -56,7 +56,8 @@ redirection, which permission settings block.
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. Missing **Plumbline settings** (JIRA project, Confluence space and parent
-page, base branch) → ask once (base branch: suggest the default branch).
+page, base branch, Workflow) → ask once. Suggest the base branch from `git symbolic-ref refs/remotes/origin/HEAD` (often
+not `main`), and the Workflow from the JIRA statuses mapped to To Do → In Progress → In Review → Done.
 
 ## Step 2 — Find the units
 Use `git ls-files` or your file search tool to find build files: `pom.xml`, `build.gradle`, `build.gradle.kts`, `package.json` (ignore `node_modules`,
@@ -119,10 +120,12 @@ Only if at least one unit passed. Writer: `plumbline-onboard-writer` with "root 
 table from Step 2 with results>, settings: <from Step 1>". Judge: `plumbline-judge` with the root file and this
 checklist: (1) every unit is in the Units table with the right folder and CLAUDE.md; (2) How they connect matches the
 units' Integrations/API sections; (3) Plumbline settings present (JIRA project, Confluence space and parent page, base
-branch, PR target, branch pattern, API URL, frontend URL — the URLs match the config); (4) text outside the markers unchanged;
+branch = the repository's default branch, Workflow, PR target, branch pattern, API URL, frontend URL — the URLs match the config); (4) text outside the markers unchanged;
 (5) *Architecture* and *Decisions & trade-offs* (each with its source, none invented) present; (6) **Decisions needed** lists every place where the repository's own docs, the settings and the code disagree on how
 work is done (base/PR branch, branch naming, ticket key, test command, environments) — each with both sides and their
 files — or says "None". Up to 3 attempts.
+
+Then show the root *Solution* and ask "Is this the system you meant?" — no → stop; wrong repository or project.
 
 ## Step 4b — Settle the decisions
 For each item in **Decisions needed**, ask the user to choose (show both sides and the files). Write each answer into

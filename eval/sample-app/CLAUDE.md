@@ -1,7 +1,7 @@
 # Order Desk
 
 <!-- plumbline:begin solution -->
-Last updated: 0000000 (2026-10-28, /pl-onboard, claude-root v1)
+Last updated: 0000000 (2026-10-28, /pl-onboard, claude-root v2)
 
 ## Solution
 Order Desk is a small order service: customers place orders with lines; back-office staff (ADMIN) mark them paid and
@@ -29,6 +29,7 @@ None recorded beyond `src/CLAUDE.md` Decisions.
 - Base branch: main
 - PR target: main
 - Branch pattern: ai/OD-<n>-<slug>
+- Workflow: To Do → In Progress → In Review → Done
 - API URL: http://localhost:8085
 - Frontend URL: none
 

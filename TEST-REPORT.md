@@ -331,3 +331,18 @@ defined for comments only — now also descriptions (issue history after the lab
 the team sets points — the architect does; (5) `/pl-ba` did not say which priorities become stories — P1 unless the
 user says otherwise; (6) stories referred to each other as "story 1" — now created in dependency order with keys
 filled in.
+
+## 6g. Model-followed runs on the sample app and the real OMS (2.8.7, 2026-10-28)
+
+Same method as §6f. **Sample app (order-desk):** `/pl-onboard` (PASS 1/3, rules honestly `[code]`), `/pl-pm`, `/pl-ba`,
+`/pl-arch` HLD (PASS 1/3, CLAUDE.md diff only decisions and `[decided]` rules) and LLD (**FAIL 1/3**: the controller
+test wiring was left to the developer → PASS 2/3), `/pl-dev` (7 tests, scope check clean, **UNVERIFIED** — no Maven here).
+**Real OMS (`umeshkumarkv/oms`, 9 services + frontend):** `/pl-onboard` — 48 endpoints, 17 tables, the Kafka chain
+closes; frontend `npm test`: 306 tests pass but 9 Playwright specs make it fail (recorded, not hidden); root
+*Decisions needed* records a committed `k8s/secret.yaml`, service ports reachable without the gateway, and the
+risk maker-checker `SYSTEM` default. **FAIL 1/3** (rules tagged with "order flow" etc. instead of classes) → PASS 2/3.
+
+**Findings, fixed in 2.8.8:** (7) freshness false alarm from CLAUDE.md's own commits; (8) `/pl-dev` still offered to
+continue without CLAUDE.md; (9) the architect's checklists did not check the unit's Must never; (10) no check that the
+repository is the system the user meant (sample-app tickets landed in the OMS project) and the base branch was not
+taken from the real default (`develop`); (11) no JIRA status transitions — `/pl-sm` reported statuses nothing set.

@@ -1,8 +1,8 @@
-<!-- plumbline:template claude-root v1 -->
+<!-- plumbline:template claude-root v2 -->
 # {{solution name}}
 
 <!-- plumbline:begin solution -->
-Last updated: {{commit}} ({{date}}, {{/pl-command}}, claude-root v1)
+Last updated: {{commit}} ({{date}}, {{/pl-command}}, claude-root v2)
 
 ## Solution
 {{what the system is, in a paragraph}}
@@ -20,7 +20,7 @@ Last updated: {{commit}} ({{date}}, {{/pl-command}}, claude-root v1)
 {{system-wide choices and why, each with its source}}
 
 ## Plumbline settings
-{{JIRA project, Confluence space, Confluence parent page, Base branch, PR target, Branch pattern, API URL, Frontend URL}}
+{{JIRA project, Confluence space, Confluence parent page, Base branch, PR target, Branch pattern, Workflow (your status names for To Do → In Progress → In Review → Done), API URL, Frontend URL}}
 
 ## Decisions needed
 {{where docs, settings and code disagree — both sides with files — or None}}

@@ -18,15 +18,16 @@ be completed and send what you have.
 
 | # | Run | Look for | Pass when |
 |---|---|---|---|
-| 1 | `/pl-onboard` | Each unit's `CLAUDE.md` (≤ 8 KB) and `CLAUDE.reference.md`; root `CLAUDE.md` with settings | 10 endpoints/tables you pick at random are real; every Rule is tagged `[code: …]` or `[decided …]`; the `Last updated` lines name `claude-unit v1` etc. |
+| 1 | `/pl-onboard` | It asks "Is this the system you meant?"; each unit's `CLAUDE.md` (≤ 8 KB) and `CLAUDE.reference.md`; root `CLAUDE.md` with settings | 10 endpoints/tables you pick at random are real; every Rule is tagged with a real file or class; base branch is your real default; `Workflow` matches your JIRA statuses |
 | 2 | `/pl-pm "<idea>"` | Epic, PRD page with the epic key in its title, `plumbline-prd-approved` | PRD is business-only with a *Today* section; epic pins page version 1 |
 | 3 | `/pl-ba <EPIC>` | Stories under the epic, `plumbline-dor-ready`, `Blocks` links | Given/When/Then `AC1`…; criteria for who may **not** do it; no APIs, units or points |
 | 4 | `/pl-arch <EPIC>` | HLD page under the PRD, docs PR for CLAUDE.md, epic comment, `plumbline-hld-final` | Units come from your CLAUDE.md, not invented; the docs PR adds only decisions and `[decided <EPIC>]` rules |
 | 5 | `/pl-arch <STORY>` | LLD comment, story points set, `plumbline-arch-approved` | Every AC id mapped to a technical check; conforms to the HLD |
-| 6 | `/pl-dev <STORY>` | Branch, PR on `pr.md`, story comment | Tests ran (or the first line says UNVERIFIED); *Design gaps* None; code matches the LLD |
+| 6 | `/pl-dev <STORY>` | Branch, PR on `pr.md`, story comment; story In Progress → In Review | Tests ran (or the first line says UNVERIFIED); *Design gaps* None; code matches the LLD |
 | 7 | `/pl-code-review <branch>` | One text as PR review and story comment | It cites code it read; anything differing from the LLD is a finding |
 
-Optional if time allows: `/pl-qa <STORY>` with the service running; `/pl-doc` after merging the branch.
+Optional if time allows: `/pl-qa <STORY>` with the service running; `/pl-doc` after merging the branch — it is the only
+command that moves the story to Done (and the epic, with its last story).
 
 ## Two deliberate breaks (≈ 20 min)
 - Edit one word of the LLD comment, then run `/pl-dev <STORY>` again → must stop: changed after approval.

@@ -30,7 +30,7 @@ unchanged, then continue — but only for a path you gave that helper; any other
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
 - **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
-  <unit folder>`. Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
+  <unit folder> ':!**/CLAUDE*.md'` (CLAUDE.md's own edits do not make it stale). Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
   changed>", and say so in the hand-over.
 - **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
   every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
@@ -69,9 +69,9 @@ The person running a command is that role's SME: their yes at the hand-over is t
 | `/pl-devops` | PR description; story comment | `pr.md`, `handoff-devops.md` | — |
 | `/pl-sm` | sprint report; one comment per flagged ticket | `sprint-report.md`, `sm-flag.md` | — |
 
-- **Input:** read the ticket — description, labels, links, the latest comment of each kind that starts
-  `[Plumbline /pl-<role>]` (JIRA returns `\[Plumbline …\]`: ignore backslashes), and each PRD or HLD page they link —
-  **at the version named**; a story's HLD is linked from its epic (no version → compare last-modified times).
+- **Input:** the ticket (description, labels, links), the latest `[Plumbline /pl-<role>]` comment of each kind (JIRA
+  shows `\[Plumbline …\]`: ignore backslashes), and each PRD or HLD page they link at the version named (a story's HLD
+  is linked from its epic; no version → compare last-modified times).
 - **Gate:** start only when the previous step's label is on the ticket (a story's design also needs
   `plumbline-hld-final` on its epic). A hand-off edited after it was posted (comment `updated` later than `created`;
   PRD or HLD page past the pinned version) → `STOPPED: <what> changed after approval — re-run <command>`.
@@ -79,6 +79,9 @@ The person running a command is that role's SME: their yes at the hand-over is t
   design gap — /pl-arch <KEY>`; never work around it. Do not redo an earlier role's work.
 - **Output:** post what the table says, on its template, after the SME's yes with the exact text shown first; then
   add the label.
+- **Status:** with the hand-over the SME approves, move the ticket via JIRA's transitions to the `Workflow` statuses
+  (Plumbline settings): `/pl-dev` → In Progress (epic too), then In Review with the PR; a review or QA FAIL → In
+  Progress; only `/pl-doc` → Done, after merge and `plumbline-qa-passed` (epic with its last story). Never force one.
 - No Confluence tools or no parent page → the PRD goes in the epic description, the HLD in the epic comment. A comment must stay under 30,000
   characters (JIRA's limit is 32,767): longer → split. No JIRA tools → output as text to paste. Drafts are scratch.
 

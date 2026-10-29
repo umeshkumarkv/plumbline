@@ -23,6 +23,8 @@ The facts file path, the report path, and on a retry the judge's findings — fi
   - **Needs attention** — In Review for more than 1 day.
   - **Blocked** — has a blocked-by ticket that is not Done; show the chain.
   - **Unassigned** — To Do with no assignee.
+  - **Status ≠ labels** — Done without `plumbline-qa-passed` or a `[Plumbline /pl-doc]` comment; In Review with no
+    `[Plumbline /pl-dev]` comment. Only `/pl-doc` closes a story, so docs are never skipped.
   - **No acceptance criteria** — flag it.
   - **Definition of Done** for each In Review ticket — QA passed, PR approved by a human, code review passed on the
     current commit, CI green, merged; mark each item and list what is missing.

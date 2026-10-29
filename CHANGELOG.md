@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.8.8 — 2026-10-28 — tickets move with the work; /pl-doc closes; fixes from the sample and OMS runs
+- **JIRA status transitions.** New `Workflow` setting (your status names for To Do → In Progress → In Review → Done),
+  proposed by `/pl-onboard` from the project's real statuses. `/pl-dev` → In Progress at start (the epic with its first
+  story) and In Review with the PR; a `/pl-code-review` or `/pl-qa` FAIL → In Progress; **only `/pl-doc` → Done**, after
+  merge and `plumbline-qa-passed` (the epic with its last story), so docs are never skipped. Moves go through JIRA's
+  transitions as part of the hand-over the SME approves; a refused transition is reported, never forced. `/pl-sm`
+  flags tickets whose status and labels disagree.
+- **Freshness:** CLAUDE.md's own edits no longer make it "stale" (`':!**/CLAUDE*.md'`) — every run after an onboard,
+  doc or HLD update raised a false alarm.
+- **`/pl-dev`:** no longer offers to continue without CLAUDE.md (2.8.7 stops instead).
+- **`/pl-arch`:** the HLD and Design checklists check the unit's **Must never**, not only the root rules; a list or
+  query the Must never limits states its bound and why it holds.
+- **`/pl-onboard`:** suggests the base branch from the repository's real default (`origin/HEAD` — the OMS default was
+  `develop`), proposes `Workflow`, and asks "Is this the system you meant?" before finishing — a no stops the run.
+- **Template `claude-root` v2** (adds `Workflow`) — the first template version bump: lock and template CHANGELOG
+  updated; v1 root files still read.
+
 ## 2.8.7 — 2026-10-28 — fixes from the OMS run; half-day smoke test
 Fixes from the first model-followed run (TEST-REPORT §6f):
 - No root CLAUDE.md → every command except `/pl-onboard` stops first: `STOPPED: run /pl-onboard first`.
