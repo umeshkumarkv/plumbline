@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.8.9 — 2026-10-30 — onboarding finds security risks, every unit, and stays small (from OMS PR #3)
+Review of the first real Claude Code onboarding (OMS PR #3): accurate and deep, but it missed every security risk,
+skipped the frontend, changed a Dockerfile, committed drafts, and filled each core file to 8 KB.
+- **Security:** onboarding scans for committed secrets (file and key — never a value; placeholders ignored) and each
+  unit's Security section must say how identity reaches the unit, where it is verified, and whether the unit is
+  reachable without that check (published ports, k8s Service type). Both go into the root's *Decisions needed*, and a
+  security item cannot be settled by an answer alone — it stays listed until the code no longer has it.
+- **Every unit:** every folder with its own build file and source is a unit, frontend included; skipping one needs the
+  user's yes, recorded; the root judge checks every unit has its file.
+- **Scope check in onboarding:** only the unit's CLAUDE.md files may change; anything else is reverted and is a finding.
+- **Drafts never committed:** restored the `.plumbline-drafts/.gitignore` rule in every command (2.8.0 dropped it from
+  `/pl-onboard`, `/pl-dev`, `/pl-doc` and `/pl-code-review` when the shared block was shortened); self-test guards it.
+- **Smaller always-loaded files:** unit core at most 6 KB (was 8), root at most 10 KB; detail goes to the reference.
+
 ## 2.8.8 — 2026-10-28 — tickets move with the work; /pl-doc closes; fixes from the sample and OMS runs
 - **JIRA status transitions.** New `Workflow` setting (your status names for To Do → In Progress → In Review → Done),
   proposed by `/pl-onboard` from the project's real statuses. `/pl-dev` → In Progress at start (the epic with its first

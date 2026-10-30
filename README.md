@@ -69,11 +69,11 @@ your yes.
 
 ## How the commands work together
 - **CLAUDE.md is the single source of truth, kept small.** `/pl-onboard` reads the code once. Each unit gets a core
-  `CLAUDE.md` (at most 8 KB: purpose, build and test recipe, architecture, security, rules, must-nevers, decisions)
+  `CLAUDE.md` (at most 6 KB: purpose, build and test recipe, architecture, security, rules, must-nevers, decisions)
   that every agent loads, and a `CLAUDE.reference.md` (endpoints, data, integrations, config, debt) opened only for the
   section a task needs. Every rule says where it comes from: `[code: <file>]` (what the code does today) or
   `[decided <source>]` (what a person decided). After each merge `/pl-doc` adds the new durable rules and design
-  decisions, keeps the core under 8 KB, and proposes removals for the architect, who approves the docs PR. Before
+  decisions, keeps the core under 6 KB, and proposes removals for the architect, who approves the docs PR. Before
   each run, commands check whether the code changed since CLAUDE.md's `Last updated` commit and warn the agents.
 - **JIRA is the hand-off; the SME's yes is the approval.** The PRD and each epic's HLD are Confluence pages, linked
   from the epic. Everything else lives in JIRA: the epic, the stories, and one `[Plumbline /pl-<role>]` comment per

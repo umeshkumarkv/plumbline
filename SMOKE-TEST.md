@@ -18,7 +18,7 @@ be completed and send what you have.
 
 | # | Run | Look for | Pass when |
 |---|---|---|---|
-| 1 | `/pl-onboard` | It asks "Is this the system you meant?"; each unit's `CLAUDE.md` (≤ 8 KB) and `CLAUDE.reference.md`; root `CLAUDE.md` with settings | 10 endpoints/tables you pick at random are real; every Rule is tagged with a real file or class; base branch is your real default; `Workflow` matches your JIRA statuses |
+| 1 | `/pl-onboard` | It asks "Is this the system you meant?"; each unit's `CLAUDE.md` (≤ 6 KB) and `CLAUDE.reference.md`; root `CLAUDE.md` with settings | 10 endpoints/tables you pick at random are real; every Rule is tagged with a real file or class; base branch is your real default; `Workflow` matches your JIRA statuses; *Decisions needed* names any committed secret and any service reachable without the gateway; every unit — frontend included — has its own file |
 | 2 | `/pl-pm "<idea>"` | Epic, PRD page with the epic key in its title, `plumbline-prd-approved` | PRD is business-only with a *Today* section; epic pins page version 1 |
 | 3 | `/pl-ba <EPIC>` | Stories under the epic, `plumbline-dor-ready`, `Blocks` links | Given/When/Then `AC1`…; criteria for who may **not** do it; no APIs, units or points |
 | 4 | `/pl-arch <EPIC>` | HLD page under the PRD, docs PR for CLAUDE.md, epic comment, `plumbline-hld-final` | Units come from your CLAUDE.md, not invented; the docs PR adds only decisions and `[decided <EPIC>]` rules |

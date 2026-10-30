@@ -26,8 +26,8 @@ true of the code today — search for it before you write it.
   it is. If the file has no markers, add them below the existing text.
 - **Facts only.** Every endpoint, table, topic, config key and rule you list must exist in the code. If you are not
   sure, leave it out or list it under "Open questions".
-- **Two files, two budgets.** The unit's `CLAUDE.md` is loaded by every agent every time: at most **8 KB**, only
-  what most tasks need. Catalogues go in its `CLAUDE.reference.md` (same folder), opened only for the section a task
+- **Two files, two budgets.** The unit's `CLAUDE.md` is loaded by every agent every time: at most **6 KB**, only
+  what most tasks need; detail belongs in the reference. Catalogues go in its `CLAUDE.reference.md` (same folder), opened only for the section a task
   needs: at most **30 KB**; for debt give counts and the top locations, never full inventories.
 - Change only the files you were given. Do not touch code, tests, build files or other docs.
 - Use only your read, search and edit tools — no shell commands.
@@ -45,7 +45,9 @@ every merge.
    files hard-code absolute paths (log folders, data files) that startup or tests depend on, list them here.
 3. **Architecture & structure** — stack and versions (language, framework, build, database), the layers and patterns
    the code follows (e.g. controller → service → repository, events, DTO mapping), main packages and what lives where.
-4. **Security** — authentication, authorization (roles), where tokens are stored, with the files.
+4. **Security** — authentication, authorization (roles), where tokens are stored, how identity reaches this unit and
+   where it is verified, and whether the unit is reachable without that check (published ports, k8s Service type) —
+   with the files. A check that can be bypassed is a risk: say so plainly; it also goes in the root's Decisions needed.
 5. **Rules** — one line each, tagged with where it comes from: `[code: <file>]` = the code enforces it today;
    `[decided <source>]` = a person decided it (root CLAUDE.md, ADR, README, an approved story). Onboarding writes
    `[decided]` only where a document states the decision; everything else is `[code]`.
@@ -70,6 +72,7 @@ Write it on `.github/plumbline/templates/claude-reference.md` (its headings exac
 6. **Open questions** — what the code does not answer.
 
 ## Root (master) CLAUDE.md — the `solution` block
+At most **10 KB**: it is loaded on every run. Name each unit's detail by pointing to its CLAUDE.md, never repeat it.
 Write it on `.github/plumbline/templates/claude-root.md` (its headings exactly), starting the block with
 `Last updated: <commit> (<date>, /pl-onboard, claude-root v1)`:
 - **Solution** — what the system is, in a paragraph.
@@ -83,7 +86,8 @@ Write it on `.github/plumbline/templates/claude-root.md` (its headings exactly),
   `Confluence parent page`, `Base branch`, `Workflow`; add
   `PR target`, `Branch pattern`, `API URL` and `Frontend URL` if missing (URLs from the config: e.g.
   `http://localhost:<gateway or backend port>`). Values marked `(decided <date>)` are never changed.
-- **Decisions needed** — every place where the repository's own docs (README, existing CLAUDE.md text, CONTRIBUTING),
+- **Decisions needed** — every secret from the scan you were given (file and key, never a value), every unit's
+  security risk, and every place where the repository's own docs (README, existing CLAUDE.md text, CONTRIBUTING),
   the settings and the code disagree about how work is done: base/PR branch, branch naming, ticket key, test command,
   environments. One line each: the two sides with their files. "None" if there are none.
 - **Rules for every change** — the cross-cutting rules (security, data ownership, testing).

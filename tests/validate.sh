@@ -180,6 +180,12 @@ for pair in "claude-root:CLAUDE.md" "claude-unit:src/CLAUDE.md" "claude-referenc
     && ok || bad "eval sample ${pair#*:} does not match template ${pair%%:*}"
 done
 
+# Drafts never get committed: every command creates .plumbline-drafts/.gitignore (a 2.8.0 regression dropped it from four)
+for f in .claude/commands/pl-*.md; do grep -q '\.plumbline-drafts/\.gitignore' "$f" && ok || bad "$f: must create .plumbline-drafts/.gitignore"; done
+# Onboarding scans for secrets and checks every unit's reachability
+grep -q 'Secrets scan' .claude/commands/pl-onboard.md && grep -q 'reached without that check' .claude/commands/pl-onboard.md \
+  && ok || bad "pl-onboard: needs the secrets scan and the reachability check"
+
 # 12. Every output a command posts names its template
 while read -r c ts; do
   for t in $ts; do grep -q "\b$t\b" ".claude/commands/$c.md" && ok || bad "$c: never names its template $t"; done

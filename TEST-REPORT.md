@@ -346,3 +346,13 @@ risk maker-checker `SYSTEM` default. **FAIL 1/3** (rules tagged with "order flow
 continue without CLAUDE.md; (9) the architect's checklists did not check the unit's Must never; (10) no check that the
 repository is the system the user meant (sample-app tickets landed in the OMS project) and the base branch was not
 taken from the real default (`develop`); (11) no JIRA status transitions — `/pl-sm` reported statuses nothing set.
+
+## 6h. Human-run onboarding of OMS in Claude Code (2.8.8, PR umeshkumarkv/oms#3, 2026-10-30)
+
+First real `/pl-onboard` run (Claude Code, the user's machine). Judged against the code: every checked claim true
+(TRADER-only submit, 200 page cap, NYSE default, 16:00/09:30 ET schedulers, GTD +180 d, DLT backoff, counts); real
+business rules with sources; honest **FAILED** test recipe (Lombok/MapStruct on Java 24); the judge failed 6 of 10
+files at least once. **Missed:** committed `k8s/secret.yaml`; service ports published so forged `X-User-*` headers are
+trusted; risk maker-checker `SYSTEM` default — *Decisions needed* said "None"; no `frontend/CLAUDE.md`; a Dockerfile
+change and `.plumbline-drafts/metrics.csv` in the docs PR; core files at 7.2–8.2 KB and a 15 KB root. All addressed
+in 2.8.9.

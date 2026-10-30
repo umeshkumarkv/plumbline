@@ -85,8 +85,8 @@ At the hand-over append to `.plumbline-drafts/metrics.csv` (header, if new:
 `date,command,target,attempts,verdict,tests_run,minutes,human_decision`): date, command, story/branch/PR, attempts,
 verdict, tests ran `yes`/`no`/`n/a`, minutes (`date +%s` at start and at hand-over), and `human_decision` once the user
 answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` summarises it.
-**Files:** create drafts and metrics with your write tool (it creates folders) — never `mkdir`, `echo`, `printf` or
-redirection, which permission settings block.
+**Files:** before the first draft, create `.plumbline-drafts/.gitignore` containing `*` (the folder is never
+committed). Create drafts and metrics with your write tool — never `mkdir`, `echo`, `printf` or redirection.
 
 ## Step 1 — The change
 1. Find the change: a story key → the PR in its `[Plumbline /pl-dev]` comment; a PR number (`gh pr view <n>` / `gh pr diff <n>`, or the connected GitHub tools), a story key
@@ -125,7 +125,7 @@ library arrived without the root CLAUDE.md allowing it.
 7. The root CLAUDE.md changed only if the architecture changed (new unit, new cross-unit event, new pattern).
 8. The API spec still parses (valid YAML/JSON) and every documented path exists in the code.
 9. New Rules are durable constraints tagged `[decided <KEY>]`; no `[decided]` rule was removed; each core CLAUDE.md
-   is at most 8 KB and each reference file at most 30 KB, with the core's Reference counts still right.
+   is at most 6 KB and each reference file at most 30 KB, with the core's Reference counts still right.
 
 ## Step 3 — Hand over
 Show the doc diff summary, each file's size before → after, any *Proposed removals*, and the judge verdict. Ask before commit, push and opening a docs PR described on `pr.md`, and before the JIRA

@@ -24,7 +24,7 @@ and send it back with the hand-overs (copy the text) and any `STOPPED` lines.
 ## Part 2 — onboarding (≈ 30 min)
 | # | Run | Pass when |
 |---|---|---|
-| 2.1 | `/pl-onboard` (answer: JIRA project, Confluence space, parent page, base branch) | each unit has `CLAUDE.md` ≤ 8 KB and `CLAUDE.reference.md` ≤ 30 KB; every Rule is tagged `[code: …]` or `[decided …]`; 10 spot-checked endpoints/tables are real; the settings hold all values. Commit it on a branch. |
+| 2.1 | `/pl-onboard` (answer: JIRA project, Confluence space, parent page, base branch) | each unit has `CLAUDE.md` ≤ 6 KB and `CLAUDE.reference.md` ≤ 30 KB; every Rule is tagged `[code: …]` or `[decided …]`; 10 spot-checked endpoints/tables are real; the settings hold all values. Commit it on a branch. |
 
 ## Part 3 — one feature end to end (≈ 4 h)
 Use one small real backlog idea. After each step, open JIRA and Confluence and look at what was posted.
@@ -40,7 +40,7 @@ Use one small real backlog idea. After each step, open JIRA and Confluence and l
 | 3.7 | `/pl-dev <STORY>` | a branch; the comment maps every AC id to a test; *Design gaps* None; tests ran (or the first line says UNVERIFIED) |
 | 3.8 | `/pl-code-review <branch>` | cites code it read (callers, tests); any difference from the LLD is a major finding |
 | 3.9 | `/pl-qa <STORY>` with the system running | evidence per AC id, checked as the LLD maps it; stops cleanly if the system is not reachable |
-| 3.10 | merge the branch in your clone, then `/pl-doc <STORY or PR>` | only durable rules as `[decided <STORY>]`, the LLD's Decisions, the "Add to CLAUDE.md" notes; core ≤ 8 KB |
+| 3.10 | merge the branch in your clone, then `/pl-doc <STORY or PR>` | only durable rules as `[decided <STORY>]`, the LLD's Decisions, the "Add to CLAUDE.md" notes; core ≤ 6 KB |
 
 ## Part 4 — deliberate breakage (≈ 1 h)
 | # | Do | Pass when |

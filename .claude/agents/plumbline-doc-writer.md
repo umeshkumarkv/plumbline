@@ -38,7 +38,7 @@ The commit range, the code change as a diff file, the list of what changed, the 
   a story goes in only if every later change must keep it, tagged `[decided <KEY>]`; display details do not.
 - Rules and decisions the architect already added from the epic's HLD (`[decided <EPIC>]`) stay as they are; do not
   repeat them.
-- **Keep the core at most 8 KB:** merge duplicate rules and move detail to the reference file. Never delete a
+- **Keep the core at most 6 KB:** merge duplicate rules and move detail to the reference file. Never delete a
   `[decided]` rule: list anything stale or superseded under "Proposed removals" in your reply, with why, for the
   architect.
 - Document only what is in the code. If the code and the spec disagree in a way you cannot settle, write it under the

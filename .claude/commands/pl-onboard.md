@@ -5,9 +5,8 @@ argument-hint: "[unit name, or empty for all]"
 
 # /pl-onboard
 
-Document this repository for people and AI agents: one CLAUDE.md per unit (backend service, frontend) and one master
-CLAUDE.md at the root that describes the whole solution. Each file is written by a **writer** subagent and checked by
-an independent **judge** subagent; up to 3 attempts per file, then it is handed to the user.
+Document this repository for people and AI agents: CLAUDE.md files per unit plus a master at the root. A **writer**
+drafts each, an independent **judge** checks it; up to 3 attempts per file, then it goes to the user.
 
 Target: $ARGUMENTS (empty = every unit)
 
@@ -51,8 +50,8 @@ At the hand-over append to `.plumbline-drafts/metrics.csv` (header, if new:
 `date,command,target,attempts,verdict,tests_run,minutes,human_decision`): date, command, story/branch/PR, attempts,
 verdict, tests ran `yes`/`no`/`n/a`, minutes (`date +%s` at start and at hand-over), and `human_decision` once the user
 answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` summarises it.
-**Files:** create drafts and metrics with your write tool (it creates folders) — never `mkdir`, `echo`, `printf` or
-redirection, which permission settings block.
+**Files:** before the first draft, create `.plumbline-drafts/.gitignore` containing `*` (the folder is never
+committed). Create drafts and metrics with your write tool — never `mkdir`, `echo`, `printf` or redirection.
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. Missing **Plumbline settings** (JIRA project, Confluence space and parent
@@ -60,34 +59,33 @@ page, base branch, Workflow) → ask once. Suggest the base branch from `git sym
 not `main`), and the Workflow from the JIRA statuses mapped to To Do → In Progress → In Review → Done.
 
 ## Step 2 — Find the units
-Use `git ls-files` or your file search tool to find build files: `pom.xml`, `build.gradle`, `build.gradle.kts`, `package.json` (ignore `node_modules`,
-`target`, `build`, `dist`), plus other stacks' build files if present. A folder with its own build file and source is a
-unit; a parent build file that only lists modules is not. For each unit decide its CLAUDE.md (and, beside it, its
-`CLAUDE.reference.md`): a unit in a folder → `<folder>/CLAUDE.md`; an app at the repository root → `src/CLAUDE.md`
-(the root `CLAUDE.md` is the master).
+Find build files with `git ls-files`: `pom.xml`, `build.gradle(.kts)`, `package.json` and other stacks' (not under
+`node_modules`, `target`, `build`, `dist`). **Every folder with its own build file and source is a unit** — backend,
+frontend, worker, library alike; a parent file that only lists modules is not. Skipping one needs the user's yes,
+recorded in the root's *Decisions needed*. Each unit gets `<folder>/CLAUDE.md` + `CLAUDE.reference.md` (an app at the
+repository root → `src/`). Show one table (name, folder, kind, CLAUDE.md) and continue.
 
-Show the user the list (name, folder, kind, CLAUDE.md) in one table and continue.
+**Secrets scan:** `git ls-files | grep -iE 'secret|credential|\.env($|\.)|\.pem$|\.key$|id_rsa'` and, in those and
+the config files, values set for keys named `*password*`, `*secret*`, `*token*`, `*key*`. Record each file and key —
+**never a value** — for the root's *Decisions needed*; placeholders (`<…>`, `${…}`, `changeme`) do not count.
 
 ## Step 2b — Do the tests run here? (one run per unit)
-For each unit, take its test command from the build files (`./mvnw test` / `mvnw.cmd test`, `mvn test`,
-`./gradlew test`, `npm test -- --watch=false`; the command the README or an existing CLAUDE.md gives wins). Note the
-runtime the build files ask for (Java version, Node engines). Run it once from the unit's folder as `cd <folder> && <command>` (not `--prefix` or `-f` flags, which permission
-rules do not match), with a 15-minute limit; check the runtime with `java -version` / `node -v`. Keep
-only: the exact command, the runtime actually used (`java -version`, `node -v`), the result (`N tests, M failed` or
-the first error line), and the duration. Do not change any file to make it pass. If running it needs something you
-must not do (install software, network the user has not allowed), do not run it and record why.
-The result goes to the writer as the unit's **test recipe**; other commands rely on it, so a failure must be recorded
-exactly, never smoothed over.
+Take each unit's test command from its build files (`./mvnw test`, `mvn test`, `./gradlew test`, `npm test --
+--watch=false`; a README or existing CLAUDE.md wins) and the runtime they ask for. Run it once as `cd <folder> &&
+<command>` (15-minute limit) and keep: the command, the runtime actually used (`java -version`, `node -v`), the result
+(`N tests, M failed` or the first error) and the duration. Change no file to make it pass; if running needs something
+you must not do (install software, unapproved network), do not run it and record why. The result is the unit's **test
+recipe** — other commands rely on it, so record failures exactly.
 
 ## Step 3 — Each unit, one at a time (helpers run in the foreground)
 For attempt = 1, 2, 3:
 1. **Writer** — start `plumbline-onboard-writer` with: the unit name, folder, CLAUDE.md and reference paths, the test recipe
    from Step 2b, the current commit (`git rev-parse --short HEAD`) and today's date for its `Last updated` line, and on attempts 2–3 the judge's findings from the previous attempt (verbatim JSON).
-2. **Judge** — start `plumbline-judge` with exactly:
-   - *Review:* both paths, the unit folder, and "compare with `git diff -- <both paths>`: text outside the
-     plumbline markers must be unchanged";
-   - *Checklist:* the **Onboard checklist** below, verbatim.
-3. **PASS** → next unit. **FAIL** → next attempt with the findings.
+2. **Scope check** — `git status --porcelain`: only this unit's `CLAUDE.md` / `CLAUDE.reference.md` changed (drafts are
+   ignored). Anything else → `git checkout -- <file>` and that is the attempt's finding.
+3. **Judge** — `plumbline-judge` with: *Review:* both paths, the unit folder, "`git diff -- <both paths>`: text outside
+   the markers unchanged"; *Checklist:* the **Onboard checklist**, verbatim.
+4. **PASS** → next unit. **FAIL** → next attempt with the findings.
 
 After 3 failed attempts: leave the file as it is, mark the unit **ESCALATED**, keep its last findings for the summary,
 and move on.
@@ -95,22 +93,21 @@ and move on.
 ### Onboard checklist
 1. Every endpoint/route the code defines is in the reference API section — search the mapping annotations or route
    definitions, compare the count, check at least 10 at random. None listed that the code does not define.
-2. Frontend: every backend call is listed with the endpoint it hits; calls that no backend endpoint serves are listed
-   as such, not presented as working. (N/A for a backend.)
+2. Frontend: every backend call with the endpoint it hits; calls no endpoint serves are listed as such. (N/A backend.)
 3. Every entity/table is in the reference Data section with its key fields; none the code, migrations or SQL scripts
    do not define. Column names are fields, not tables.
 4. Integrations: every outbound HTTP call, messaging topic and cache the code uses is listed; nothing invented.
-5. Build & run commands, port and configuration match the build and config files. A **Test recipe** line states the
-   command, the runtime it needs (from the build files), and the result of the Step 2b run as given in the request
-   (passed / failed with the first error / not run and why) — a failure is not hidden or reworded as success.
-   Absolute filesystem paths in config that tests or startup depend on are listed.
-6. Security: authentication, roles and token storage are described as the code does them, with the file.
+5. Build & run, port and config match the build and config files. The **Test recipe** gives the command, runtime and
+   the Step 2b result exactly (a failure is never reworded as success); absolute paths tests depend on are listed.
+6. Security, as the code does it, with files: authentication, roles, token storage; **how identity reaches this unit
+   and where it is verified**; and **whether the unit can be reached without that check** (published ports, k8s
+   Service type). Trusting headers while directly reachable is stated as a risk, never as a design choice.
 7. Every Rule is tagged `[code: <file>]` (and that file enforces it) or `[decided <source>]` (and that source says
    so); every Must-never is traceable to code or the root CLAUDE.md.
 8. Tech debt states the TODO/FIXME count and top files; other debt as counts plus up to 10 locations. Debt recorded
    truthfully passes.
-9. Core: 8 sections, at most 8 KB, the Reference lines' counts match the reference file. Reference: 6 sections, at
-   most 30 KB. Both start with `Last updated: <commit> (<date>, /pl-onboard, <template> v<N>)`, with the given commit.
+9. Core: 8 sections, at most **6 KB** (detail goes to the reference), the Reference lines' counts match the reference
+   file. Reference: 6 sections, at most 30 KB. Both start with `Last updated: <commit> (<date>, /pl-onboard, <template> v<N>)`, with the given commit.
 10. Text outside the plumbline markers is unchanged, in both files.
 11. Decisions & trade-offs: each one names its source (code comment, README, ADR, commit message, config) — none is
     invented; "None found" is fine.
@@ -123,13 +120,16 @@ units' Integrations/API sections; (3) Plumbline settings present (JIRA project, 
 branch = the repository's default branch, Workflow, PR target, branch pattern, API URL, frontend URL — the URLs match the config); (4) text outside the markers unchanged;
 (5) *Architecture* and *Decisions & trade-offs* (each with its source, none invented) present; (6) **Decisions needed** lists every place where the repository's own docs, the settings and the code disagree on how
 work is done (base/PR branch, branch naming, ticket key, test command, environments) — each with both sides and their
-files — or says "None". Up to 3 attempts.
+files — or says "None"; (7) it also lists **every secret from the Step 2 scan** (file and key, never a value) and every
+unit's security risk; (8) every unit from Step 2 is in the table with its own CLAUDE.md, or its skip is recorded;
+(9) the root is at most 10 KB. Up to 3 attempts.
 
 Then show the root *Solution* and ask "Is this the system you meant?" — no → stop; wrong repository or project.
 
 ## Step 4b — Settle the decisions
 For each item in **Decisions needed**, ask the user to choose (show both sides and the files). Write each answer into
-the Plumbline settings as the value plus `(decided <date>)`, and remove the item from the list. Every other command
+the Plumbline settings as the value plus `(decided <date>)`, and remove the item from the list — except a **security
+item** (secret, bypassable check): the answer is recorded next to it, and it stays listed until the code no longer has it. Every other command
 treats these settings as the rule. When nobody can answer (an unattended run), leave the items listed: other commands
 then use the Plumbline settings value and name the open decision in their hand-over.
 
