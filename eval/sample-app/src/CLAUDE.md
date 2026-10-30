@@ -1,7 +1,7 @@
 # order-desk
 
 <!-- plumbline:begin unit -->
-Last updated: VERIFIED_COMMIT (2026-10-28, /pl-onboard, claude-unit v1)
+Last updated: VERIFIED_COMMIT (2026-10-28, /pl-onboard, claude-unit v2)
 
 ## Purpose
 REST API for customer orders: create, read, list, pay, ship, cancel. Package `com.example.orderdesk`.
@@ -16,6 +16,9 @@ repository (`JdbcTemplate`, no JPA); records for data; one exception handler for
 (controller, service, repository, records), `common/` (errors), `security/` (gateway header filter, roles).
 
 ## Security
+- Identity: gateway headers `X-User-Id` / `X-User-Role`, turned into the principal by `GatewayHeaderFilter`.
+- Verified at: not verified here — the headers are trusted as sent (`security/GatewayHeaderFilter`).
+- Reachable without that check: local `mvn spring-boot:run`: yes, port 8085 — any caller can set the headers; no deploy files in the repository.
 `GatewayHeaderFilter` turns `X-User-Id` / `X-User-Role` (ADMIN, CUSTOMER) into the principal; `CurrentUser` reads it.
 Back-office endpoints use `@PreAuthorize("hasRole('ADMIN')")`; customer-facing ones check owner-or-ADMIN.
 

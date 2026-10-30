@@ -7,7 +7,7 @@ over to you. Nothing is committed, pushed or posted without your yes.
 
 | Command | What it does | Writes to |
 |---|---|---|
-| `/pl-onboard` | Documents the codebase: per service/frontend a short `CLAUDE.md` + a `CLAUDE.reference.md` catalogue, and a master `CLAUDE.md`; checks the tests run | CLAUDE.md files |
+| `/pl-onboard` | Documents the codebase (re-runs refresh: existing files are checked first and only failing ones are edited): per service/frontend a short `CLAUDE.md` + a `CLAUDE.reference.md` catalogue, and a master `CLAUDE.md`; checks the tests run | CLAUDE.md files |
 | `/pl-pm "idea"` | Feature idea → PRD in business language (problem, behaviour, success criteria, scope, sized backlog) | Confluence page + JIRA epic* |
 | `/pl-ba CRS-40` | Epic → stories in business language (Given/When/Then criteria, examples) — no APIs, units or points | JIRA stories* |
 | `/pl-arch CRS-40` / `CRS-12` | The architect's final design: epic → HLD (Confluence page + its decisions into CLAUDE.md); story → LLD (unit, how each criterion is checked, API, data, logic, tests, points) | Confluence + docs PR + JIRA* |

@@ -183,8 +183,12 @@ done
 # Drafts never get committed: every command creates .plumbline-drafts/.gitignore (a 2.8.0 regression dropped it from four)
 for f in .claude/commands/pl-*.md; do grep -q '\.plumbline-drafts/\.gitignore' "$f" && ok || bad "$f: must create .plumbline-drafts/.gitignore"; done
 # Onboarding scans for secrets and checks every unit's reachability
-grep -q 'Secrets scan' .claude/commands/pl-onboard.md && grep -q 'reached without that check' .claude/commands/pl-onboard.md \
+grep -q 'Secrets scan' .claude/commands/pl-onboard.md && grep -q 'Reachable without that check' .github/plumbline/checklists/onboard-unit.md \
   && ok || bad "pl-onboard: needs the secrets scan and the reachability check"
+
+# Checklists a command hands to the judge by file must exist
+for c in $(grep -ohE '\.github/plumbline/checklists/[a-z-]+\.md' .claude/commands/*.md | sort -u); do
+  [ -f "$c" ] && ok || bad "a command names checklist $c that does not exist"; done
 
 # 12. Every output a command posts names its template
 while read -r c ts; do

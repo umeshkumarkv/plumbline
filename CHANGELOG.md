@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.8.10 — 2026-10-30 — cheap re-runs; security and conventions enforced by templates; existing docs checked
+From the second review of OMS PR #3 and the comparison with the original broker-dealer CLAUDE files.
+- **Refresh mode (cost).** A re-run of `/pl-onboard` no longer rewrites everything: a unit whose files pass the template
+  check, with no code change since `Last updated`, gets the judge only and is **kept** if it passes — no writer. Other
+  existing units get the writer in **update mode** (keep what is true, fix what failed, add what the template now
+  requires). Test recipes are **reused** unless a build file changed. The summary shows each unit's mode.
+- **Security as template fields** (`claude-unit` v2): `Identity`, `Verified at`, `Reachable without that check` per
+  environment — the checker fails a file without them, with no model involved. The judge reads the deploy files
+  (docker-compose, k8s, Helm); "the gateway is the trust boundary" alone fails.
+- **`claude-root` v3:** required `Secrets found` field in *Decisions needed*; new **Conventions** section (money, errors,
+  logging, naming, tests — from docs or consistent code patterns, with sources).
+- **Existing docs are checked:** the team's text outside the markers is kept; every technical claim the code
+  contradicts is reported as "Docs vs code" and listed in *Decisions needed*; conventions still true become
+  `[decided docs: <file §section>]` rules.
+- **Test recipes run:** the project's own dependencies may be installed from its lockfile (`npm ci`, Maven/Gradle
+  downloads) — never tools or runtimes; the recipe names the runtime the build requires when a different one ran.
+- **Onboarding checklists are files** (`.github/plumbline/checklists/`), read by the judge; `/pl-onboard` 140 → 113 lines.
+
 ## 2.8.9 — 2026-10-30 — onboarding finds security risks, every unit, and stays small (from OMS PR #3)
 Review of the first real Claude Code onboarding (OMS PR #3): accurate and deep, but it missed every security risk,
 skipped the frontend, changed a Dockerfile, committed drafts, and filled each core file to 8 KB.

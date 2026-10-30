@@ -1,7 +1,7 @@
 # Order Desk
 
 <!-- plumbline:begin solution -->
-Last updated: 0000000 (2026-10-28, /pl-onboard, claude-root v2)
+Last updated: 0000000 (2026-10-28, /pl-onboard, claude-root v3)
 
 ## Solution
 Order Desk is a small order service: customers place orders with lines; back-office staff (ADMIN) mark them paid and
@@ -22,6 +22,9 @@ error format (`ApiError`) for every endpoint.
 ## Decisions & trade-offs
 None recorded beyond `src/CLAUDE.md` Decisions.
 
+## Conventions
+Money as `BigDecimal`, SQL only through `JdbcTemplate` with `?` parameters, one `ApiError` format for every error, logs with ids only — see `src/CLAUDE.md` Rules.
+
 ## Plumbline settings
 - JIRA project: OD
 - Confluence space: OD
@@ -34,6 +37,7 @@ None recorded beyond `src/CLAUDE.md` Decisions.
 - Frontend URL: none
 
 ## Decisions needed
+- Secrets found: none
 None.
 
 ## Rules for every change
