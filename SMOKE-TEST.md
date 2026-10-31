@@ -26,15 +26,15 @@ be completed and send what you have.
 | 6 | `/pl-dev <STORY>` | Branch, PR on `pr.md`, story comment; story In Progress → In Review | Tests ran (or the first line says UNVERIFIED); *Design gaps* None; code matches the LLD |
 | 7 | `/pl-code-review <branch>` | One text as PR review and story comment | It cites code it read; anything differing from the LLD is a finding |
 
-Optional if time allows: `/pl-qa <STORY>` with the service running; `/pl-doc` after merging the branch — it is the only
-command that moves the story to Done (and the epic, with its last story).
+Then, in order: `/pl-doc <STORY>` (posts the docs text on the PR) → `/pl-dev <STORY>` again (applies it) →
+`/pl-code-review` → merge → `/pl-devops <STORY>` (confirms the pipeline deployed to QA) → `/pl-qa <STORY>` (closes it).
 
 ## Two deliberate breaks (≈ 20 min)
 - Edit one word of the LLD comment, then run `/pl-dev <STORY>` again → must stop: changed after approval.
 - In a BA draft, add `POST /api/x` to a criterion and let the command continue → the template check must fail it.
 
 ## What to send back
-For each step: pass/fail, attempts used (from the hand-over or `.plumbline-drafts/metrics.csv`), any `STOPPED` line,
+For each step: pass/fail, attempts used (from the hand-over footer), any `STOPPED` line,
 and anything you had to fix by hand. Plus: total time, and the one thing that annoyed you most.
 
 | # | Pass / Fail | Attempts | STOPPED / what you fixed by hand |

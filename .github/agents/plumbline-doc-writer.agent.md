@@ -1,6 +1,6 @@
 ---
 name: plumbline-doc-writer
-description: Updates the API spec and CLAUDE.md files so they match a merged code change. Started by /pl-doc.
+description: Drafts the exact API-spec and CLAUDE.md text an open PR needs, for dev to apply in the same PR.
 tools: ['read/readFile', 'search', 'edit']
 user-invocable: false
 ---

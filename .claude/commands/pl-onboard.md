@@ -34,7 +34,8 @@ unchanged, then continue — but only for a path you gave that helper; any other
   template's version. Give each writer the template, the version (`.github/plumbline/VERSION.md`) and the
   commit (`/pl-dev`, `/pl-code-review`: `git rev-parse --short HEAD`; every other command: `—`); tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
   each judge and before posting, do the **Template check** in `.github/plumbline/templates/README.md` yourself (it
-  also catches text outside the lane): any miss is that attempt's finding, no judge. Set the footer's `judge`.
+  also catches text outside the lane): any miss is that attempt's finding, no judge. Fill the footer's `judge`, minutes and
+  `SME edited`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -43,12 +44,11 @@ unchanged, then continue — but only for a path you gave that helper; any other
   run>`; then the details; then each question for the user with the exact text or command it would send or run.
 
 ## Metrics
-At the hand-over append to `.plumbline-drafts/metrics.csv` (header, if new:
-`date,command,target,attempts,verdict,tests_run,minutes,human_decision`): date, command, story/branch/PR, attempts,
-verdict, tests ran `yes`/`no`/`n/a`, minutes (`date +%s` at start and at hand-over), and `human_decision` once the user
-answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` summarises it.
-**Files:** before the first draft, create `.plumbline-drafts/.gitignore` containing `*` (the folder is never
-committed). Create drafts and metrics with your write tool — never `mkdir`, `echo`, `printf` or redirection.
+Metrics live in JIRA, in the footer of every hand-off: judge result and attempts, minutes from start to hand-over
+(`date +%s` at both — the one non-build command every command may run), and `SME edited: yes` if the SME changed the
+text before posting. `/pl-sm metrics` reads them from JIRA, so the whole team sees the same numbers.
+**Files:** before the first draft, create `.plumbline-drafts/.gitignore` containing `*` (drafts are your private
+scratch, never committed). Create drafts with your write tool — never `mkdir`, `echo`, `printf` or redirection.
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. Missing **Plumbline settings** (JIRA project, Confluence space and parent

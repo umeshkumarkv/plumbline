@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.8.14 — 2026-10-31 — the operating model
+Implements [OPERATING-MODEL.md](OPERATING-MODEL.md), agreed with the team lead, and nothing else.
+- **Flow:** dev → doc → code review → merge → CI/CD deploys to QA → devops → QA → Done. `/pl-doc` runs on the **open
+  PR** and posts the exact CLAUDE.md / API-spec text (PR comment + story comment, `plumbline-docs-ready`); `/pl-dev`
+  (apply mode) applies it word for word in the same PR; `/pl-code-review` needs `docs-ready` and checks code and docs
+  together (item 12). `/pl-devops` after a merge confirms the pipeline deployed to QA (`handoff-deploy`,
+  `plumbline-deployed-qa`); QA tests that deployment and **closes the story**. A failing pipeline or CI run becomes exact
+  fix text for dev.
+- **Nothing travels through anyone's folder:** the HLD's CLAUDE.md additions are exact text in the epic comment, applied
+  by dev in the epic's first story PR; the arch writer edits no repository file.
+- **SME approval is explicit:** "Your yes approves this as the <role> SME. JIRA will show you as the person who posted it."
+- **Metrics in JIRA:** every hand-off footer records attempts, minutes and `SME edited`; `/pl-sm metrics` reads JIRA;
+  `metrics.csv` is gone.
+- **Any git host:** GitHub, GitLab or Bitbucket — "the git host's connector"; PR means PR or MR.
+- **Markdown-only install:** `VERSION` → `VERSION.md`; the template lock moved to `tests/`; the optional GitHub Actions
+  check moved to `examples/ci/`. Install = `.claude/commands`, `.claude/agents`, `.github/plumbline` — all `.md`.
+  **Copilot on hold** (its files stay in the repository, not in the install).
+- `/pl-dev` names branches by the *Branch pattern* setting (it had hard-coded `ai/<KEY>-<slug>`).
+- Templates: every hand-off template v2 (footer metrics; exact-text hand-offs); new `handoff-deploy` v1.
+
 ## 2.8.13 — 2026-10-31 — only dev and code review use git
 - `/pl-dev` creates the branch and the PR; `/pl-code-review` reads it and writes the review. **No other command runs
   git or `gh`:** `/pl-onboard`, `/pl-pm`, `/pl-ba`, `/pl-arch`, `/pl-qa`, `/pl-doc`, `/pl-devops` and `/pl-sm` work on the

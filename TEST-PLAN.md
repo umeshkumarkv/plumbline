@@ -39,8 +39,8 @@ Use one small real backlog idea. After each step, open JIRA and Confluence and l
 | 3.6 | edit one word of the LLD comment, then `/pl-dev <STORY>` | stops: changed after approval — re-run `/pl-arch` |
 | 3.7 | `/pl-dev <STORY>` | a branch; the comment maps every AC id to a test; *Design gaps* None; tests ran (or the first line says UNVERIFIED) |
 | 3.8 | `/pl-code-review <branch>` | cites code it read (callers, tests); any difference from the LLD is a major finding |
-| 3.9 | `/pl-qa <STORY>` with the system running | evidence per AC id, checked as the LLD maps it; stops cleanly if the system is not reachable |
-| 3.10 | merge the branch in your clone, then `/pl-doc <STORY or PR>` | only durable rules as `[decided <STORY>]`, the LLD's Decisions, the "Add to CLAUDE.md" notes; core ≤ 6 KB |
+| 3.9 | `/pl-doc <STORY>` on the open PR, then `/pl-dev <STORY>` (apply mode), then `/pl-code-review` | doc's exact text is on the PR and the story; dev applied it word for word; review checks code and docs together |
+| 3.10 | merge; `/pl-devops <STORY>`; `/pl-qa <STORY>` | devops reports the deployed commit and QA URL; QA tests that deployment, evidence per AC id, and moves the story to Done |
 
 ## Part 4 — deliberate breakage (≈ 1 h)
 | # | Do | Pass when |

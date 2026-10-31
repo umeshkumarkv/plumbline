@@ -82,16 +82,17 @@ your yes.
   step — the LLD on each story. The HLD's decisions and rules also go into CLAUDE.md (`[decided <EPIC>]`) through a
   docs PR the architect owns, so every later agent works under them. Each command posts only after its SME's yes and then adds its label
   (`plumbline-prd-approved`, `plumbline-dor-ready`, `plumbline-hld-final`, `plumbline-arch-approved`,
-  `plumbline-review-passed`, `plumbline-qa-passed`); JIRA records who posted it. The next command starts only when the
+  `plumbline-docs-ready`, `plumbline-review-passed`, `plumbline-deployed-qa`, `plumbline-qa-passed`); JIRA records
+  who posted it. The next command starts only when the
   label is there, and stops if a PRD page or hand-off comment was edited after it was posted. Code still needs a second
-  person: the PR approval your GitHub branch protection requires.
-- **Tickets move with the work.** Each command moves its ticket through your workflow (the `Workflow` setting, read
-  from JIRA by `/pl-onboard`): `/pl-dev` → In Progress, then In Review with the PR; a failed review or QA → back to In
-  Progress; **only `/pl-doc` closes a story** — after merge and QA — so CLAUDE.md and the API docs are updated before
-  anything is Done. `/pl-sm` flags any ticket whose status and labels disagree.
-- **Only two roles touch git.** `/pl-dev` creates the branch and the PR; `/pl-code-review` reads that PR and writes
-  its review. Every other command works on the code already in your folder and never runs git: changes it makes
-  (CLAUDE.md files, docs, a CI fix) stay in the folder with a ready PR description on `pr.md`, and you commit them.
+  person: the PR approval your branch protection requires.
+- **One PR carries code and docs.** dev → doc → code review → merge → CI/CD deploys to QA → devops confirms → QA.
+  `/pl-doc` posts the exact CLAUDE.md and API-spec text on the open PR; dev applies it word for word; review checks
+  code and docs together. Tickets move with the work (the `Workflow` setting): In Progress, In Review with the PR, back
+  to In Progress on a failed review or QA, and **Done when QA passes** on the deployed code. `/pl-sm` flags any ticket
+  whose status and labels disagree. The flow and who needs what access: [OPERATING-MODEL.md](OPERATING-MODEL.md).
+- **Only two roles touch git.** `/pl-dev` creates the branch and the PR; `/pl-code-review` reads it and writes the
+  review. Every other role hands off through JIRA, Confluence and PR comments — never through anyone's folder.
 - **The architect's design is final.** Dev, code review, QA, doc and devops follow the HLD and LLD exactly; a role that
   cannot stops with `design gap — /pl-arch <KEY>` instead of working around it, and code review fails any difference.
 - **Same shape everywhere, versioned.** Everything Plumbline produces — JIRA descriptions and comments, Confluence
@@ -113,8 +114,8 @@ your yes.
 Also:
 - **Honest test status** — if the build or tests could not run, `/pl-dev` says **UNVERIFIED** first, also in its JIRA
   comment. Work a judge passed by reading is not called tested.
-- **Metrics** — every command appends a line to `.plumbline-drafts/metrics.csv` (attempts, verdict, tests run, your
-  decision). `/pl-sm metrics` summarises it.
+- **Metrics in JIRA** — every hand-off's footer records attempts, minutes and whether the SME edited the text;
+  `/pl-sm metrics` reads them, so the team sees the same numbers.
 - **Drafts** — `.plumbline-drafts/` is scratch before posting; it ignores itself (`.gitignore` = `*`) and no command
   reads another's drafts.
 

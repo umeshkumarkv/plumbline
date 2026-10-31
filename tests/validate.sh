@@ -20,7 +20,7 @@ for c in $CMDS; do
   grep -qiE '^## Step [0-9]+ — (Hand over|Report|Summary)' "$f" && ok || bad "$f: no hand-over/report/summary step"
   n=$(wc -l < "$f"); [ "$n" -le 140 ] && ok || bad "$f: $n lines (budget 140) — long commands are followed less reliably"
   # every agent a command names must exist
-  for a in $(grep -oE 'plumbline-[a-z]+(-[a-z]+)*' "$f" | sort -u | grep -vE '^plumbline-(drafts|policy-change|checks|prd-approved|dor-ready|hld-final|arch-approved|review-passed|qa-passed|test)$'); do
+  for a in $(grep -oE 'plumbline-[a-z]+(-[a-z]+)*' "$f" | sort -u | grep -vE '^plumbline-(drafts|policy-change|checks|prd-approved|dor-ready|hld-final|arch-approved|docs-ready|review-passed|deployed-qa|qa-passed|test)$'); do
     [ -f ".claude/agents/$a.md" ] && ok || bad "$f: names agent '$a' that does not exist"
   done
 done
@@ -207,12 +207,12 @@ while read -r c ts; do
 done <<'MAP'
 pl-pm prd.md epic.md
 pl-ba story.md
-pl-arch hld.md handoff-hld.md handoff-arch.md pr.md
+pl-arch hld.md handoff-hld.md handoff-arch.md
 pl-dev handoff-dev.md pr.md
 pl-code-review handoff-review.md
 pl-qa handoff-qa.md
-pl-doc handoff-doc.md pr.md
-pl-devops handoff-devops.md pr.md
+pl-doc handoff-doc.md
+pl-devops handoff-devops.md handoff-deploy.md
 pl-sm sprint-report.md sm-flag.md
 pl-onboard claude-unit.md claude-reference.md claude-root.md pr.md
 MAP
