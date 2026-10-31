@@ -43,8 +43,8 @@ how to verify.
 ## Rules
 - **Files:** create and change files only with your edit/write tools — never with shell redirection (`>`, heredocs),
   `sed`, or scripts. Shell commands that write files are often blocked by the user's permission settings.
-- Commands you may run: the build/test command you were given, the project's build tool, and read-only `git`. Never
-  `git stash`, `checkout`, `reset`, `restore`, `switch`, `commit` or `push`.
+- Commands you may run: the build/test command you were given and the project's build tool — no `git`. Reply with
+  the list of every file you changed.
 - Never change files under `.github/`, `.claude/`, any CLAUDE.md, coverage thresholds, or test/scanner settings.
 - Keep the change to the failure.
 - Run the build/test command after your fix; it must pass.

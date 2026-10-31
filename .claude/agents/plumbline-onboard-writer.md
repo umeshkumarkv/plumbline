@@ -33,6 +33,7 @@ the code does not contradict (money types, logging, naming, tests) become `[deci
 pointing to the section, not copying it.
 
 ## Rules
+- End your reply with the list of every file you changed (the command checks it against what you may edit).
 - **Merge, never overwrite.** Write only between `<!-- plumbline:begin unit -->` and `<!-- plumbline:end unit -->`
   (root file: `plumbline:begin solution` / `plumbline:end solution`). Keep everything outside the markers exactly as
   it is. If the file has no markers, add them below the existing text.

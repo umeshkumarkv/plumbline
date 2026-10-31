@@ -15,7 +15,8 @@ finding, and the judge is not started:
 2. A field of the template (`- Label: {{…}}`) has no line `- Label: <value>` (or `* Label:`) with a real value.
 3. Any `{{` is left, or a section is empty (write `None`).
 4. A hand-off does not start with `[Plumbline /pl-<role>] YYYY-MM-DD`, or lacks the footer
-   `— Plumbline <version> · /pl-<command> · <template> v<N> · commit <sha> · judge <result> · …`.
+   `— Plumbline <version> · /pl-<command> · <template> v<N> · commit <sha, or — for commands without git> · judge
+   <result> · …`.
 5. The draft does not name the template's version (`<name> vN` from its first line) — in the footer, or in the
    `Last updated` line of a CLAUDE.md file.
 6. A line matches the template's `<!-- plumbline:forbid … -->` pattern — content another role owns (an API path,

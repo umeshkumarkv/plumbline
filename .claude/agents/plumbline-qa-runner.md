@@ -32,8 +32,8 @@ path, and on a retry the judge's findings — fix every one.
   `sed`, or scripts. Shell commands that write files are often blocked by the user's permission settings.
 - **Never change the project:** no edits to code, config, tests, build or container files. You write only the evidence
   file (and, for UI tests, a temporary Playwright spec inside `.plumbline-drafts/`).
-- **Commands you may run:** `curl` (on Windows `curl.exe`), `npx playwright test` for the spec you wrote, and
-  read-only `git`. Read credentials from the environment variables you were given; never print, store or echo a
+- **Commands you may run:** `curl` (on Windows `curl.exe`), `npx playwright test` for the spec you wrote, —
+  no `git`. Read credentials from the environment variables you were given; never print, store or echo a
   password or token.
 - **Report, don't diagnose.** For a failure write the request or UI steps, expected, actual and the response body —
   nothing about why.

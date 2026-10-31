@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.8.13 — 2026-10-31 — only dev and code review use git
+- `/pl-dev` creates the branch and the PR; `/pl-code-review` reads it and writes the review. **No other command runs
+  git or `gh`:** `/pl-onboard`, `/pl-pm`, `/pl-ba`, `/pl-arch`, `/pl-qa`, `/pl-doc`, `/pl-devops` and `/pl-sm` work on the
+  code already in the folder. Their changes (CLAUDE.md files, docs, a CI fix) stay in the folder with a PR description
+  on `pr.md` in drafts — the user commits. CI logs and PRs are read through the connected GitHub tools.
+- Without git: units are found with file search; the base branch is asked; scope checks use the writer's list of
+  changed files; the judge compares against copies saved in drafts (`before/`); footers and `Last updated` use commit
+  `—`; the freshness check is gone (`/pl-doc` keeps CLAUDE.md current after each merge).
+- Agents: the devops fixer and QA runner run no git; the judge runs read-only git only for dev and code review.
+- Self-test fails if any command other than `/pl-dev` and `/pl-code-review` runs git or `gh`.
+
 ## 2.8.12 — 2026-10-30 — markdown only, again
 Plumbline is a framework of markdown files that runs the same on macOS, Windows and Linux. 2.8.0 had added
 `check-template.sh` and 2.8.11 `onboard-audit.py` — both executables in your project. Both are gone:

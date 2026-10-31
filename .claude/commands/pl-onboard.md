@@ -16,8 +16,8 @@ Target: $ARGUMENTS (empty = every unit)
   (`.github/agents/`). If subagents are not available in this chat, stop and say so.
 
 Each subagent starts with a clean context. Never do the writer's or the judge's work yourself, and never pass the
-writer's reasoning or your own opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) commands, and in Step 2b each
-unit's own test command, yourself (they work in bash, PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
+writer's reasoning or your own opinion to the judge. **Shell:** run no `git` (the code is already in this folder; only `/pl-dev` and `/pl-code-review` use git); only each unit's own test
+command in Step 2b, yourself (they work in bash, PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
 
@@ -28,14 +28,11 @@ unchanged, then continue — but only for a path you gave that helper; any other
   Helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
-- **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
-  <unit folder> ':!**/CLAUDE*.md'` (CLAUDE.md's own edits do not make it stale). Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
-  changed>", and say so in the hand-over.
 - **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
   every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
   `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
-  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and
-  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and the
+  commit (`/pl-dev`, `/pl-code-review`: `git rev-parse --short HEAD`; every other command: `—`); tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
   each judge and before posting, do the **Template check** in `.github/plumbline/templates/README.md` yourself (it
   also catches text outside the lane): any miss is that attempt's finding, no judge. Set the footer's `judge`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
@@ -55,22 +52,20 @@ committed). Create drafts and metrics with your write tool — never `mkdir`, `e
 
 ## Step 1 — Settings
 Read the root `CLAUDE.md` if it exists. Missing **Plumbline settings** (JIRA project, Confluence space and parent
-page, base branch, Workflow) → ask once. Suggest the base branch from `git symbolic-ref refs/remotes/origin/HEAD` (often
-not `main`), and the Workflow from the JIRA statuses mapped to To Do → In Progress → In Review → Done.
+page, base branch, Workflow) → ask once. Ask the base branch (often not `main` — e.g. `develop`), and suggest the Workflow from the JIRA statuses mapped to To Do → In Progress → In Review → Done.
 
 ## Step 2 — Find the units
-Find build files with `git ls-files`: `pom.xml`, `build.gradle(.kts)`, `package.json` and other stacks' (not under
+Find build files with your file search tools: `pom.xml`, `build.gradle(.kts)`, `package.json` and other stacks' (not under
 `node_modules`, `target`, `build`, `dist`). **Every folder with its own build file and source is a unit** — backend,
 frontend, worker, library alike; a parent file that only lists modules is not. Skipping one needs the user's yes,
 recorded in the root's *Decisions needed*. Each unit gets `<folder>/CLAUDE.md` + `CLAUDE.reference.md` (an app at the
 repository root → `src/`). Show one table (name, folder, kind, mode — see Step 3) and continue.
-**Secrets scan:** `git ls-files | grep -iE 'secret|credential|\.env($|\.)|\.pem$|\.key$|id_rsa'` and, in those and
-the config files, values set for keys named `*password*`, `*secret*`, `*token*`, `*key*`. Keep each file and key —
+**Secrets scan:** search the files for names like `*secret*`, `*credential*`, `.env`, `*.pem`, `*.key`, `id_rsa` and,
+in those and the config files, values set for keys named `*password*`, `*secret*`, `*token*`, `*key*`. Keep each file and key —
 **never a value** — for the root's `Secrets found`; placeholders (`<…>`, `${…}`, `changeme`) do not count.
 
 ## Step 2b — Test recipe (one run per unit, reused when nothing changed)
-**Reuse** the unit's existing recipe only if it **ran** (a result, not "not run") and no build file changed since its
-`Last updated` commit (`git log --oneline <commit>..HEAD -- <build files>` is empty). Otherwise take the test command from the build
+**Reuse** the unit's existing recipe if it **ran** (a result, not "not run"), unless the user asks to re-run tests. Otherwise take the test command from the build
 files (`./mvnw test`, `mvn test`, `./gradlew test`, `npm test -- --watch=false`; a README wins), install the
 project's **own dependencies from its lockfile** if missing (`npm ci`; Maven/Gradle download them) — never tools or
 runtimes — and run it once as `cd <folder> && <command>` (15-minute limit). Keep: command, runtime used
@@ -79,16 +74,16 @@ duration. Change no file to make it pass; record failures exactly — other comm
 
 ## Step 3 — Each unit, one at a time (helpers run in the foreground)
 **Mode** per unit: **new** (no CLAUDE.md), **refresh** (both files exist), or **keep**. Refresh first costs no
-writer: do the **Template check** (`.github/plumbline/templates/README.md`) on both files, and the Freshness check. Both clean →
+writer: do the **Template check** (`.github/plumbline/templates/README.md`) on both files, copying both files first to `.plumbline-drafts/onboard/<unit>/before/`. Clean →
 judge only (step 3 below, attempt 1); PASS → **keep** — the files are not touched. Otherwise the writer runs in
 **update mode** with the template and judge findings: keep every line that is still true, fix what failed, add what
 the template now requires; never rewrite the rest. For attempt = 1, 2, 3:
 1. **Writer** — `plumbline-onboard-writer` with: mode, unit name, folder, both paths, the test recipe, the commit
-   (`git rev-parse --short HEAD`) and today's date for `Last updated`; on a retry the judge's findings (verbatim).
-2. **Scope check** — `git status --porcelain`: only this unit's `CLAUDE.md` / `CLAUDE.reference.md` changed (drafts are
-   ignored). Anything else → `git checkout -- <file>` and that is the attempt's finding.
+   (`—`; no git) and today's date for `Last updated`; on a retry the judge's findings (verbatim).
+2. **Scope check** — the writer replies with every file it changed: only this unit's `CLAUDE.md` /
+   `CLAUDE.reference.md` may be listed. Anything else is the attempt's finding (tell the user which file to restore).
 3. **Judge** — `plumbline-judge` with: *Review:* both paths, the unit folder, the deploy files (`docker-compose*.yml`,
-   `k8s/`, Helm), "`git diff -- <both paths>`: text outside the markers unchanged"; *Checklist:* the file
+   `k8s/`, Helm), "compare with the copies in `before/`: text outside the markers unchanged"; *Checklist:* the file
    `.github/plumbline/checklists/onboard-unit.md` plus this unit's checks in `onboard-audit.md` — the judge reads both.
 4. **PASS** → next unit. **FAIL** → next attempt with the findings.
 After 3 failed attempts: leave the file, mark the unit **ESCALATED**, keep its last findings, and move on.
@@ -110,6 +105,5 @@ commands treat these settings as the rule. Unattended → leave the items; other
 ## Step 5 — Summary
 One table: unit · mode · result (PASS / KEPT / ESCALATED) · attempts · test recipe result · open findings; then the
 root judge's last audit list, verbatim — every remaining `FAIL` line at once, so nothing is found later piece by
-piece. Untested or failing units first: `/pl-dev` on them will be **UNVERIFIED**. Then: review with `git diff` (discard a file:
-`git checkout -- <file>`), and offer to commit on a branch and open a PR described on `pr.md` — the exact text first,
-then a yes. Nothing else is written.
+piece. Untested or failing units first: `/pl-dev` on them will be **UNVERIFIED**. Then list the files changed, and write a PR description on `pr.md`
+to `.plumbline-drafts/onboard/pr.md` for you: you review, commit and open the PR. Nothing else is written.

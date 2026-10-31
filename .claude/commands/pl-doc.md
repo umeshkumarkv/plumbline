@@ -16,7 +16,7 @@ Change: $ARGUMENTS
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with
   agent `plumbline-doc-writer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
-Never do the writer's or the judge's work yourself. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) (and `gh` if present) yourself. Do not research the code yourself — that is the
+Never do the writer's or the judge's work yourself. **Shell:** run no `git` (the code is already in this folder; only `/pl-dev` and `/pl-code-review` use git); read the merged PR with the connected GitHub tools. Do not research the code yourself — that is the
 writer's/runner's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
@@ -28,14 +28,11 @@ unchanged, then continue — but only for a path you gave that helper; any other
   Helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
-- **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
-  <unit folder> ':!**/CLAUDE*.md'` (CLAUDE.md's own edits do not make it stale). Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
-  changed>", and say so in the hand-over.
 - **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
   every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
   `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
-  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and
-  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and the
+  commit (`/pl-dev`, `/pl-code-review`: `git rev-parse --short HEAD`; every other command: `—`); tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
   each judge and before posting, do the **Template check** in `.github/plumbline/templates/README.md` yourself (it
   also catches text outside the lane): any miss is that attempt's finding, no judge. Set the footer's `judge`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
@@ -89,7 +86,7 @@ answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` su
 committed). Create drafts and metrics with your write tool — never `mkdir`, `echo`, `printf` or redirection.
 
 ## Step 1 — The change
-1. Find the change: a story key → the PR in its `[Plumbline /pl-dev]` comment; a PR number (`gh pr view <n>` / `gh pr diff <n>`, or the connected GitHub tools), a story key
+1. Find the change: a story key → the PR in its `[Plumbline /pl-dev]` comment; a PR number (read with the connected GitHub tools), a story key
    (search PRs for it), or a branch. Work out the commit range: `<base>...<merge or head>`.
 2. List what changed in the code: endpoints, request/response fields, error codes, events/topics, cache keys, env vars,
    migrations, new libraries, new units. From the story's JIRA ticket also take: the **durable** business rules its
@@ -97,20 +94,22 @@ committed). Create drafts and metrics with your write tool — never `mkdir`, `e
    `[decided <KEY>]`), the *Decisions* in its latest `[Plumbline /pl-arch]` comment (→ Decisions & trade-offs), and every
    "Add to CLAUDE.md" / "CLAUDE.md out of date" note in its `[Plumbline …]` comments. CLAUDE.md is the single source
    of truth: after this merge it must say everything the next agent needs, so no one rediscovers it from the code.
-3. `git status` must be clean. Create a docs branch: `git switch -c docs/<KEY or pr-n> <base branch>`.
+3. The merged code must be in this folder (the base branch, pulled). Copy the CLAUDE.md files and the API spec to
+   `.plumbline-drafts/doc-<KEY or pr-n>/before/`.
 
 **Stop and ask the user** if: the change adds a new unit or a new cross-unit event (the root CLAUDE.md needs a human
 decision first); the merged code contradicts the existing API spec in a way that needs an architecture call; or a new
 library arrived without the root CLAUDE.md allowing it.
 
 ## Step 2 — Attempts (1, 2, 3)
-1. **Writer** — start `plumbline-doc-writer` with: the commit range, the output of `git diff <range>` saved with your
-   write tool as `.plumbline-drafts/doc-<KEY or pr-n>/change.diff`, the list from Step 1, the files it may edit (the
+1. **Writer** — start `plumbline-doc-writer` with: the list of files the change touched (from the PR or the
+   `[Plumbline /pl-dev]` comment) and the PR's diff if the GitHub tools give it, saved as `.plumbline-drafts/doc-<KEY or
+   pr-n>/change.diff`, the list from Step 1, the files it may edit (the
    API spec files, and the CLAUDE.md and CLAUDE.reference.md files of the touched units; the root CLAUDE.md only if the architecture changed); on
    attempts 2–3 the judge's findings.
-2. **Scope check** — `git status --porcelain`: only documentation files changed. Anything else → finding, next attempt.
-3. **Judge** — start `plumbline-judge` with exactly: *Review:* "the code change `git diff <range>` and the doc change
-   `git diff`", the files edited; *Checklist:* the **Doc checklist** below, verbatim. PASS → Step 3. FAIL → next attempt.
+2. **Scope check** — the writer lists every file it changed: only documentation files. Anything else → finding.
+3. **Judge** — start `plumbline-judge` with exactly: *Review:* the change (files and diff above), the edited docs and their
+   `before/` copies; *Checklist:* the **Doc checklist** below, verbatim. PASS → Step 3. FAIL → next attempt.
 
 ### Doc checklist
 1. Every endpoint the code change added or changed is in the API spec with the right method, path, parameters,
@@ -128,9 +127,9 @@ library arrived without the root CLAUDE.md allowing it.
    is at most 6 KB and each reference file at most 30 KB, with the core's Reference counts still right.
 
 ## Step 3 — Hand over
-Show the doc diff summary, each file's size before → after, any *Proposed removals*, and the judge verdict. Ask before commit, push and opening a docs PR described on `pr.md`, and before the JIRA
-comment `[Plumbline /pl-doc] <date>` with the docs PR link — show the exact text first and wait for a yes. The docs PR
-needs the architect's approval: the architect owns what CLAUDE.md says. **Close the story:** with the same yes, move it
+Show the doc diff summary, each file's size before → after, any *Proposed removals*, and the judge verdict. The doc changes stay in the folder with a PR description on `pr.md` in drafts — you commit
+and open the docs PR. Ask before the JIRA comment `[Plumbline /pl-doc] <date>` — exact text first, then a yes. The docs
+PR needs the architect's approval: the architect owns what CLAUDE.md says. **Close the story:** with the same yes, move it
 to Done (JIRA hand-off: Status) — only once its PR is merged and it has `plumbline-qa-passed`; otherwise say what is
 missing and leave it open. When it is the epic's last open story, move the epic to Done too. Set (keeping the template version) `Last updated: <merge commit> (<date>,
 /pl-doc)` in each CLAUDE.md you change. Never commit to the base branch directly.

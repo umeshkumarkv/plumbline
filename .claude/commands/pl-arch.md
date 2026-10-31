@@ -16,7 +16,7 @@ Input: $ARGUMENTS
   agent `plumbline-arch-writer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
-only `git` (from the repository root — never `git -C`, which permission rules do not match) yourself; read and search files with your file tools. Do not research the code yourself — that is the
+no `git` (the code is already in this folder; only `/pl-dev` and `/pl-code-review` use git); read and search files with your file tools. Do not research the code yourself — that is the
 writer's and the judge's job; you route, check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
@@ -28,14 +28,11 @@ unchanged, then continue — but only for a path you gave that helper; any other
   Helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
-- **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
-  <unit folder> ':!**/CLAUDE*.md'` (CLAUDE.md's own edits do not make it stale). Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
-  changed>", and say so in the hand-over.
 - **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
   every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
   `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
-  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and
-  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and the
+  commit (`/pl-dev`, `/pl-code-review`: `git rev-parse --short HEAD`; every other command: `—`); tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
   each judge and before posting, do the **Template check** in `.github/plumbline/templates/README.md` yourself (it
   also catches text outside the lane): any miss is that attempt's finding, no judge. Set the footer's `judge`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
@@ -102,8 +99,9 @@ unit's database, a new unit, an out-of-scope feature, or a library the root CLAU
 ## Step 2 — Attempts (1, 2, 3)
 1. **Writer** — `plumbline-arch-writer` with: HLD or LLD, its template (`hld.md` / `handoff-arch.md`), the input and
    CLAUDE.md paths, the draft path; for an HLD also "add its decisions and rules to the CLAUDE.md files"; findings.
-2. **Scope check (HLD)** — `git status --porcelain`: only `CLAUDE.md` files (and drafts) changed; else a finding.
-3. **Judge** — `plumbline-judge` with exactly: *Review:* the draft, the input and CLAUDE.md paths, `git diff` (HLD),
+2. **Scope check (HLD)** — first copy the CLAUDE.md files to `.plumbline-drafts/<KEY>/before/`; the writer lists every
+   file it changed — only `CLAUDE.md` files may be listed; else a finding.
+3. **Judge** — `plumbline-judge` with exactly: *Review:* the draft, the input and CLAUDE.md paths, the `before/` copies (HLD),
    the unit folders (writer: `plumbline-arch-writer`); *Checklist:* the HLD or Design checklist, verbatim.
 
 After 3 failed attempts: stop, show the last findings, hand over (usually the story needs the BA to clarify).
@@ -134,7 +132,7 @@ After 3 failed attempts: stop, show the last findings, hand over (usually the st
 
 ## Step 3 — Hand over
 Show the HLD or LLD, then ask before each — exact text first, then a yes. **HLD:** publish the page `<EPIC> — <title> —
-HLD` under the PRD page; commit the CLAUDE.md changes on `docs/<EPIC>-hld`, push, open a docs PR on `pr.md` (the
-architect owns it — merge it before stories are built); post `handoff-hld.md` on the epic with the page link, version and PR;
+HLD` under the PRD page; leave the CLAUDE.md changes in the folder with a PR description on `pr.md` in drafts — you
+commit and open the docs PR (merge it before stories are built); post `handoff-hld.md` on the epic with the page link;
 add `plumbline-hld-final`. **LLD:** post it on the story; add `plumbline-arch-approved`; set the story points and one
 `Blocks` link per technical blocker. The architect's yes is final. Next: `/pl-arch <STORY>` in *Story design order*.

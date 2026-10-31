@@ -8,7 +8,7 @@ argument-hint: "<PR number or branch with a failing CI run>"
 Get a failing CI run green the honest way. A **fixer** subagent classifies the failure and either fixes it (compile
 error, failing test, coverage) or writes a diagnosis for you to approve (pipeline, container, migration, dependency,
 secrets). An independent **judge** checks the fix addresses the cause and weakens nothing. Up to 3 attempts, then it
-is handed to the user. Nothing is pushed without your yes.
+is handed to the user. It never commits or pushes: the fix stays in your folder.
 
 Target: $ARGUMENTS
 
@@ -17,8 +17,8 @@ Target: $ARGUMENTS
 - **GitHub Copilot:** VS Code — `#runSubagent` (the `agent/runSubagent` tool); Copilot CLI — the `task` tool; with
   agent `plumbline-devops-fixer` or `plumbline-judge` (`.github/agents/`). If subagents are not available, stop and say so.
 
-Never do the fixer's or the judge's work yourself. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match), `gh` and the project's build/test
-command yourself. Do not research the code yourself — the fixer and the judge do; you route,
+Never do the fixer's or the judge's work yourself. **Shell:** run no `git` (the code is already in this folder; only `/pl-dev` and `/pl-code-review` use git); only the project's build/test
+command yourself. Read CI runs with the connected GitHub tools, or the log the user pastes. Do not research the code yourself — the fixer and the judge do; you route,
 check scope and hand over.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
@@ -30,14 +30,11 @@ unchanged, then continue — but only for a path you gave that helper; any other
   Helpers work from the CLAUDE.md files (kept current by `/pl-doc`) and the JIRA/Confluence
   material, opening code only for what they change or review; never research the code yourself. List their "Add to
   CLAUDE.md" / "CLAUDE.md out of date" notes in the hand-over for `/pl-doc`.
-- **Freshness:** for each unit CLAUDE.md a helper gets, run `git log --oneline <its Last updated commit>..HEAD --
-  <unit folder> ':!**/CLAUDE*.md'` (CLAUDE.md's own edits do not make it stale). Commits listed → tell the helpers and the judge "CLAUDE.md may be stale for: <files those commits
-  changed>", and say so in the hand-over.
 - **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
   every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
   `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
-  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and
-  `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
+  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and the
+  commit (`/pl-dev`, `/pl-code-review`: `git rev-parse --short HEAD`; every other command: `—`); tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
   each judge and before posting, do the **Template check** in `.github/plumbline/templates/README.md` yourself (it
   also catches text outside the lane): any miss is that attempt's finding, no judge. Set the footer's `judge`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
@@ -94,10 +91,10 @@ answers: `approved`, `edited` or `rejected`. It stays local; `/pl-sm metrics` su
 committed). Create drafts and metrics with your write tool — never `mkdir`, `echo`, `printf` or redirection.
 
 ## Step 1 — The failure
-1. Find the latest failed run for the PR/branch (`gh run list --branch <b>`, `gh run view <id> --log-failed`, or the
-   connected GitHub tools) and save the failing log to `.plumbline-drafts/ci-<branch>/ci.log`. No `gh` and no GitHub
-   tools → ask the user to paste the failing log.
-2. Check out the branch (`git switch <branch>`; `git status` must be clean first).
+1. Find the latest failed run for the PR/branch with the connected GitHub tools and save the failing log to
+   `.plumbline-drafts/ci-<branch>/ci.log`. No GitHub tools → ask the user to paste it.
+2. The PR's branch must already be open in this folder (the user checks it out); copy the files the log points to into
+   `.plumbline-drafts/ci-<branch>/before/`.
 3. **Pre-existing failures:** a failure that also fails on the base branch (its last CI run, or a log the user gives)
    is not this branch's problem — note it for the hand-over and fix only what this branch broke. Several categories
    *caused by this branch* is a stop-and-ask; one new failure plus old ones is not.
@@ -111,10 +108,10 @@ committed). Create drafts and metrics with your write tool — never `mkdir`, `e
    separate PR a human makes. For other categories, if the user approves, start the fixer again with "approved:
    apply the diagnosis" (this does not use an attempt).
 3. **Local check** — run the build/test command yourself; it must pass.
-4. **Judge** — start `plumbline-judge` with exactly: *Review:* "`git diff` on branch <branch>", the diagnosis/log
-   paths; *Checklist:* the **Fix checklist** below, verbatim. FAIL → next attempt.
-5. **CI** — on judge PASS, ask the user before commit + push to the PR branch (show the message; never `main`/the base
-   branch). After the push, check the new run (`gh run view`); still red → save the new log, next attempt.
+4. **Judge** — start `plumbline-judge` with exactly: *Review:* the files the fixer changed (it lists them) and their
+   `before/` copies, the diagnosis/log paths; *Checklist:* the **Fix checklist** below, verbatim. FAIL → next attempt.
+5. **CI** — on judge PASS, the fix stays in the folder: give the user the commit message to push to the PR branch
+   (never `main`/the base). After their push, check the new run with the GitHub tools; still red → next attempt.
 
 ### Fix checklist
 1. The fix addresses the root cause named in the classification, not a symptom.
@@ -131,5 +128,5 @@ refactor or tidy-up did not intend to change output, so the tests are right); or
 a fix.
 
 ## Step 3 — Hand over
-Show: category · cause · fix · local result · CI result · judge verdict. Then ask before each of: commit, push, the PR
-described on `pr.md`, and the `[Plumbline /pl-devops]` comment on `handoff-devops.md` — exact text first, then a yes.
+Show: category · cause · fix · local result · CI result · judge verdict. The fix stays in the folder with its commit message and a PR
+description on `pr.md` in drafts. Ask before the `[Plumbline /pl-devops]` comment on `handoff-devops.md` — exact text first, then a yes.

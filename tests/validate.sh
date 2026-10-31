@@ -191,6 +191,12 @@ for f in $(git ls-files .claude .github/plumbline .github/agents .github/prompts
   case "$f" in *.md|*/VERSION|*/VERSIONS|*.yml) ;; *) bad "$f: Plumbline installs markdown only — move tools to tests/" ;; esac
 done; ok
 
+# Only /pl-dev and /pl-code-review run git; every other command works on the folder (2.8.13)
+for f in .claude/commands/pl-*.md; do
+  case "$(basename "$f")" in pl-dev.md|pl-code-review.md) continue ;; esac
+  grep -v 'every other command: `—`' "$f" | grep -qE '`(git|gh) [a-z]' && bad "$f: runs git/gh — only /pl-dev and /pl-code-review may" || ok
+done
+
 # Checklists a command hands to the judge by file must exist
 for c in $(grep -ohE '\.github/plumbline/checklists/[a-z-]+\.md' .claude/commands/*.md | sort -u); do
   [ -f "$c" ] && ok || bad "a command names checklist $c that does not exist"; done

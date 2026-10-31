@@ -87,6 +87,9 @@ your yes.
   from JIRA by `/pl-onboard`): `/pl-dev` → In Progress, then In Review with the PR; a failed review or QA → back to In
   Progress; **only `/pl-doc` closes a story** — after merge and QA — so CLAUDE.md and the API docs are updated before
   anything is Done. `/pl-sm` flags any ticket whose status and labels disagree.
+- **Only two roles touch git.** `/pl-dev` creates the branch and the PR; `/pl-code-review` reads that PR and writes
+  its review. Every other command works on the code already in your folder and never runs git: changes it makes
+  (CLAUDE.md files, docs, a CI fix) stay in the folder with a ready PR description on `pr.md`, and you commit them.
 - **The architect's design is final.** Dev, code review, QA, doc and devops follow the HLD and LLD exactly; a role that
   cannot stops with `design gap — /pl-arch <KEY>` instead of working around it, and code review fails any difference.
 - **Same shape everywhere, versioned.** Everything Plumbline produces — JIRA descriptions and comments, Confluence

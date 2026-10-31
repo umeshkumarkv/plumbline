@@ -32,6 +32,7 @@ The story path, the unit, the CLAUDE.md paths, the draft path, and on a retry th
   `CLAUDE.md out of date: <what> — <file:line>`.
 
 ## Rules
+- End your reply with the list of every file you changed (the command checks it against what you may edit).
 - Read the root and unit CLAUDE.md and the story; then open only what the change touches — the classes, methods,
   migrations and tests it will modify. Follow the patterns the CLAUDE.md files describe.
 - Never invent acceptance criteria; design for the ones in the story. Missing information goes under "Open questions".
