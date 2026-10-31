@@ -33,7 +33,7 @@ unchanged, then continue — but only for a path you gave that helper; any other
 - **Templates and lanes:** everything that leaves this machine — JIRA, Confluence, PR descriptions and reviews — and
   every CLAUDE.md file is written on its template in `.github/plumbline/templates/` (`claude-root.md`,
   `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
-  template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and the
+  template's version. Give each writer the template, the version (`.github/plumbline/VERSION.md`) and the
   commit (`/pl-dev`, `/pl-code-review`: `git rev-parse --short HEAD`; every other command: `—`); tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
   each judge and before posting, do the **Template check** in `.github/plumbline/templates/README.md` yourself (it
   also catches text outside the lane): any miss is that attempt's finding, no judge. Set the footer's `judge`.

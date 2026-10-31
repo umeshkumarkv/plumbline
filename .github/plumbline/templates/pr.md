@@ -1,4 +1,4 @@
-<!-- plumbline:template pr v1 -->
+<!-- plumbline:template pr v2 -->
 ## Story
 - Story: {{KEY — summary, or "docs" / "CI fix" with the run or epic it belongs to}}
 
@@ -14,4 +14,4 @@
 ## Tests
 - Tests: {{ran — N passed, M failed | UNVERIFIED — not run: <why>}}
 
-— Plumbline {{version}} · {{/pl-command}} · pr v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · pr v2 · commit {{short sha, or —}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · {{minutes}} min · SME edited: {{yes | no}} · AI-drafted, posted after SME review

@@ -1,4 +1,4 @@
-<!-- plumbline:template handoff-devops v1 -->
+<!-- plumbline:template handoff-devops v2 -->
 [Plumbline /pl-devops] {{YYYY-MM-DD}}
 
 ## CI failure
@@ -9,10 +9,10 @@
 {{what failed and why, with file:line}}
 
 ## Fix
-{{the change on the branch, or the proposed fix for a person to make}}
+{{for each file: its path and the exact change in a fenced block, for dev to apply on the PR branch — or the diagnosis for a person to act on}}
 
 ## Results
 - Local: {{command and result}}
 - CI: {{result after the fix, or "not re-run"}}
 
-— Plumbline {{version}} · {{/pl-command}} · handoff-devops v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · handoff-devops v2 · commit {{short sha, or —}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · {{minutes}} min · SME edited: {{yes | no}} · AI-drafted, posted after SME review

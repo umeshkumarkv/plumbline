@@ -1,4 +1,4 @@
-<!-- plumbline:template handoff-dev v1 -->
+<!-- plumbline:template handoff-dev v2 -->
 [Plumbline /pl-dev] {{YYYY-MM-DD}}
 
 ## Change
@@ -18,4 +18,4 @@
 ## Notes for /pl-doc
 {{"Add to CLAUDE.md: …" and "CLAUDE.md out of date: …" lines from the helpers, or None}}
 
-— Plumbline {{version}} · {{/pl-command}} · handoff-dev v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · handoff-dev v2 · commit {{short sha, or —}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · {{minutes}} min · SME edited: {{yes | no}} · AI-drafted, posted after SME review

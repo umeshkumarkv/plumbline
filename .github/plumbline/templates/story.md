@@ -1,4 +1,4 @@
-<!-- plumbline:template story v1 -->
+<!-- plumbline:template story v2 -->
 <!-- plumbline:forbid (GET|POST|PUT|PATCH|DELETE) /|/api/|[a-z]\.(java|ts|py|kt)|[A-Z][a-z]+(Service|Controller|Repository|Exception|Dto|Entity)|HTTP [1-5][0-9][0-9]|status [1-5][0-9][0-9]|customfield_|[Ss]tory points|[0-9]+ points -->
 ## User story
 As a {{specific business role}} / I want {{…}} / So that {{…}}
@@ -18,4 +18,4 @@ As a {{specific business role}} / I want {{…}} / So that {{…}}
 ## Dependencies
 {{other stories or business decisions this needs first, or None}}
 
-— Plumbline {{version}} · {{/pl-command}} · story v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · story v2 · commit {{short sha, or —}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · {{minutes}} min · SME edited: {{yes | no}} · AI-drafted, posted after SME review

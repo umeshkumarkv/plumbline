@@ -5,6 +5,13 @@ CLAUDE.md file in its `Last updated` line. When a template changes, its version 
 Commands that read an older hand-off accept it as written: they look for the sections that version had (listed
 below) and never fail a hand-off for being on an older template. Only new output must use the current version.
 
+## v2 of every hand-off template, handoff-deploy v1 — Plumbline 2.8.14
+Templates: prd v2, epic v2, story v2, hld v2, handoff-hld v2, handoff-arch v2, handoff-dev v2, handoff-review v2, handoff-qa v2, handoff-doc v2, handoff-devops v2, sprint-report v2, sm-flag v2, pr v2; new handoff-deploy v1.
+Footer gains `<minutes> min · SME edited: yes|no` (team metrics live in JIRA) and accepts `commit —`. `handoff-hld` v2:
+*CLAUDE.md changes* is the exact text dev applies (no docs PR). `handoff-doc` v2: *Text to apply* per file, posted on
+the PR and the story. `handoff-devops` v2: the fix is exact text per file for dev. New `handoff-deploy` v1: devops after
+a merge (pipeline run, deployed commit, QA URL). Readers of v1 hand-offs: the footer has no minutes — treat as unknown.
+
 ## claude-unit v2, claude-root v3 — Plumbline 2.8.10
 `claude-unit` Security gains three required fields: `Identity`, `Verified at`, `Reachable without that check` (per
 environment). `claude-root` gains a `## Conventions` section (before Plumbline settings) and a required

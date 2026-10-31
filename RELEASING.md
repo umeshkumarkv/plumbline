@@ -6,7 +6,7 @@ documentation and wording fixes.
 
 ## Checklist
 1. **Self-test passes:** `bash tests/validate.sh` (also runs in CI on every PR).
-2. **Version:** `.github/plumbline/VERSION` and the top entry of `CHANGELOG.md` say the same version; the changelog
+2. **Version:** `.github/plumbline/VERSION.md` and the top entry of `CHANGELOG.md` say the same version; the changelog
    entry says what changed and how it was tested.
 3. **Regression runs** — for any change to a command or agent, re-run on a real repository, with the recommended
    permission settings (never bypassed), at least:

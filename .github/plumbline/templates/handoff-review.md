@@ -1,4 +1,4 @@
-<!-- plumbline:template handoff-review v1 -->
+<!-- plumbline:template handoff-review v2 -->
 [Plumbline /pl-code-review] {{YYYY-MM-DD}}
 
 ## Verdict
@@ -15,4 +15,4 @@
 ## Notes for /pl-doc
 {{or None}}
 
-— Plumbline {{version}} · {{/pl-command}} · handoff-review v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · handoff-review v2 · commit {{short sha, or —}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · {{minutes}} min · SME edited: {{yes | no}} · AI-drafted, posted after SME review

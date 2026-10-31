@@ -50,7 +50,7 @@ jobs:
         run: |
           pip install --quiet "semgrep==1.180.0"
           # The rules come from the BASE branch, so a PR cannot weaken the rules it is checked by.
-          git show "$BASE:.github/plumbline/semgrep-java.yml" > "$RUNNER_TEMP/rules.yml" 2>/dev/null \
-            || cp .github/plumbline/semgrep-java.yml "$RUNNER_TEMP/rules.yml"
+          git show "$BASE:.github/plumbline-ci/semgrep-java.yml" > "$RUNNER_TEMP/rules.yml" 2>/dev/null \
+            || cp .github/plumbline-ci/semgrep-java.yml "$RUNNER_TEMP/rules.yml"
           semgrep scan --config "$RUNNER_TEMP/rules.yml" --baseline-commit "$BASE" \
             --error --metrics=off --disable-version-check

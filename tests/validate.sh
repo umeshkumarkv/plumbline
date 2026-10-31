@@ -81,9 +81,9 @@ PY
 checks=$((checks+1))
 
 # 6. Version: VERSION file = top CHANGELOG entry
-v=$(cat .github/plumbline/VERSION 2>/dev/null | tr -d '[:space:]')
+v=$(grep -E '^[0-9]+\.[0-9]+\.[0-9]+' .github/plumbline/VERSION.md 2>/dev/null | head -1 | tr -d '[:space:]')
 top=$(grep -m1 -oE '^## [0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | cut -c4-)
-[ -n "$v" ] && [ "$v" = "$top" ] && ok || bad ".github/plumbline/VERSION ('$v') must equal the top CHANGELOG version ('$top')"
+[ -n "$v" ] && [ "$v" = "$top" ] && ok || bad ".github/plumbline/VERSION.md ('$v') must equal the top CHANGELOG version ('$top')"
 
 # 7. Relative links in the docs resolve
 for doc in README.md PILOT.md SECURITY.md RELEASING.md TEST-REPORT.md TEAM-TEST.md TEST-PLAN.md SMOKE-TEST.md eval/README.md; do
@@ -153,7 +153,7 @@ for a in pm ba sm; do grep -qE '^tools: Read, (Grep, Glob, )?Write$' .claude/age
 python3 - <<'PY' || fail=$((fail+1))
 import glob, hashlib, os, re, sys
 lock = {}
-for l in open(".github/plumbline/templates/VERSIONS"):
+for l in open("tests/template-versions.txt"):
     if l.strip() and not l.startswith("#"): n, v, h = l.split(); lock[n] = (v, h)
 log = open(".github/plumbline/templates/CHANGELOG.md").read()
 errs = []
@@ -164,7 +164,7 @@ for t in sorted(glob.glob(".github/plumbline/templates/*.md")):
     m = re.search(rb"<!-- plumbline:template ([a-z-]+) (v[0-9]+) -->", s)
     if not m or m.group(1).decode() != n: errs.append(f"{t}: needs <!-- plumbline:template {n} vN -->"); continue
     v = m.group(2).decode()
-    if n not in lock: errs.append(f"{n}: not in templates/VERSIONS — run bash tests/lock-templates.sh"); continue
+    if n not in lock: errs.append(f"{n}: not in tests/template-versions.txt — run bash tests/lock-templates.sh"); continue
     lv, lh = lock[n]
     if v == lv and hashlib.sha256(s).hexdigest() != lh:
         errs.append(f"{n} {v}: changed without a new version — bump it, add a CHANGELOG entry, run tests/lock-templates.sh")
@@ -188,7 +188,7 @@ grep -q 'Secrets scan' .claude/commands/pl-onboard.md && grep -q 'Reachable with
 
 # The framework is markdown only: nothing executable is ever copied into a project (2.8.12)
 for f in $(git ls-files .claude .github/plumbline .github/agents .github/prompts); do
-  case "$f" in *.md|*/VERSION|*/VERSIONS|*.yml) ;; *) bad "$f: Plumbline installs markdown only — move tools to tests/" ;; esac
+  case "$f" in *.md) ;; *) bad "$f: Plumbline installs markdown only — move it to tests/ or examples/" ;; esac
 done; ok
 
 # Only /pl-dev and /pl-code-review run git; every other command works on the folder (2.8.13)

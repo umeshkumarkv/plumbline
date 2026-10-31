@@ -22,4 +22,4 @@ Several accounts at once; blocking new orders (kill switch); the screen button (
 ## Dependencies
 Story points: 5
 
-— Plumbline 2.8.3 · /pl-ba · story v1 · commit 2b87760 · judge pending · AI-drafted, posted after SME review
+— Plumbline 2.8.3 · /pl-ba · story v2 · commit 2b87760 · judge pending · 12 min · SME edited: no · AI-drafted, posted after SME review

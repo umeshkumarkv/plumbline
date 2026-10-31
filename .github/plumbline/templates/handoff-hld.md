@@ -1,4 +1,4 @@
-<!-- plumbline:template handoff-hld v1 -->
+<!-- plumbline:template handoff-hld v2 -->
 [Plumbline /pl-arch] {{YYYY-MM-DD}}
 
 ## HLD
@@ -8,6 +8,6 @@
 {{3–5 lines: units involved, the riskiest interaction, the key decision}}
 
 ## CLAUDE.md changes
-- Docs PR: {{link — the HLD's decisions and rules as [decided <EPIC>], or "none"}}
+{{for each CLAUDE.md file: its path, then the exact lines to add under *Rules* ([decided <EPIC>]) and *Decisions & trade-offs*, in a fenced block — dev applies them word for word in the first story's PR; or None}}
 
-— Plumbline {{version}} · {{/pl-command}} · handoff-hld v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · handoff-hld v2 · commit {{short sha, or —}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · {{minutes}} min · SME edited: {{yes | no}} · AI-drafted, posted after SME review

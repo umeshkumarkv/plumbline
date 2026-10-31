@@ -38,7 +38,7 @@ NR == FNR {
   else if (line != "") body = 1
   if (index(line, "{{")) bad = bad sprintf("FAIL: placeholder left on line %d: %s\n", FNR, substr(line, 1, 80))
   if (tv != "" && index(line, tv)) havetv = 1
-  if (line ~ /^— Plumbline [0-9]+\.[0-9]+\.[0-9]+ · \/pl-[a-z-]+ · ([a-z-]+ v[0-9]+ · )?commit [0-9a-f]+ · judge [^·]+ · /) havefooter = 1
+  if (line ~ /^— Plumbline [0-9]+\.[0-9]+\.[0-9]+ · \/pl-[a-z-]+ · ([a-z-]+ v[0-9]+ · )?commit [^ ]+ · judge [^·]+ · /) havefooter = 1
   else if (forbid != "" && line ~ forbid)
     bad = bad sprintf("FAIL: outside this role (line %d): %s\n", FNR, substr(line, 1, 80))
   f = line; sub(/^[-*] /, "", f)

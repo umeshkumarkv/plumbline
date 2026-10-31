@@ -40,21 +40,23 @@ Plumbline with a team? Use [TEAM-TEST.md](TEAM-TEST.md); for a two-sprint trial,
 
 ## Install
 
+How teams work with Plumbline — roles, hand-offs, access — is in [OPERATING-MODEL.md](OPERATING-MODEL.md).
+
 1. Get Plumbline: `git clone https://github.com/umeshkumarkv/plumbline` (or **Code → Download ZIP**).
-2. Copy its `.claude` and `.github` folders into your project's root. They merge with what you have; Plumbline's
-   files are named `pl-*` and `plumbline-*`, so they don't clash.
-   - macOS / Linux: `cp -R ~/plumbline/.claude ~/plumbline/.github .`
-   - Windows (PowerShell): `robocopy $HOME\plumbline\.claude .claude /E` and `robocopy $HOME\plumbline\.github .github /E`
-3. **Permissions (recommended for every team):** merge the `allow`, `deny` and `ask` lists from
-   [`examples/claude-settings.json`](examples/claude-settings.json) into your `.claude/settings.json`, and replace the
-   build/test lines with your project's commands. See [Permissions](#permissions).
-4. **Owners (recommended):** merge [`examples/CODEOWNERS`](examples/CODEOWNERS) into `.github/CODEOWNERS` and require
-   code-owner review, so the architect approves every CLAUDE.md change.
+2. Copy two folders into your project's root — every file in them is markdown:
+   - `.claude/commands` and `.claude/agents` → your `.claude/`
+   - `.github/plumbline` → your `.github/`
+   Plumbline's files are named `pl-*` and `plumbline-*`, so they don't clash with yours.
+3. **Permissions (recommended):** [`examples/claude-settings.json`](examples/claude-settings.json) lists the `allow`,
+   `deny` and `ask` rules to merge into your `.claude/settings.json`. See [Permissions](#permissions).
+4. **Required reviewer for CLAUDE.md:** make the architect a required reviewer for `**/CLAUDE.md` —
+   [`examples/CODEOWNERS`](examples/CODEOWNERS) for GitHub and GitLab; code owners or default reviewers on Bitbucket —
+   and protect the base branch.
 5. Commit on a branch and open a PR.
 
-Requirements: Claude Code with subagents (the Agent tool), or VS Code with Copilot agent mode and the **runSubagent**
-tool enabled. JIRA, Confluence and GitHub work through the tools you have connected (e.g. the Atlassian MCP server);
-without them, paste the story text instead.
+Requirements: Claude Code with subagents (the Agent tool); the Atlassian connector; for doc, devops and SM, a connector
+for your git host (GitHub, GitLab or Bitbucket). **GitHub Copilot is on hold** until it is tested: its files stay in
+this repository (`.github/agents`, `.github/prompts`) but are not part of the install.
 
 ## Use
 
@@ -128,14 +130,16 @@ Plumbline runs with Claude Code's normal permission prompts. The example setting
 Anything an agent can read reaches the model and its logs: if other files in your repository hold secrets, add them to
 `deny`. Details and the threat model: [SECURITY.md](SECURITY.md).
 
-## CI check (optional)
-`.github/workflows/plumbline-checks.yml` runs on every pull request in GitHub Actions:
+## CI check (optional, GitHub Actions only)
+Not part of the install. To use it, copy [`examples/ci/plumbline-checks.yml`](examples/ci/plumbline-checks.yml) to
+`.github/workflows/` and [`examples/ci/semgrep-java.yml`](examples/ci/semgrep-java.yml) to `.github/plumbline-ci/`. It runs on
+every pull request:
 - **protected files** — a PR may not change Plumbline's commands, agents or checks unless a maintainer adds the
   `plumbline-policy-change` label;
 - **Semgrep** — 15 Java/Spring rules (money as floating point, SQL concatenation, hard-coded secrets, …) on **the
   lines the PR changes only**, using the rules from the base branch.
 
-`plumbline-selftest.yml` is Plumbline's own test and is skipped in your project. Delete either file if you don't want it.
+GitLab and Bitbucket teams can run the same Semgrep rules from their own pipelines.
 
 ## A different model for the judge (optional)
 Writer and judge use your session's model, so they can share blind spots. To give the judge its own model, add a
@@ -150,16 +154,16 @@ Compare with `eval/ab.sh` before and after.
                     plumbline-judge.md (shared by every command)
 .github/prompts/    the commands for Copilot (each points at .claude/commands)
 .github/agents/     the agents for Copilot (each points at .claude/agents, plus its tool list)
-.github/workflows/  plumbline-checks.yml (optional CI), plumbline-selftest.yml (Plumbline's own test)
-.github/plumbline/  templates/ (every artefact + the Template check), checklists/ (judge checklists), semgrep-java.yml (CI only), VERSION
-examples/           claude-settings.json (recommended permissions), CODEOWNERS
+.github/workflows/  plumbline-selftest.yml (Plumbline's own test — not installed)
+.github/plumbline/  templates/ (every artefact + the Template check), checklists/ (judge checklists), VERSION.md
+examples/           claude-settings.json (recommended permissions), CODEOWNERS, ci/ (optional GitHub Actions checks)
 eval/               sample app + 10 review cases, setup / score / run / A/B scripts (not copied into your project)
 tests/              validate.sh — Plumbline's self-test
 ```
 To change how a command behaves, edit its file in `.claude/` — Copilot uses the same file.
 
 ## Upgrade
-Check your version in `.github/plumbline/VERSION`, read [CHANGELOG.md](CHANGELOG.md), then copy the `.claude` and
+Check your version in `.github/plumbline/VERSION.md`, read [CHANGELOG.md](CHANGELOG.md), then copy the `.claude` and
 `.github` folders again (step 2 of Install) and re-merge `examples/claude-settings.json`. Your `CLAUDE.md` files and
 `.plumbline-drafts/` are not touched.
 - From 2.7 or earlier: run `/pl-onboard` again so each unit's CLAUDE.md is split into the core and

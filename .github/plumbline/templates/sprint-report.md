@@ -1,4 +1,4 @@
-<!-- plumbline:template sprint-report v1 -->
+<!-- plumbline:template sprint-report v2 -->
 # Sprint {{name}} — {{YYYY-MM-DD}}
 
 ## Done
@@ -11,4 +11,4 @@
 ## Flags for action
 ## Comments
 
-— Plumbline {{version}} · {{/pl-command}} · sprint-report v1 · commit {{short sha}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · AI-drafted, posted after SME review
+— Plumbline {{version}} · {{/pl-command}} · sprint-report v2 · commit {{short sha, or —}} · judge {{pending | PASS n/3 | FAIL 3/3 | n/a}} · {{minutes}} min · SME edited: {{yes | no}} · AI-drafted, posted after SME review
