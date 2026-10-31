@@ -28,7 +28,7 @@ and **sm** every morning; arch runs once per epic (HLD) and once per story (LLD)
 | | Status |
 |---|---|
 | Claude Code | **Supported.** Tested with Claude Code 2.1.309 on Linux on two real codebases — see [TEST-REPORT.md](TEST-REPORT.md) |
-| Claude Code on macOS / Windows | Expected to work; not yet tested. The template check is a bash script (Git Bash on Windows); without bash the judge checks the template instead |
+| Claude Code on macOS / Windows / Linux | Same everywhere: Plumbline is markdown only — no scripts, no Python, nothing to install beyond Claude Code or Copilot |
 | GitHub Copilot (VS Code agent mode, Copilot CLI) | **Preview.** Files follow the documented format; not yet tested end to end |
 | Stacks tested | Java/Spring Boot backends, Angular and React frontends. Others should work; not yet tested |
 
@@ -91,7 +91,8 @@ your yes.
   cannot stops with `design gap — /pl-arch <KEY>` instead of working around it, and code review fails any difference.
 - **Same shape everywhere, versioned.** Everything Plumbline produces — JIRA descriptions and comments, Confluence
   pages, PR descriptions and reviews, and the CLAUDE.md files — is written on a template in
-  `.github/plumbline/templates/` and names its template version (`story v1`). `check-template.sh` checks headings,
+  `.github/plumbline/templates/` and names its template version (`story v1`). the *Template check* (written in
+  `.github/plumbline/templates/README.md`, done by the command itself) checks headings,
   fields, the version and the role lane before any judge runs; a template cannot change without a new version
   (`VERSIONS` lock + `CHANGELOG.md`). Acceptance criteria carry ids (`AC1`, `AC2`,
   …) that design, tests and QA evidence cite.
@@ -147,7 +148,7 @@ Compare with `eval/ab.sh` before and after.
 .github/prompts/    the commands for Copilot (each points at .claude/commands)
 .github/agents/     the agents for Copilot (each points at .claude/agents, plus its tool list)
 .github/workflows/  plumbline-checks.yml (optional CI), plumbline-selftest.yml (Plumbline's own test)
-.github/plumbline/  templates/ (every posted artefact), check-template.sh, semgrep-java.yml (CI rules), VERSION
+.github/plumbline/  templates/ (every artefact + the Template check), checklists/ (judge checklists), semgrep-java.yml (CI only), VERSION
 examples/           claude-settings.json (recommended permissions), CODEOWNERS
 eval/               sample app + 10 review cases, setup / score / run / A/B scripts (not copied into your project)
 tests/              validate.sh — Plumbline's self-test

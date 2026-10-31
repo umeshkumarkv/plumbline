@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.8.12 — 2026-10-30 — markdown only, again
+Plumbline is a framework of markdown files that runs the same on macOS, Windows and Linux. 2.8.0 had added
+`check-template.sh` and 2.8.11 `onboard-audit.py` — both executables in your project. Both are gone:
+- The **Template check** is a written procedure in `.github/plumbline/templates/README.md` that every command does
+  itself before the judge and before posting (headings, fields, placeholders, footer and version, role lane).
+- The **onboarding audit** is a judge checklist, `.github/plumbline/checklists/onboard-audit.md`: every unit, every
+  check (endpoints, tables, topics, tags, silent header defaults, pass-through filters, CORS, reachability, recipes
+  that ran, security risks reaching the root), no sampling, all failures in one list in the summary.
+- The permission allow-list no longer names any script. The self-test fails if anything but markdown (plus `VERSION`
+  and the optional CI `.yml`) is ever installed into a project; the template checker lives on in `tests/` for
+  Plumbline's own maintainers only.
+
 ## 2.8.11 — 2026-10-30 — onboarding audits itself: every gap in one run
 - **`onboard-audit.py`** (deterministic, no model) runs after each writer and before the root judge: endpoints in code
   vs docs (full paths), tables in migrations, Kafka topics, `[code: …]` tags that name missing files, `X-User-*`

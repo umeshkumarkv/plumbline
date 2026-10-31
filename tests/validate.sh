@@ -134,13 +134,13 @@ for t in .github/plumbline/templates/*.md; do
   case "$(basename "$t")" in README.md|CHANGELOG.md|claude-*.md) continue;; esac
   grep -q '^— Plumbline {{version}} · ' "$t" && ! grep -q '^## Record$' "$t" && ok || bad "$t: needs the '— Plumbline …' footer (no '## Record')"
 done
-bash .github/plumbline/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.good.md >/dev/null \
+bash tests/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.good.md >/dev/null \
   && ok || bad "check-template.sh fails a correct draft"
-bash .github/plumbline/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.bad.md >/dev/null \
+bash tests/check-template.sh .github/plumbline/templates/handoff-dev.md tests/fixtures/handoff-dev.bad.md >/dev/null \
   && bad "check-template.sh passes a broken draft" || ok
-bash .github/plumbline/check-template.sh .github/plumbline/templates/story.md tests/fixtures/story.business.md >/dev/null \
+bash tests/check-template.sh .github/plumbline/templates/story.md tests/fixtures/story.business.md >/dev/null \
   && ok || bad "role check fails a business-only story"
-bash .github/plumbline/check-template.sh .github/plumbline/templates/story.md tests/fixtures/story.technical.md >/dev/null \
+bash tests/check-template.sh .github/plumbline/templates/story.md tests/fixtures/story.technical.md >/dev/null \
   && bad "role check passes a story with an API path and story points" || ok
 for a in pm ba arch dev qa doc sm onboard; do
   f=.claude/agents/plumbline-$a-writer.md; [ -f "$f" ] || f=.claude/agents/plumbline-$a-runner.md
@@ -176,22 +176,20 @@ PY
 checks=$((checks+1))
 
 for pair in "claude-root:CLAUDE.md" "claude-unit:src/CLAUDE.md" "claude-reference:src/CLAUDE.reference.md"; do
-  bash .github/plumbline/check-template.sh ".github/plumbline/templates/${pair%%:*}.md" "eval/sample-app/${pair#*:}" >/dev/null \
+  bash tests/check-template.sh ".github/plumbline/templates/${pair%%:*}.md" "eval/sample-app/${pair#*:}" >/dev/null \
     && ok || bad "eval sample ${pair#*:} does not match template ${pair%%:*}"
 done
 
 # Drafts never get committed: every command creates .plumbline-drafts/.gitignore (a 2.8.0 regression dropped it from four)
 for f in .claude/commands/pl-*.md; do grep -q '\.plumbline-drafts/\.gitignore' "$f" && ok || bad "$f: must create .plumbline-drafts/.gitignore"; done
 # Onboarding scans for secrets and checks every unit's reachability
-grep -q 'Secrets scan' .claude/commands/pl-onboard.md && grep -q 'Reachable without that check' .github/plumbline/checklists/onboard-unit.md \
+grep -q 'Secrets scan' .claude/commands/pl-onboard.md && grep -q 'Reachable without that check' .github/plumbline/checklists/onboard-unit.md && grep -q 'no sampling' .github/plumbline/checklists/onboard-audit.md \
   && ok || bad "pl-onboard: needs the secrets scan and the reachability check"
 
-# The onboarding audit passes the eval sample and catches a missing endpoint
-tmp=$(mktemp -d); cp -R eval/sample-app/. "$tmp/"; ( cd "$tmp" && git init -q && git add -A )
-( cd "$tmp" && PLUMBLINE_AUDIT_SKIP=recipe python3 "$OLDPWD/.github/plumbline/onboard-audit.py" >/dev/null ) && ok || bad "onboard-audit fails the eval sample"
-sed -i.bak '/orders\/{id}\/pay/d' "$tmp/src/CLAUDE.reference.md" && rm -f "$tmp/src/CLAUDE.reference.md.bak"
-( cd "$tmp" && PLUMBLINE_AUDIT_SKIP=recipe python3 "$OLDPWD/.github/plumbline/onboard-audit.py" >/dev/null ) && bad "onboard-audit misses an undocumented endpoint" || ok
-rm -rf "$tmp"
+# The framework is markdown only: nothing executable is ever copied into a project (2.8.12)
+for f in $(git ls-files .claude .github/plumbline .github/agents .github/prompts); do
+  case "$f" in *.md|*/VERSION|*/VERSIONS|*.yml) ;; *) bad "$f: Plumbline installs markdown only — move tools to tests/" ;; esac
+done; ok
 
 # Checklists a command hands to the judge by file must exist
 for c in $(grep -ohE '\.github/plumbline/checklists/[a-z-]+\.md' .claude/commands/*.md | sort -u); do

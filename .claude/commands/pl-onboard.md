@@ -16,7 +16,7 @@ Target: $ARGUMENTS (empty = every unit)
   (`.github/agents/`). If subagents are not available in this chat, stop and say so.
 
 Each subagent starts with a clean context. Never do the writer's or the judge's work yourself, and never pass the
-writer's reasoning or your own opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match), `bash .github/plumbline/check-template.sh` commands, and in Step 2b each
+writer's reasoning or your own opinion to the judge. **Shell:** run only `git` (from the repository root — never `git -C`, which permission rules do not match) commands, and in Step 2b each
 unit's own test command, yourself (they work in bash, PowerShell and cmd alike); find and read files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
@@ -36,8 +36,8 @@ unchanged, then continue — but only for a path you gave that helper; any other
   `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
   template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and
   `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
-  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` (it also fails text
-  outside the lane): FAIL = that attempt's finding, no judge. No bash → the judge checks it. Set the footer's `judge`.
+  each judge and before posting, do the **Template check** in `.github/plumbline/templates/README.md` yourself (it
+  also catches text outside the lane): any miss is that attempt's finding, no judge. Set the footer's `judge`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
@@ -79,18 +79,17 @@ duration. Change no file to make it pass; record failures exactly — other comm
 
 ## Step 3 — Each unit, one at a time (helpers run in the foreground)
 **Mode** per unit: **new** (no CLAUDE.md), **refresh** (both files exist), or **keep**. Refresh first costs no
-writer: run `check-template.sh` on both files against the current templates, and the Freshness check. Both clean →
+writer: do the **Template check** (`.github/plumbline/templates/README.md`) on both files, and the Freshness check. Both clean →
 judge only (step 3 below, attempt 1); PASS → **keep** — the files are not touched. Otherwise the writer runs in
 **update mode** with the template and judge findings: keep every line that is still true, fix what failed, add what
 the template now requires; never rewrite the rest. For attempt = 1, 2, 3:
 1. **Writer** — `plumbline-onboard-writer` with: mode, unit name, folder, both paths, the test recipe, the commit
    (`git rev-parse --short HEAD`) and today's date for `Last updated`; on a retry the judge's findings (verbatim).
 2. **Scope check** — `git status --porcelain`: only this unit's `CLAUDE.md` / `CLAUDE.reference.md` changed (drafts are
-   ignored). Anything else → `git checkout -- <file>` and that is the attempt's finding. **Audit** — run
-   `python3 .github/plumbline/onboard-audit.py`; this unit's `FAIL` lines are the attempt's findings (no judge needed).
+   ignored). Anything else → `git checkout -- <file>` and that is the attempt's finding.
 3. **Judge** — `plumbline-judge` with: *Review:* both paths, the unit folder, the deploy files (`docker-compose*.yml`,
    `k8s/`, Helm), "`git diff -- <both paths>`: text outside the markers unchanged"; *Checklist:* the file
-   `.github/plumbline/checklists/onboard-unit.md` — the judge reads it.
+   `.github/plumbline/checklists/onboard-unit.md` plus this unit's checks in `onboard-audit.md` — the judge reads both.
 4. **PASS** → next unit. **FAIL** → next attempt with the findings.
 After 3 failed attempts: leave the file, mark the unit **ESCALATED**, keep its last findings, and move on.
 
@@ -98,8 +97,8 @@ After 3 failed attempts: leave the file, mark the unit **ESCALATED**, keep its l
 Only if at least one unit passed. Mode as in Step 3. Writer: `plumbline-onboard-writer` with "root master file:
 `CLAUDE.md`", the units table with results, the settings, the secrets scan (files and keys only), and every
 "Docs vs code" line the unit writers replied with. Judge: the root file, the deploy files, and the checklist file
-`.github/plumbline/checklists/onboard-root.md`; before the judge, run the audit — every `[root]` and `[security]` FAIL
-line is a root finding. Up to 3 attempts. Then show the root *Solution* and ask "Is this the
+`.github/plumbline/checklists/onboard-root.md` and the whole of `onboard-audit.md` across every unit — its
+`[root]`, `header defaults` and `pass-through` failures are root findings. Up to 3 attempts. Then show the root *Solution* and ask "Is this the
 system you meant?" — no → stop: wrong repository or project.
 
 ## Step 4b — Settle the decisions
@@ -110,7 +109,7 @@ commands treat these settings as the rule. Unattended → leave the items; other
 
 ## Step 5 — Summary
 One table: unit · mode · result (PASS / KEPT / ESCALATED) · attempts · test recipe result · open findings; then the
-final audit output, verbatim — every remaining `FAIL` line in one list, so nothing is found later piece by piece. Untested or
-failing units first: `/pl-dev` on them will be **UNVERIFIED**. Then: review with `git diff` (discard a file:
+root judge's last audit list, verbatim — every remaining `FAIL` line at once, so nothing is found later piece by
+piece. Untested or failing units first: `/pl-dev` on them will be **UNVERIFIED**. Then: review with `git diff` (discard a file:
 `git checkout -- <file>`), and offer to commit on a branch and open a PR described on `pr.md` — the exact text first,
 then a yes. Nothing else is written.

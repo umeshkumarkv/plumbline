@@ -46,7 +46,7 @@ Use one small real backlog idea. After each step, open JIRA and Confluence and l
 | # | Do | Pass when |
 |---|---|---|
 | 4.1 | Change a line in code that CLAUDE.md describes (e.g. an endpoint's role), commit, then `/pl-code-review` a branch touching that file | the judge flags the defect from the code and adds `CLAUDE.md out of date`; every command warns "CLAUDE.md may be stale for: …" |
-| 4.2 | Hand-edit a hand-off draft to drop a heading, then let the command continue | `check-template.sh` fails it before any judge runs |
+| 4.2 | Hand-edit a hand-off draft to drop a heading, then let the command continue | the command's Template check fails it before any judge runs |
 | 4.3 | Give `/pl-dev` a story whose LLD cannot be built as written (e.g. names a method that cannot exist) | stops: `design gap — /pl-arch <KEY>`; no workaround in the code |
 | 4.4 | Edit one word of the PRD page, then `/pl-ba <EPIC>` | stops: PRD page changed after approval |
 

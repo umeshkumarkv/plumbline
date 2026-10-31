@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
+# Maintainer tool only (Plumbline's self-test) — never copied into projects. In projects, the commands do the
+# same Template check from .github/plumbline/templates/README.md, with no script.
 # Plumbline template check — deterministic, no model. Is a draft written on its template, and in its role's lane?
-#   bash .github/plumbline/check-template.sh <template> <draft>      exit 0 = PASS
+#   bash tests/check-template.sh <template> <draft>      exit 0 = PASS
 # Checks: (1) every "## " heading of the template is in the draft, exactly and in the same order;
 # (2) every "Label: {{…}}" field of the template appears in the draft as "Label: <value>" ("- " / "* " bullets ok);
 # (3) a hand-off comment's tag line is "[Plumbline /pl-<role>] YYYY-MM-DD";

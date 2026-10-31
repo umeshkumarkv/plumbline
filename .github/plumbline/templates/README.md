@@ -5,8 +5,22 @@ every agent: whatever is posted to JIRA, Confluence or a PR, and the CLAUDE.md f
 keep every `## ` heading, in this order, with the exact text; replace every `{{…}}`; write `None` under a heading
 with nothing to say; add `###` sub-headings or tables freely inside a section; plain `-` bullets only (JIRA shows
 `- [ ]` as literal text); fields are bullets (`- Label: value`), because Confluence and JIRA merge plain lines into
-one paragraph. Do not copy the `<!-- plumbline:… -->` lines at the top. `check-template.sh` checks the shape (and the
-role lane) before any judge or post; the judge checks the content.
+one paragraph. Do not copy the `<!-- plumbline:… -->` lines at the top. The **template check** below is done before any judge or post;
+the judge checks the content.
+
+## Template check (done by the command itself, before the judge and before posting — no script)
+Read the template and the draft side by side. The draft fails if any of these is true; each miss is the attempt's
+finding, and the judge is not started:
+1. A `## ` heading of the template is missing, renamed or out of order (extra `###` inside a section are fine).
+2. A field of the template (`- Label: {{…}}`) has no line `- Label: <value>` (or `* Label:`) with a real value.
+3. Any `{{` is left, or a section is empty (write `None`).
+4. A hand-off does not start with `[Plumbline /pl-<role>] YYYY-MM-DD`, or lacks the footer
+   `— Plumbline <version> · /pl-<command> · <template> v<N> · commit <sha> · judge <result> · …`.
+5. The draft does not name the template's version (`<name> vN` from its first line) — in the footer, or in the
+   `Last updated` line of a CLAUDE.md file.
+6. A line matches the template's `<!-- plumbline:forbid … -->` pattern — content another role owns (an API path,
+   status code, class name or points in a PRD or story; production code in a design).
+Text read back from JIRA or Confluence may show `\[`, `\~` and `*` bullets: ignore the backslashes and treat `*` as `-`.
 
 ## Versions
 Each template's first line is `<!-- plumbline:template <name> v<N> -->`, and every output names the version it was

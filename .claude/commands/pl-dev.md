@@ -17,7 +17,7 @@ Story: $ARGUMENTS
   If subagents are not available in this chat, stop and say so.
 
 Never do the writer's or the judge's work yourself, and never pass the writer's reasoning to the judge. **Shell:** run
-only `git` (from the repository root — never `git -C`, which permission rules do not match), `bash .github/plumbline/check-template.sh` and the project's build/test command yourself (they work in bash, PowerShell and cmd alike); find and read
+only `git` (from the repository root — never `git -C`, which permission rules do not match) and the project's build/test command yourself (they work in bash, PowerShell and cmd alike); find and read
 files with your file search/read tools — never `find`, `grep`, `ls`, `cat`.
 If a helper replies with `FILE: <path>` and the content instead of writing the file, save that content to the path
 unchanged, then continue — but only for a path you gave that helper; any other path is a FAIL finding, not a write.
@@ -37,8 +37,8 @@ unchanged, then continue — but only for a path you gave that helper; any other
   `claude-unit.md`, `claude-reference.md` for those files; the JIRA hand-off table for the rest), and names the
   template's version. Give each writer the template, the version (`.github/plumbline/VERSION`) and
   `git rev-parse --short HEAD`; tell the judge the writer's agent name, so it checks that agent's *Your lane*. Before
-  each judge and before posting run `bash .github/plumbline/check-template.sh <template> <draft>` (it also fails text
-  outside the lane): FAIL = that attempt's finding, no judge. No bash → the judge checks it. Set the footer's `judge`.
+  each judge and before posting, do the **Template check** in `.github/plumbline/templates/README.md` yourself (it
+  also catches text outside the lane): any miss is that attempt's finding, no judge. Set the footer's `judge`.
 - **Limits:** at most 3 attempts per item, one writer and one judge each. More than 6 items → show the list and ask;
   nobody to answer → do the first 6 and list the rest.
 - **Nobody to answer** (scheduled/headless): where a step says ask, take its safe choice or stop that item — never
