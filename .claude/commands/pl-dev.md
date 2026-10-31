@@ -1,6 +1,6 @@
 ---
 description: Plumbline — implement a story with tests; checked by the build, a scope check and an independent judge
-argument-hint: "<JIRA key, e.g. CRS-12, or a short story description>"
+argument-hint: "<JIRA key, e.g. PROJ-12, or a short story description>"
 ---
 
 # /pl-dev
@@ -46,7 +46,7 @@ unchanged, then continue — but only for a path you gave that helper; any other
 
 ## JIRA hand-off
 Roles pass work to each other only through JIRA, Confluence and the PR (or MR) — never through files on someone's
-machine; every person works in their own clone (OPERATING-MODEL.md). The PRD and each epic's HLD are Confluence pages
+machine; every person works in their own clone (`.github/plumbline/OPERATING-MODEL.md`). The PRD and each epic's HLD are Confluence pages
 under the `Confluence parent page` (Plumbline settings), linked from the epic; every other hand-off is a ticket, a
 comment, or a PR comment. Only `/pl-dev` and `/pl-code-review` use git.
 
@@ -87,7 +87,7 @@ text before posting. `/pl-sm metrics` reads them from JIRA, so the whole team se
 scratch, never committed). Create drafts with your write tool — never `mkdir`, `echo`, `printf` or redirection.
 
 ## Step 1 — The story
-- Several keys (`CRS-301 CRS-302`): implement them in that order on one branch; everything below applies to each.
+- Several keys (`PROJ-301 PROJ-302`): implement them in that order on one branch; everything below applies to each.
 - A JIRA key: read the story (summary, description, acceptance criteria), and its latest `[Plumbline /pl-arch]` comment (the design) with the connected JIRA/Atlassian tools, and save both in `.plumbline-drafts/<KEY>/` for this run's
   writer and judge. No `plumbline-arch-approved` label → `STOPPED` (see JIRA hand-off). No JIRA tools → ask the user to
   paste the story and the design.

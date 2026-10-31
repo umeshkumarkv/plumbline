@@ -1,6 +1,6 @@
 ---
 description: Plumbline — split an epic or requirement into ready-to-build stories with testable acceptance criteria, each checked by an independent judge
-argument-hint: "<epic key, e.g. CRS-40, or a requirement in plain English>"
+argument-hint: "<epic key, e.g. PROJ-40, or a requirement in plain English>"
 ---
 
 # /pl-ba
@@ -50,7 +50,7 @@ Drafts go in `.plumbline-drafts/<KEY or slug>/`. Make sure `.plumbline-drafts/.g
 
 ## JIRA hand-off
 Roles pass work to each other only through JIRA, Confluence and the PR (or MR) — never through files on someone's
-machine; every person works in their own clone (OPERATING-MODEL.md). The PRD and each epic's HLD are Confluence pages
+machine; every person works in their own clone (`.github/plumbline/OPERATING-MODEL.md`). The PRD and each epic's HLD are Confluence pages
 under the `Confluence parent page` (Plumbline settings), linked from the epic; every other hand-off is a ticket, a
 comment, or a PR comment. Only `/pl-dev` and `/pl-code-review` use git.
 

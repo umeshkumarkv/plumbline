@@ -197,6 +197,19 @@ for f in .claude/commands/pl-*.md; do
   grep -v 'every other command: `—`' "$f" | grep -qE '`(git|gh) [a-z]' && bad "$f: runs git/gh — only /pl-dev and /pl-code-review may" || ok
 done
 
+# Dry-run install: every file a command or agent points to is inside what the README tells teams to copy
+inst=$(mktemp -d); mkdir -p "$inst/.claude" "$inst/.github"; cp -R .claude/commands .claude/agents "$inst/.claude/"; cp -R .github/plumbline "$inst/.github/"
+( cd "$inst" && grep -rhoE '(\.github/plumbline/[A-Za-z0-9_./-]+\.md|templates/[a-z-]+\.md|checklists/[a-z-]+\.md)' .claude .github/plumbline \
+  | sed 's/[.,)]*$//' | sort -u | while read -r p; do case "$p" in templates/*|checklists/*) f=".github/plumbline/$p";; *) f="$p";; esac
+    [ -e "$f" ] || echo "$p"; done ) > "$inst.missing"
+[ -s "$inst.missing" ] && bad "installed commands point to files the install lacks: $(tr '\n' ' ' < "$inst.missing")" || ok
+rm -rf "$inst" "$inst.missing"
+
+# Flow: every label a gate waits for is added by an earlier step of the story flow
+for l in prd-approved dor-ready hld-final arch-approved docs-ready review-passed deployed-qa qa-passed; do
+  grep -qE "\| \`plumbline-$l\` \|$" .claude/commands/pl-dev.md && ok || bad "no step in the JIRA hand-off table adds plumbline-$l"
+done
+
 # Checklists a command hands to the judge by file must exist
 for c in $(grep -ohE '\.github/plumbline/checklists/[a-z-]+\.md' .claude/commands/*.md | sort -u); do
   [ -f "$c" ] && ok || bad "a command names checklist $c that does not exist"; done

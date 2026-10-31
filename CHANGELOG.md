@@ -1,7 +1,15 @@
 # Changelog
 
+## 2.8.15 — 2026-10-31 — close-out: dry-run install verified
+- **Dry run of the install** (copy `.claude/commands`, `.claude/agents`, `.github/plumbline` into an empty project) found
+  one broken pointer: every command referred to `OPERATING-MODEL.md`, which was not installed. It now lives at
+  `.github/plumbline/OPERATING-MODEL.md`. Result: 45 files, all markdown, every reference resolves.
+- Self-test now repeats that dry run on every change (every file a command or agent points to must be in the install)
+  and checks the flow: every label a gate waits for is added by an earlier step.
+- Example keys in command hints are neutral (`PROJ-12`), not a real-looking project.
+
 ## 2.8.14 — 2026-10-31 — the operating model
-Implements [OPERATING-MODEL.md](OPERATING-MODEL.md), agreed with the team lead, and nothing else.
+Implements [OPERATING-MODEL.md](.github/plumbline/OPERATING-MODEL.md), agreed with the team lead, and nothing else.
 - **Flow:** dev → doc → code review → merge → CI/CD deploys to QA → devops → QA → Done. `/pl-doc` runs on the **open
   PR** and posts the exact CLAUDE.md / API-spec text (PR comment + story comment, `plumbline-docs-ready`); `/pl-dev`
   (apply mode) applies it word for word in the same PR; `/pl-code-review` needs `docs-ready` and checks code and docs

@@ -46,7 +46,7 @@ unchanged, then continue — but only for a path you gave that helper; any other
 
 ## JIRA hand-off
 Roles pass work to each other only through JIRA, Confluence and the PR (or MR) — never through files on someone's
-machine; every person works in their own clone (OPERATING-MODEL.md). The PRD and each epic's HLD are Confluence pages
+machine; every person works in their own clone (`.github/plumbline/OPERATING-MODEL.md`). The PRD and each epic's HLD are Confluence pages
 under the `Confluence parent page` (Plumbline settings), linked from the epic; every other hand-off is a ticket, a
 comment, or a PR comment. Only `/pl-dev` and `/pl-code-review` use git.
 

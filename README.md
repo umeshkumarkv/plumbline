@@ -9,11 +9,11 @@ over to you. Nothing is committed, pushed or posted without your yes.
 |---|---|---|
 | `/pl-onboard` | Documents the codebase (re-runs refresh: existing files are checked first and only failing ones are edited): per service/frontend a short `CLAUDE.md` + a `CLAUDE.reference.md` catalogue, and a master `CLAUDE.md`; checks the tests run | CLAUDE.md files |
 | `/pl-pm "idea"` | Feature idea → PRD in business language (problem, behaviour, success criteria, scope, sized backlog) | Confluence page + JIRA epic* |
-| `/pl-ba CRS-40` | Epic → stories in business language (Given/When/Then criteria, examples) — no APIs, units or points | JIRA stories* |
-| `/pl-arch CRS-40` / `CRS-12` | The architect's final design: epic → HLD (Confluence page + its decisions into CLAUDE.md); story → LLD (unit, how each criterion is checked, API, data, logic, tests, points) | Confluence + docs PR + JIRA* |
-| `/pl-dev CRS-12` | Implements the story and the design's tests on a new branch | branch* |
+| `/pl-ba PROJ-40` | Epic → stories in business language (Given/When/Then criteria, examples) — no APIs, units or points | JIRA stories* |
+| `/pl-arch PROJ-40` / `PROJ-12` | The architect's final design: epic → HLD (Confluence page + its decisions into CLAUDE.md); story → LLD (unit, how each criterion is checked, API, data, logic, tests, points) | Confluence + docs PR + JIRA* |
+| `/pl-dev PROJ-12` | Implements the story and the design's tests on a new branch | branch* |
 | `/pl-code-review 42` | Independent review of a PR or branch against your `CLAUDE.md` rules and its stories | PR comment* |
-| `/pl-qa CRS-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
+| `/pl-qa PROJ-12` | Runs the acceptance criteria against the running system, records evidence | JIRA comment* |
 | `/pl-doc 42` | After merge: updates the API spec and CLAUDE.md files to match the code | docs PR* |
 | `/pl-devops 42` | Fixes a red CI run (code/tests/coverage) or proposes the fix (pipeline/config) | branch* |
 | `/pl-sm` | Daily sprint health: stuck, blocked, Definition of Done, velocity; `/pl-sm metrics` | JIRA comments* |
@@ -40,7 +40,7 @@ Plumbline with a team? Use [TEAM-TEST.md](TEAM-TEST.md); for a two-sprint trial,
 
 ## Install
 
-How teams work with Plumbline — roles, hand-offs, access — is in [OPERATING-MODEL.md](OPERATING-MODEL.md).
+How teams work with Plumbline — roles, hand-offs, access — is in [OPERATING-MODEL.md](.github/plumbline/OPERATING-MODEL.md).
 
 1. Get Plumbline: `git clone https://github.com/umeshkumarkv/plumbline` (or **Code → Download ZIP**).
 2. Copy two folders into your project's root — every file in them is markdown:
@@ -90,7 +90,7 @@ your yes.
   `/pl-doc` posts the exact CLAUDE.md and API-spec text on the open PR; dev applies it word for word; review checks
   code and docs together. Tickets move with the work (the `Workflow` setting): In Progress, In Review with the PR, back
   to In Progress on a failed review or QA, and **Done when QA passes** on the deployed code. `/pl-sm` flags any ticket
-  whose status and labels disagree. The flow and who needs what access: [OPERATING-MODEL.md](OPERATING-MODEL.md).
+  whose status and labels disagree. The flow and who needs what access: [OPERATING-MODEL.md](.github/plumbline/OPERATING-MODEL.md).
 - **Only two roles touch git.** `/pl-dev` creates the branch and the PR; `/pl-code-review` reads it and writes the
   review. Every other role hands off through JIRA, Confluence and PR comments — never through anyone's folder.
 - **The architect's design is final.** Dev, code review, QA, doc and devops follow the HLD and LLD exactly; a role that
