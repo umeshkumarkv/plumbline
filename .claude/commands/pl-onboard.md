@@ -69,8 +69,8 @@ the config files, values set for keys named `*password*`, `*secret*`, `*token*`,
 **never a value** — for the root's `Secrets found`; placeholders (`<…>`, `${…}`, `changeme`) do not count.
 
 ## Step 2b — Test recipe (one run per unit, reused when nothing changed)
-**Reuse** the unit's existing recipe if its CLAUDE.md has one and no build file changed since its `Last updated`
-commit (`git log --oneline <commit>..HEAD -- <build files>` is empty). Otherwise take the test command from the build
+**Reuse** the unit's existing recipe only if it **ran** (a result, not "not run") and no build file changed since its
+`Last updated` commit (`git log --oneline <commit>..HEAD -- <build files>` is empty). Otherwise take the test command from the build
 files (`./mvnw test`, `mvn test`, `./gradlew test`, `npm test -- --watch=false`; a README wins), install the
 project's **own dependencies from its lockfile** if missing (`npm ci`; Maven/Gradle download them) — never tools or
 runtimes — and run it once as `cd <folder> && <command>` (15-minute limit). Keep: command, runtime used
@@ -86,7 +86,8 @@ the template now requires; never rewrite the rest. For attempt = 1, 2, 3:
 1. **Writer** — `plumbline-onboard-writer` with: mode, unit name, folder, both paths, the test recipe, the commit
    (`git rev-parse --short HEAD`) and today's date for `Last updated`; on a retry the judge's findings (verbatim).
 2. **Scope check** — `git status --porcelain`: only this unit's `CLAUDE.md` / `CLAUDE.reference.md` changed (drafts are
-   ignored). Anything else → `git checkout -- <file>` and that is the attempt's finding.
+   ignored). Anything else → `git checkout -- <file>` and that is the attempt's finding. **Audit** — run
+   `python3 .github/plumbline/onboard-audit.py`; this unit's `FAIL` lines are the attempt's findings (no judge needed).
 3. **Judge** — `plumbline-judge` with: *Review:* both paths, the unit folder, the deploy files (`docker-compose*.yml`,
    `k8s/`, Helm), "`git diff -- <both paths>`: text outside the markers unchanged"; *Checklist:* the file
    `.github/plumbline/checklists/onboard-unit.md` — the judge reads it.
@@ -97,7 +98,8 @@ After 3 failed attempts: leave the file, mark the unit **ESCALATED**, keep its l
 Only if at least one unit passed. Mode as in Step 3. Writer: `plumbline-onboard-writer` with "root master file:
 `CLAUDE.md`", the units table with results, the settings, the secrets scan (files and keys only), and every
 "Docs vs code" line the unit writers replied with. Judge: the root file, the deploy files, and the checklist file
-`.github/plumbline/checklists/onboard-root.md`. Up to 3 attempts. Then show the root *Solution* and ask "Is this the
+`.github/plumbline/checklists/onboard-root.md`; before the judge, run the audit — every `[root]` and `[security]` FAIL
+line is a root finding. Up to 3 attempts. Then show the root *Solution* and ask "Is this the
 system you meant?" — no → stop: wrong repository or project.
 
 ## Step 4b — Settle the decisions
@@ -107,7 +109,8 @@ found`, reachable without the check): the answer goes next to it, and it stays u
 commands treat these settings as the rule. Unattended → leave the items; other commands name them in hand-overs.
 
 ## Step 5 — Summary
-One table: unit · mode · result (PASS / KEPT / ESCALATED) · attempts · test recipe result · open findings. Untested or
+One table: unit · mode · result (PASS / KEPT / ESCALATED) · attempts · test recipe result · open findings; then the
+final audit output, verbatim — every remaining `FAIL` line in one list, so nothing is found later piece by piece. Untested or
 failing units first: `/pl-dev` on them will be **UNVERIFIED**. Then: review with `git diff` (discard a file:
 `git checkout -- <file>`), and offer to commit on a branch and open a PR described on `pr.md` — the exact text first,
 then a yes. Nothing else is written.

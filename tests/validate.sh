@@ -186,6 +186,13 @@ for f in .claude/commands/pl-*.md; do grep -q '\.plumbline-drafts/\.gitignore' "
 grep -q 'Secrets scan' .claude/commands/pl-onboard.md && grep -q 'Reachable without that check' .github/plumbline/checklists/onboard-unit.md \
   && ok || bad "pl-onboard: needs the secrets scan and the reachability check"
 
+# The onboarding audit passes the eval sample and catches a missing endpoint
+tmp=$(mktemp -d); cp -R eval/sample-app/. "$tmp/"; ( cd "$tmp" && git init -q && git add -A )
+( cd "$tmp" && PLUMBLINE_AUDIT_SKIP=recipe python3 "$OLDPWD/.github/plumbline/onboard-audit.py" >/dev/null ) && ok || bad "onboard-audit fails the eval sample"
+sed -i.bak '/orders\/{id}\/pay/d' "$tmp/src/CLAUDE.reference.md" && rm -f "$tmp/src/CLAUDE.reference.md.bak"
+( cd "$tmp" && PLUMBLINE_AUDIT_SKIP=recipe python3 "$OLDPWD/.github/plumbline/onboard-audit.py" >/dev/null ) && bad "onboard-audit misses an undocumented endpoint" || ok
+rm -rf "$tmp"
+
 # Checklists a command hands to the judge by file must exist
 for c in $(grep -ohE '\.github/plumbline/checklists/[a-z-]+\.md' .claude/commands/*.md | sort -u); do
   [ -f "$c" ] && ok || bad "a command names checklist $c that does not exist"; done

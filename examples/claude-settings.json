@@ -30,7 +30,8 @@
       "Bash(mvn -v)",
       "Bash(./mvnw -v)",
       "Bash(date +%s)",
-      "Bash(bash .github/plumbline/check-template.sh:*)"
+      "Bash(bash .github/plumbline/check-template.sh:*)",
+      "Bash(python3 .github/plumbline/onboard-audit.py:*)"
     ],
     "deny": [
       "Bash(git clean:*)",

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.8.11 — 2026-10-30 — onboarding audits itself: every gap in one run
+- **`onboard-audit.py`** (deterministic, no model) runs after each writer and before the root judge: endpoints in code
+  vs docs (full paths), tables in migrations, Kafka topics, `[code: …]` tags that name missing files, `X-User-*`
+  headers with silent defaults, filters that pass requests without a role header, CORS open to any origin,
+  docker-compose ports vs "Reachable without that check", test recipes that did not run, and unit security risks
+  missing from the root. Its FAIL lines are the next attempt's findings; the summary prints whatever remains, in one
+  list. On OMS PR #3 it reports exactly the three open issues (frontend recipe, marketdata pass-through, risk-service
+  `SYSTEM` default) and nothing else.
+- Test recipes are reused only if they actually ran (2.8.10 reused a "NOT RUN" recipe).
+- Unit writers mark each risk as `Security risk:`; every one must be in the root's *Decisions needed*.
+- Self-test: the audit passes the eval sample and catches a removed endpoint.
+
 ## 2.8.10 — 2026-10-30 — cheap re-runs; security and conventions enforced by templates; existing docs checked
 From the second review of OMS PR #3 and the comparison with the original broker-dealer CLAUDE files.
 - **Refresh mode (cost).** A re-run of `/pl-onboard` no longer rewrites everything: a unit whose files pass the template

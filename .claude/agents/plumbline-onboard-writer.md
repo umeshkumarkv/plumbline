@@ -60,7 +60,8 @@ every merge.
 4. **Security** — the three template fields first: `Identity`, `Verified at`, and `Reachable without that check` for
    **every** environment the repository deploys to (read `docker-compose*.yml`, `k8s/`, Helm: published ports, Service
    type, ingress). "The gateway is the trust boundary" is not an answer — say where it holds and where it does not.
-   Then roles and token storage, with files. A reachable-without-the-check unit goes in your reply as `Security risk:`.
+   Then roles and token storage, with files. Write every security risk as its own line starting `Security risk:` (the audit and the root look for it) — a check
+that can be bypassed, a header with a silent default, a request that passes without identity.
 5. **Rules** — one line each, tagged with where it comes from: `[code: <file>]` = the code enforces it today;
    `[decided <source>]` = a person decided it (root CLAUDE.md, ADR, README, an approved story). Onboarding writes
    `[decided]` only where a document states the decision; everything else is `[code]`.
